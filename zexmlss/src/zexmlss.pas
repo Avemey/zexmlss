@@ -75,6 +75,8 @@ type
     FShowComment: boolean;       //default = false
     FCellType: TZCellType;
     FCellStyle: integer;
+    function GetDataAsDouble: double;
+    procedure SetDataAsDouble(const Value: double);
   protected
   public
     constructor Create();virtual;
@@ -90,6 +92,8 @@ type
     property Href: string read FHref write FHref;              //гиперссылка
     property HRefScreenTip: string read FHRefScreenTip write FHRefScreenTip; //подпись гиперссылки
     property ShowComment: boolean read FShowComment write FShowComment default false;
+
+    property AsDouble: double read GetDataAsDouble write SetDataAsDouble;
   end;
 
   //стиль линии границы
@@ -1712,6 +1716,30 @@ begin
   FCellStyle := -1; //по дефолту
   FAlwaysShowComment := false;
   FShowComment := false;
+end;
+
+function TZCell.GetDataAsDouble: double;
+Var err: integer;
+begin
+  Val(FData, Result, err); // need old-school to ignore regional settings
+  if err>0 then Raise EConvertError.Create('ZxCell: Cannot cast data to number');
+end;
+
+procedure TZCell.SetDataAsDouble(const Value: double);
+var s: string;
+begin
+   Str(Value, s); // need old-school to ignore regional settings
+
+   s := UpperCase(Trim(s));
+// UpperCase for exponent w.r.t OpenXML format
+// Trim for leading space w.r.t XML SS format
+
+   FData := s;
+
+   CellType := ZENumber;
+// Seem natural and logical thing to do w.r.t further export...
+// Seem out of "brain-dead no-automation overall aproach of a component...
+// Correct choice? dunno. I prefer making export better
 end;
 
 procedure TZCell.Assign(Source: TPersistent);

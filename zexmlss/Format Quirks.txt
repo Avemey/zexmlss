@@ -18,6 +18,8 @@ and
     <Cell><Data ss:Type="Number">4</Data><NamedCell ss:Name="Print_Titles"/></Cell>
 
 ## OpenXML ???
+Seems impossible, at least in text realm.
+http://stackoverflow.com/questions/13576555
 
 ## OpenDocument ???
 
