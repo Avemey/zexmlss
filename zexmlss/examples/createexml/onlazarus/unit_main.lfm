@@ -1,0 +1,24 @@
+object frmMain: TfrmMain
+  Left = 373
+  Height = 425
+  Top = 166
+  Width = 781
+  BorderIcons = [biSystemMenu, biMinimize]
+  BorderStyle = bsSingle
+  Caption = 'Пример использования EXMLSS'
+  ClientHeight = 425
+  ClientWidth = 781
+  Font.Height = -11
+  Font.Name = 'MS Sans Serif'
+  Position = poDesktopCenter
+  LCLVersion = '0.9.28.2'
+  object btnCreate: TButton
+    Left = 272
+    Height = 73
+    Top = 160
+    Width = 241
+    Caption = 'Создать файл Excel XML'
+    OnClick = btnCreateClick
+    TabOrder = 0
+  end
+end

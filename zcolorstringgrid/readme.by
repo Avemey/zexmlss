@@ -1,0 +1,45 @@
+ZColorStringGrid 0.4
+Для:
+Delphi 6-7, C++Builder 5-6, Borland Developer Studio 2005, BDS 2006, 
+CodeGear Delphi 2007, CodeGear RAD Studio 2009 і 2010, XE і XE2.
+
+Спадчыннік TStringgrid. 
+Умее:
+ * Выраўноўванне тэксту ў вочку па гарызанталі і вертыкалі
+ * У кожнага вочка свой "стыль" (колер фону, шрыфт (стыль, колер), рамка)
+ * Магчымасць аб'яднання вочак
+ * Шматрадковыя вочкі
+ * Павелічэнне памеру вочка, калі тэкст не змяшчаецца
+ * Паварот шматрадковага тэксту
+
+Ўсталёўка
+---------
+ 1. Delphi 6-7, BDS 2005, BDS 2006, Delphi 2007, CodeGear RAD 
+    Studio 2009/2010
+    1. Выдаліце папярэднюю версію (адпаведныя bpl, dcp і dcu 
+       падчысціце).
+    2. Дадайце (калі неабходна) дырэкторыю з зыходным кодам у Tools->
+       Environment Options->Library->Library Path (для BDS 2005 ці 
+       BDS 2006 у Tools->Options->Environment Options->Delphi Options->
+       Library - Win32->Library Path) 
+    3. Адкрыйце патрэбны *.dpk. Націсніце "Compile" затым "Install".
+
+ 2. C++ Builder 5-6
+    1. Выдаліце папярэднюю версію (адпаведныя bpl і bpi падчысціце).
+    2. Дадайце (калі неабходна) дырэкторыю з зыходным кодам у 
+       Tools->Environment Options->Library->Library Path
+    3. Адкрыйце патрэбны zcolor.bpk. Націсніце "Compile" затым "Install",
+       калі праблемы з *.hpp, то вазьміце патрэбныя файлы з \hpp\cbuilderХ\.
+ 3. Lazarus (толькі ZCLabel)
+    1. Пакет->Адкрыць файл	пакета (*.lpk) (Components->Open Package 
+     File (*.lpk))
+    2. Адкрыць zclabel.lpk
+    3. Націснуць Усталяваць (Install).
+    4. Націснуць "Так"("Yes") калі прапануе перасабраць lazarus.	   
+
+Кантакты
+--------
+	Калі ёсць пытанні, каментары ці прапановы то звяртайцеся.
+	Неборак Руслан
+	url: http:\\avemey.com
+	e-mail: support@avemey.com

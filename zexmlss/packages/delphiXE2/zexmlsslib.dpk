@@ -1,0 +1,47 @@
+package zexmlsslib;
+
+{$R *.res}
+{$R '..\..\src\zexmlss.dcr'}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST ON}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$DEFINE NOZCOLORSTRINGGRID}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'ZEXMLSS component'}
+{$IMPLICITBUILD ON}
+
+requires
+  vcl;
+
+contains
+  zexmlss in '..\..\src\zexmlss.pas',
+  zsspxml in '..\..\src\zsspxml.pas',
+  zeodfs in '..\..\src\zeodfs.pas',
+  duansistr in '..\..\src\duansistr.pas',
+  zesavecommon in '..\..\src\zesavecommon.pas',
+  zeformula in '..\..\src\zeformula.pas',
+  zexmlssutils in '..\..\src\zexmlssutils.pas',
+
+zexslx in '..\..\src\zexslx.pas';
+
+end.

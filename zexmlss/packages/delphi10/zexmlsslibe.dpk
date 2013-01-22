@@ -1,0 +1,42 @@
+package zexmlsslib;
+
+{$R *.RES}
+{$R '..\..\src\zexmlss.dcr'}
+{$ALIGN ON}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST ON}
+{$MINENUMSIZE 1}
+{$DESCRIPTION 'ZEXMLSS component'}
+{$IMAGEBASE $400000}
+{$IMPLICITBUILD ON}
+
+requires
+  vcl, 
+  zcolor;
+
+contains
+  zexmlss in '..\..\src\zexmlss.pas',
+  zsspxml in '..\..\src\zsspxml.pas',
+  zeodfs in '..\..\src\zeodfs.pas',
+  zeformula in '..\..\src\zeformula.pas',
+  zesavecommon in '..\..\src\zesavecommon.pas',
+  zexmlssutils in '..\..\src\zexmlssutils.pas',
+  zexslx in '..\..\src\zexslx.pas';
+
+end.

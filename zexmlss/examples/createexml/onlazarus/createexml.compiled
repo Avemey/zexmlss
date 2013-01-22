@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<CONFIG>
+  <Compiler Value="D:\lang\lazarus\fpc\2.4.4\bin\i386-win32\fpc.exe" Date="1062750310"/>
+  <Params Value=" -MObjFPC -Scgi -CX -O1 -gl -Xg -Xs -XX -WG -vewnhi -l -FuE:\work\delphi\svn\ZEXMLSS003\packages\lazarus\lib\i386-win32 -FuD:\lang\lazarus\lcl\units\i386-win32 -FuD:\lang\lazarus\lcl\units\i386-win32\win32 -FuD:\lang\lazarus\packager\units\i386-win32 -FuE:\work\site\zexmlss\0_0_5\bin\zexmlss\examples\createexml\onlazarus\ -Fu. -ocreateexml.exe -dLCL -dLCLwin32 createexml.lpr"/>
+</CONFIG>

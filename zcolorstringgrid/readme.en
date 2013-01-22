@@ -1,0 +1,43 @@
+ZColorStringGrid 0.4
+For:
+Delphi 6-7, C++Builder 5-6, Borland Developer Studio 2005, BDS 2006, 
+CodeGear Delphi 2007, CodeGear RAD Studio 2009 and 2010, XE and XE2.
+
+Inherited from TStringGrid
+Key features:
+    * Align text in a cell horizontally and vertically
+    * Each cell has its own style (background color, font (style, color), border)
+    * Merge cells
+    * Multi-line cells (not only in fixed cells)
+    * Autogrow cell size, if the text does not fit
+    * Rotate multi-line text
+
+Installation
+------------
+ 1. Delphi 6-7, BDS 2005, BDS 2006, Delphi 2007, CodeGear RAD 
+    Studio 2009/2010
+    1. Uninstall previous version (delete old bpl, dcp and dcu).
+    2. Add (if needed) directory with source code in Tools->
+       Environment Options->Library->Library Path (BDS 2005 or 
+       BDS 2006 in Tools->Options->Environment Options->Delphi Options->
+       Library - Win32->Library Path) 
+    3. Open the runtime package *.dpk. Press "Compile" and "Install".
+
+ 2. C++ Builder 5-6
+    1. Uninstall previous version (delete old bpl and bpi).
+    2. Add (if needed) directory with source code in 
+       Tools->Environment Options->Library->Library Path.
+    3. Open the runtime package zcolor.bpk Press "Compile" and "Install",
+       if (have problems with *.hpp) { get files from \hpp\cbuilderX\ }.
+ 3. Lazarus (only for ZCLabel)
+    1. Components->Open Package File (*.lpk)
+    2. Open zclabel.lpk
+    3. Press "Install".
+    4. Press "Yes" when need recompiling Lazarus.
+
+Contacts
+--------
+	Contact me if you have any questions, comments or suggestions.
+	Programmer: Ruslan V. Neborak
+	url: http:\\avemey.com
+	e-mail: support@avemey.com

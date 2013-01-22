@@ -1,0 +1,42 @@
+package zcolor;
+
+{$R *.res}
+{$R '..\..\src\ZColorStringGrid.dcr'}
+{$R '..\..\src\zclabel.dcr'}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS OFF}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS OFF}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST ON}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'ZColorStringGrid component'}
+{$DESIGNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  vcl;
+
+contains
+  zcftext in '..\..\src\zcftext.pas',
+  ZColorStringGrid in '..\..\src\ZColorStringGrid.pas' {ZColorStringGrid},
+  zclab in '..\..\src\zclab.pas' {zclab};
+
+end.

@@ -1,0 +1,54 @@
+ZEXMLSSLIB 0.0.5 (beta)
+For Lazarus, Delphi 7, C++Builder 6.
+Borland Developer Studio 2005, BDS 2006, CodeGear Delphi 2007, 
+CodeGear RAD Studio 2009, 2010, Delphi XE and XE2.
+(Delphi 5 and 6 not tested. Delphi 5 work only with windows-1251 and CP866 code pages)
+
+Works with Excel XML Spreadsheet / OpenDocument Format (ODS) / OOXML (xlsx - read only) file format without installed Excel/OO Calc.
+
+Install
+---------
+ 1. Lazarus
+  0. Delete {$DEFINE USELCONVENCODING} in src\zexml.inc if don't wont use LConvEncoding.pas. 
+     (UTF-8 will work, for other codepages write converters)
+  1. Components->Open Package File (*.lpk)
+  2. Open zexmlsslib.lpk
+  4. Press "Install".
+  5. Press "Yes" when need recompiling Lazarus.
+
+ 2. Delphi 5-7, BDS 2005, BDS 2006, Delphi 2007, CodeGear RAD Studio 2009/2010, , Delphi XE and XE2.
+    Warning: Delphi 5 will work with windows-1251 and CP866 codepages. For other
+    codepages write converters (or try get system.pas from Delphi 7)!
+  0. Add {$DEFINE NOZCOLORSTRINGGRID} in src\zexml.inc if don't use ZColorStringGrid.     
+  1. Delete previous version zexmlss (delete bpl, dcp and dcu).
+  2. Add (if needed) directory with source code in Tools->
+     Environment Options->Library->Library Path (for BDS 2005 or 
+     BDS 2006 in Tools->Options->Environment Options->Delphi Options->
+     Library - Win32->Library Path) 
+  3. Open zexmlsslibe.dpk (or zexmlsslib.dpk if don't use ZColorStringGrid).
+     Press "Compile". Press "Install".
+
+ 3. C++ Builder 6
+  0. Add {$DEFINE NOZCOLORSTRINGGRID} in src\zexml.inc if don't use ZColorStringGrid.
+  1. Delete previous version zexmlss (delete bpl and bpi).
+  2. Add (if needed) directory with source code in Tools->Environment Options->
+     Library->Library Path
+  3. Open zexmlsslibe.bpk (or zexmlsslib.bpk if don't use ZColorStringGrid). 
+     Press "Compile". Press "Install".
+     If have problems with *.hpp, try get files from \hpp\cbuilder’\.
+
+License
+-------
+This lib is distributed under zlib license.
+
+Warning!!!
+----------
+Future versions may add new properties/methods in clasess and can transfer
+classes/procedures/functions in other files and other.
+
+Contacts
+--------
+   If you have questions, comments or suggestions please contact.
+   Author: Ruslan V. Neborak
+   url: http:\\avemey.com
+   e-mail: support@avemey.com (avemey(nya).tut.by)

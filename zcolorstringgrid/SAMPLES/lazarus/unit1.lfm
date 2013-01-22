@@ -1,0 +1,19 @@
+object Form1: TForm1
+  Left = 234
+  Height = 240
+  Top = 155
+  Width = 320
+  Caption = 'Form1'
+  ClientHeight = 240
+  ClientWidth = 320
+  LCLVersion = '0.9.30.2RC2'
+  object ZCLabel1: TZCLabel
+    Left = 86
+    Height = 70
+    Top = 88
+    Width = 65
+    Caption = 'Текст на русском'
+    IndentHor = 0
+    OnClick = ZCLabel1Click
+  end
+end

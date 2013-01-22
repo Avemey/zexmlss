@@ -1,0 +1,122 @@
+object frmMain: TfrmMain
+  Left = 267
+  Height = 382
+  Top = 128
+  Width = 738
+  Caption = 'lazarus + zclabel example (http://avemey.com)'
+  ClientHeight = 382
+  ClientWidth = 738
+  OnCreate = FormCreate
+  LCLVersion = '0.9.30.2RC2'
+  object ZCLabel1: TZCLabel
+    Left = 20
+    Height = 104
+    Top = 8
+    Width = 152
+    Caption = 'ZCLabel1'
+    Font.Height = -19
+    IndentHor = 0
+    ParentFont = False
+  end
+  object ZCLabel2: TZCLabel
+    Left = 200
+    Height = 104
+    Top = 8
+    Width = 152
+    AlignmentHorizontal = 1
+    Caption = 'ZCLabel1'
+    Font.Height = -19
+    IndentHor = 0
+    ParentFont = False
+  end
+  object ZCLabel3: TZCLabel
+    Left = 392
+    Height = 104
+    Top = 8
+    Width = 152
+    AlignmentHorizontal = 2
+    Caption = 'ZCLabel1'
+    Font.Height = -19
+    IndentHor = 0
+    ParentFont = False
+  end
+  object ZCLabel4: TZCLabel
+    Left = 568
+    Height = 104
+    Top = 8
+    Width = 152
+    Caption = 'ZCLabel1'
+    Font.Height = -19
+    IndentHor = 0
+    Rotate = 180
+    ParentFont = False
+  end
+  object ZCLabel5: TZCLabel
+    Left = 20
+    Height = 104
+    Top = 136
+    Width = 152
+    AlignmentVertical = 1
+    Caption = 'какой-то текст'
+    Color = clInfoBk
+    Font.Height = -19
+    IndentHor = 0
+    Transparent = False
+    ParentColor = False
+    ParentFont = False
+  end
+  object ZCLabel6: TZCLabel
+    Left = 204
+    Height = 104
+    Top = 136
+    Width = 132
+    AlignmentVertical = 1
+    AlignmentHorizontal = 1
+    Caption = 'Поворот текста на 60 градусов'
+    Font.Height = -19
+    IndentHor = 0
+    Rotate = 60
+    ParentFont = False
+  end
+  object ZCLabel8: TZCLabel
+    Left = 392
+    Height = 216
+    Top = 136
+    Width = 328
+    AlignmentVertical = 1
+    AlignmentHorizontal = 1
+    Caption = 'ZCLabel8'
+    Font.Color = clGradientActiveCaption
+    Font.Height = -27
+    Font.Style = [fsBold]
+    IndentHor = 0
+    Rotate = -60
+    ParentFont = False
+  end
+  object ZCLabel9: TZCLabel
+    Left = 20
+    Height = 104
+    Top = 256
+    Width = 112
+    AlignmentVertical = 1
+    AlignmentHorizontal = 1
+    Caption = 'поворот текста на 270 градусов'
+    Font.Height = -19
+    IndentHor = 0
+    Rotate = 270
+    ParentFont = False
+  end
+  object ZCLabel10: TZCLabel
+    Left = 184
+    Height = 112
+    Top = 248
+    Width = 112
+    AlignmentVertical = 1
+    AlignmentHorizontal = 1
+    Caption = 'поворот текста на 90 градусов'
+    Font.Height = -19
+    IndentHor = 0
+    Rotate = 90
+    ParentFont = False
+  end
+end

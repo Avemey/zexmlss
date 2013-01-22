@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<CONFIG>
+  <Package Version="3">
+    <PathDelim Value="\"/>
+    <Name Value="zexmlsslib"/>
+    <Author Value="Ruslan Neborak"/>
+    <CompilerOptions>
+      <Version Value="9"/>
+      <PathDelim Value="\"/>
+      <SearchPaths>
+        <OtherUnitFiles Value="../../src/;..\..\src"/>
+        <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
+      </SearchPaths>
+      <Parsing>
+        <SyntaxOptions>
+          <UseAnsiStrings Value="False"/>
+        </SyntaxOptions>
+      </Parsing>
+      <Other>
+        <CompilerPath Value="$(CompPath)"/>
+      </Other>
+    </CompilerOptions>
+    <Description Value="Работа с документами Excel XML SpreadSheet (excel xml), ODS и XLSX (пока только на чтение)"/>
+    <License Value="zlib"/>
+    <Version Release="5"/>
+    <Files Count="7">
+      <Item1>
+        <Filename Value="..\..\src\zexmlss.pas"/>
+        <HasRegisterProc Value="True"/>
+        <UnitName Value="zexmlss"/>
+      </Item1>
+      <Item2>
+        <Filename Value="..\..\src\zexmlssutils.pas"/>
+        <UnitName Value="zexmlssutils"/>
+      </Item2>
+      <Item3>
+        <Filename Value="..\..\src\zsspxml.pas"/>
+        <UnitName Value="zsspxml"/>
+      </Item3>
+      <Item4>
+        <Filename Value="..\..\src\zeformula.pas"/>
+        <UnitName Value="zeformula"/>
+      </Item4>
+      <Item5>
+        <Filename Value="..\..\src\zeodfs.pas"/>
+        <UnitName Value="zeodfs"/>
+      </Item5>
+      <Item6>
+        <Filename Value="..\..\src\zesavecommon.pas"/>
+        <UnitName Value="zesavecommon"/>
+      </Item6>
+      <Item7>
+        <Filename Value="..\..\src\zexslx.pas"/>
+        <UnitName Value="zexslx"/>
+      </Item7>
+    </Files>
+    <Type Value="RunAndDesignTime"/>
+    <RequiredPkgs Count="2">
+      <Item1>
+        <PackageName Value="lcl"/>
+        <MinVersion Major="1"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="FCL"/>
+        <MinVersion Major="1" Valid="True"/>
+      </Item2>
+    </RequiredPkgs>
+    <UsageOptions>
+      <UnitPath Value="$(PkgOutDir)"/>
+    </UsageOptions>
+    <PublishOptions>
+      <Version Value="2"/>
+      <IgnoreBinaries Value="False"/>
+    </PublishOptions>
+  </Package>
+</CONFIG>
