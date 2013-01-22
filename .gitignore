@@ -1,0 +1,17 @@
+
+/__history
+/Win32
+*.~*
+
+*.identcache
+*.otares
+*.local
+*.dsk
+*.skincfg
+*.tvsconfig
+
+*.exe
+*.dcu
+*.dcp
+*.bpl
+*.dll
