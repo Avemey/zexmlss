@@ -13,5 +13,6 @@
 *.exe
 *.dcu
 *.dcp
+*.ddp
 *.bpl
 *.dll
