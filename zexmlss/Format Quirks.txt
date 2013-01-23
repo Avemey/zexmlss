@@ -1,0 +1,38 @@
+...when GitHub wiki can not escape XML tags
+
+# Repeatable printable columns
+## Excel XML
+
+<Worksheet ss:Name="Лист1">
+  <Names>
+   <NamedRange ss:Name="Print_Titles" ss:RefersTo="=Лист1!C2,Лист1!R3"/>
+  </Names>
+
+and
+
+   <Row ss:Index="3" ss:AutoFitHeight="0">
+    <Cell ss:Index="2"><Data ss:Type="Number">1</Data><NamedCell
+      ss:Name="Print_Titles"/></Cell>
+    <Cell><Data ss:Type="Number">2</Data><NamedCell ss:Name="Print_Titles"/></Cell>
+    <Cell><Data ss:Type="Number">3</Data><NamedCell ss:Name="Print_Titles"/></Cell>
+    <Cell><Data ss:Type="Number">4</Data><NamedCell ss:Name="Print_Titles"/></Cell>
+
+## OpenXML ???
+Seems impossible, at least in text realm.
+http://stackoverflow.com/questions/13576555
+
+## OpenDocument ???
+
+------------
+
+Float numbers:
+
+# Excel XML
+1. Space can go after the number but NEVER before it
+2. "+12345" is possible, just like "12345"
+3. Exponent can be both "E" and "e"
+4. No thousand separator, decimal separator is always DOT
+
+# OpenXML
+1. Exponent can only be "E", "e" is read eroneously (Excel 2010)
+2. Spaces around the value seem to work, maybe changing type to string, but at least page loada
