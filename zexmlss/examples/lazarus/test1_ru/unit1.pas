@@ -30,7 +30,7 @@ var
   Form1: TForm1; 
 
 implementation
-uses zexslx, zeZippy, zeZippyLazip;
+uses zexlsx, zeZippy, zeZippyLazip;
 
 {$R *.lfm}
 
