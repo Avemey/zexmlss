@@ -165,10 +165,13 @@ end;
 function TZxZipGen.NewStream(const RelativeName: TFileName): TStream;
 var idx: integer;
     fname: TFileName;
- procedure UnifyDelims(const c: char);
+ procedure UnifyDelims(const c: char; const PathDelim: char = SysUtils.PathDelim);
  begin
   if PathDelim <> c then
      fname := StringReplace(fname, c, PathDelim, [rfReplaceAll]);
+
+  while Pos(PathDelim + c, fname)>0 do // ugly, but actually should bever happen! unless bugcheck
+        fname := StringReplace(fname, PathDelim+PathDelim, PathDelim, [rfReplaceAll]);
  end;
 begin
   RequireState(zgsAccepting);
@@ -181,7 +184,9 @@ begin
      else idx := 1;
   fname := Copy(RelativeName, idx, Length(RelativeName));
 
-  UnifyDelims('\'); UnifyDelims('/');
+//  UnifyDelims('\'); UnifyDelims('/');
+   UnifyDelims('\', '/');  // Excel 2010 chokes on back-slashes
+
 
   if fname = '' then raise EZxZipGen.Create('Internal file should have a name.');
 

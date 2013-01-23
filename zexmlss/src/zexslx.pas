@@ -4524,7 +4524,7 @@ begin
     ZipGenerator.SealStream(Stream);   Stream := nil;
 
     // xl/_rels/workbook.xml.rels 
-    path_relsw := path_xl + PathDelim + '_rels' + PathDelim;
+    path_relsw := path_xl + {PathDelim +} '_rels' + PathDelim;
 //    if (not DirectoryExists(path_relsw)) then
 //      ForceDirectories(path_relsw);
     Stream := ZipGenerator.NewStream(path_relsw + 'workbook.xml.rels');
