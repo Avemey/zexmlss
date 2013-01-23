@@ -6,7 +6,7 @@ unit zeZippyZipMaster;
    (c) the Arioch, licensed under zLib license *)
 
 interface
-uses zeZippy, SysUtils, Classes, ZipMstr19;
+uses zeZippy, SysUtils, Classes, ZipMstr;
 
 type TZxZipMastered = class (TZxZipGen)
      public
@@ -16,7 +16,7 @@ type TZxZipMastered = class (TZxZipGen)
        procedure BeforeDestruction; override;
 
      protected
-       FZM: TZipMaster19;
+       FZM: TZipMaster;
 
        procedure DoAbortAndDelete;  override;
        procedure DoSaveAndSeal;  override;
@@ -42,9 +42,9 @@ constructor TZxZipMastered.Create(const ZipFile: TFileName);
 begin
   inherited;
 
-  FZM := TZipMaster19.Create(nil);
+  FZM := TZipMaster.Create(nil);
   FZM.ZipFileName := Self.ZipFileName;
-  FZM.AddOptions := [AddDirNames, AddSafe];
+  FZM.AddOptions := [AddDirNames{, AddSafe}];
   FZM.WriteOptions := [zwoForceDest];
 end;
 
@@ -66,14 +66,15 @@ end;
 
 function TZxZipMastered.DoSealStream(const Data: TStream; const RelName: TFileName): boolean;
 begin
-  FZM.AddStreamToStream(Data as TMemoryStream);
+//  FZM.AddStreamToStream(Data as TMemoryStream);
+  FZM.ZipStream.LoadFromStream(Data);
   FZM.AddStreamToFile(RelName,0,0);
   Result := True;
 end;
 
 procedure TZxZipMastered.DoSaveAndSeal;
 begin
-  FZM.Add;
+//  FZM.Add;
    // maybe nothign at all needed ?
    // Add*** methods loads and unloads DLL
 end;

@@ -179,16 +179,13 @@ begin
   if RelativeName[Length(RelativeName)] = PathDelim then
      raise EZxZipGen.Create('Zip generator accepts files, not directories: '+RelativeName);
 
-  If Pos(PathDelim, RelativeName) = 1 // may be empty
-     then idx := 2
-     else idx := 1;
-  fname := Copy(RelativeName, idx, Length(RelativeName));
-
+  fname := RelativeName;
 //  UnifyDelims('\'); UnifyDelims('/');
-   UnifyDelims('\', '/');  // Excel 2010 chokes on back-slashes
-
+  UnifyDelims('\', '/');  // Excel 2010 chokes on back-slashes
 
   if fname = '' then raise EZxZipGen.Create('Internal file should have a name.');
+
+  if fname[1] = '/' then Delete(fname,1,1);
 
   if FSealedStreams.Find(fname, idx) or FActiveStreams.Find(fname, idx) then
      raise EZxZipGen.Create('File >>'+fname+'<< already was added to generator.');
