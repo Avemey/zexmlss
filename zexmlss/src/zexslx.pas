@@ -42,7 +42,8 @@ interface
 {$ENDIF}
 
 uses
-  SysUtils, classes, zsspxml, zexmlss, zesavecommon, graphics, zeformula
+  SysUtils, classes, zsspxml, zexmlss, zesavecommon, graphics, zeformula,
+  zeZippy
   {$IFNDEF FPC}
   ,windows
   {$ELSE}
@@ -87,6 +88,12 @@ function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const Sheets
 function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
 {$ENDIF}
+
+function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string;
+                         BOM: ansistring = '';
+                         AllowUnzippedFolder: boolean = false;
+                         ZipGenerator: TZxZipGen = nil): integer;
 
 //Дополнительные функции, на случай чтения отдельного файла
 function ZEXSLXReadTheme(var Stream: TStream; var ThemaFillsColors: TZESaveIntArray; var ThemaColorCount: integer): boolean;
@@ -4435,6 +4442,152 @@ begin
 end; //ZEXLSXCreateDocPropsCore
 
 //Сохраняет незапакованный документ в формате Office Open XML (OOXML)
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      PathName: string                  - путь к директории для сохранения (должна заканчиватся разделителем директории)
+//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
+//  const SheetsNames: array of string    - массив названий страниц
+//                                          (количество элементов в двух массивах должны совпадать)
+//      TextConverter: TAnsiToCPConverter - конвертер
+//      CodePageName: string              - имя кодировки
+//      BOM: ansistring                   - Byte Order Mark
+//RETURN
+//      integer
+function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string;
+                         BOM: ansistring = '';
+                         AllowUnzippedFolder: boolean = false;
+                         ZipGenerator: TZxZipGen = nil): integer;
+var
+  _pages: TZESaveIntArray;      //номера страниц
+  _names: TZESaveStrArray;      //названия страниц
+  kol, i: integer;
+  Stream: TStream;
+  need_comments: boolean;
+  path_xl, path_sheets, path_relsmain, path_relsw, path_docprops: string;
+  _commentArray: TZESaveIntArray;
+
+  czg: CZxZipGens;
+
+begin
+  result := 0;
+  Stream := nil;
+  kol := 0;
+  need_comments := false;
+
+  try
+    if (not ZECheckTablesTitle(XMLSS, SheetsNumbers, SheetsNames, _pages, _names, kol)) then
+    begin
+      result := 2;
+      exit;
+    end;
+
+    if nil = ZipGenerator then begin
+      CZG := QueryZipGen;
+      if CZG = nil then
+        if AllowUnzippedFolder
+           then CZG := QueryDummyZipGen
+           else raise EZxZipGen.Create('No zip generators registered, folder output disabled.');
+           // result := 3 ????
+      ZipGenerator := CZG.Create(PathName);
+    end;
+
+//    if (not ZE_CheckDirExist(PathName)) then
+//    begin
+//      result := 3;
+//      exit;
+//    end;
+
+//    path_xl := PathName + 'xl' + PathDelim;
+//    if (not DirectoryExists(path_xl)) then
+//      ForceDirectories(path_xl);
+
+    path_xl := 'xl' + PathDelim;
+    //стили
+    Stream := ZipGenerator.NewStream(path_xl + 'styles.xml');
+    ZEXLSXCreateStyles(XMLSS, Stream, TextConverter, CodePageName, BOM);
+    ZipGenerator.SealStream(Stream);   Stream := nil;
+//    FreeAndNil(Stream);
+
+    //sharedStrings.xml
+    Stream := ZipGenerator.NewStream(path_xl + 'sharedStrings.xml');
+    ZEXLSXCreateSharedStrings(XMLSS, Stream, TextConverter, CodePageName, BOM);
+    ZipGenerator.SealStream(Stream);    Stream := nil;
+//    FreeAndNil(Stream);
+
+    // _rels/.rels
+    path_relsmain := {PathName + PathDelim +} '_rels' + PathDelim;
+//    if (not DirectoryExists(path_relsmain)) then
+//      ForceDirectories(path_relsmain);
+    Stream := ZipGenerator.NewStream(path_relsmain + '.rels');
+    ZEXLSXCreateRelsMain(Stream, TextConverter, CodePageName, BOM);
+    ZipGenerator.SealStream(Stream);   Stream := nil;
+
+    // xl/_rels/workbook.xml.rels 
+    path_relsw := path_xl + PathDelim + '_rels' + PathDelim;
+//    if (not DirectoryExists(path_relsw)) then
+//      ForceDirectories(path_relsw);
+    Stream := ZipGenerator.NewStream(path_relsw + 'workbook.xml.rels');
+    ZEXLSXCreateRelsWorkBook(kol, Stream, TextConverter, CodePageName, BOM);
+    ZipGenerator.SealStream(Stream);   Stream := nil;
+
+    path_sheets := path_xl + 'worksheets' + PathDelim;
+//    if (not DirectoryExists(path_sheets)) then
+//      ForceDirectories(path_sheets);
+
+    SetLength(_commentArray, kol);
+
+    //Листы документа
+    for i := 0 to kol - 1 do
+    begin
+      _commentArray[i] := 0;
+      Stream := ZipGenerator.NewStream(path_sheets + 'sheet' + IntToStr(i + 1) + '.xml');
+      ZEXLSXCreateSheet(XMLSS, Stream, _pages[i], TextConverter, CodePageName, BOM, need_comments);
+      if (need_comments) then
+        _commentArray[i] := 1;
+      ZipGenerator.SealStream(Stream);   Stream := nil;
+
+      if (need_comments) then
+      begin
+        _commentArray[i] := 1;
+        //создать файл с комментариями
+      end;  
+    end; //for i
+
+    //workbook.xml - список листов
+    Stream := ZipGenerator.NewStream(path_xl + 'workbook.xml');
+    ZEXLSXCreateWorkBook(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM);
+    ZipGenerator.SealStream(Stream);  Stream := nil;
+
+    //[Content_Types].xml
+    Stream := ZipGenerator.NewStream({PathName +} '[Content_Types].xml');
+    ZEXLSXCreateContentTypes(XMLSS, Stream, kol, 0, nil, TextConverter, CodePageName, BOM);
+    ZipGenerator.SealStream(Stream);  Stream := nil;
+
+    path_docprops := {PathName +} 'docProps' + PathDelim;
+//    if (not DirectoryExists(path_docprops)) then
+//      ForceDirectories(path_docprops);
+
+    // docProps/app.xml
+    Stream := ZipGenerator.NewStream(path_docprops + 'app.xml');
+    ZEXLSXCreateDocPropsApp(Stream, TextConverter, CodePageName, BOM);
+    ZipGenerator.SealStream(Stream);  Stream := nil;
+
+    // docProps/core.xml
+    Stream := ZipGenerator.NewStream(path_docprops + 'core.xml');
+    ZEXLSXCreateDocPropsCore(XMLSS, Stream, TextConverter, CodePageName, BOM);
+    ZipGenerator.SealStream(Stream); Stream := nil;
+
+    ZipGenerator.SaveAndSeal;
+  finally
+    ZESClearArrays(_pages, _names);
+    if (Assigned(Stream)) then
+      FreeAndNil(Stream);
+    SetLength(_commentArray, 0);
+    _commentArray := nil;
+    ZipGenerator.Free;
+  end;
+end; //SaveXmlssToXLSXPath     //Сохраняет незапакованный документ в формате Office Open XML (OOXML)
 //INPUT
 //  var XMLSS: TZEXMLSS                   - хранилище
 //      PathName: string                  - путь к директории для сохранения (должна заканчиватся разделителем директории)

@@ -68,11 +68,14 @@ function TZxZipMastered.DoSealStream(const Data: TStream; const RelName: TFileNa
 begin
   FZM.AddStreamToStream(Data as TMemoryStream);
   FZM.AddStreamToFile(RelName,0,0);
+  Result := True;
 end;
 
 procedure TZxZipMastered.DoSaveAndSeal;
 begin
   FZM.Add;
+   // maybe nothign at all needed ?
+   // Add*** methods loads and unloads DLL
 end;
 
 initialization
