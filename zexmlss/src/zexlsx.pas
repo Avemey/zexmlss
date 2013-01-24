@@ -30,7 +30,7 @@
 }
 //HINT: File should have name 'zexlsx.pas', but my hands ... :)
 //****************************************************************
-unit zexslx;
+unit zexlsx;
 
 interface
 
