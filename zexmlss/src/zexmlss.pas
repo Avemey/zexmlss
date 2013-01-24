@@ -77,6 +77,8 @@ type
     FCellStyle: integer;
     function GetDataAsDouble: double;
     procedure SetDataAsDouble(const Value: double);
+    procedure SetDataAsInteger(const Value: integer);
+    function GetDataAsInteger: integer;
   protected
   public
     constructor Create();virtual;
@@ -94,6 +96,7 @@ type
     property ShowComment: boolean read FShowComment write FShowComment default false;
 
     property AsDouble: double read GetDataAsDouble write SetDataAsDouble;
+    property AsInteger: integer read GetDataAsInteger write SetDataAsInteger;
   end;
 
   //стиль линии границы
@@ -347,11 +350,11 @@ type
     property MarginLeft: word read FMarginLeft write FMarginLeft default 20;
     property MarginTop: word read FMarginTop write FMarginTop default 25;
     property MarginRight: word read FMarginRight write FMarginRight default 20;
-    property PaperSize: byte read FPaperSize write FPaperSize default 9; // A4 
+    property PaperSize: byte read FPaperSize write FPaperSize default 9; // A4
     property PortraitOrientation: boolean read FPortraitOrientation write FPortraitOrientation default true;
     property CenterHorizontal: boolean read FCenterHorizontal write FCenterHorizontal default false;
     property CenterVertical: boolean read FCenterVertical write FCenterVertical default false;
-    property StartPageNumber: integer read FStartPageNumber write FStartPageNumber default 1; 
+    property StartPageNumber: integer read FStartPageNumber write FStartPageNumber default 1;
     property HeaderMargin: word read FHeaderMargin write FHeaderMargin default 13;
     property FooterMargin: word read FFooterMargin write FFooterMargin default 13;
     property HeaderData: string read FHeaderData write FHeaderData;
@@ -556,7 +559,7 @@ implementation
 //      St: string - исходная строка
 //      var Corrected: string - исправленная строка
 //      var UseXMLNS: boolean - есть ли в строке правильные парные тэги
-//                              true - есть                        
+//                              true - есть
 procedure CorrectStrForXML(const St: string; var Corrected: string; var UseXMLNS: boolean);
 type
   StackData = record
@@ -865,7 +868,7 @@ begin
         '0'..'9': t := ord(value[i]) - 48;
         'A'..'F': t := 10 + ord(value[i]) - 65;
         else
-          t := 0; 
+          t := 0;
       end;
       a[n] := a[n] * 16 + t;
       if i mod 2 = 0 then inc(n);
@@ -1693,7 +1696,7 @@ end;
 procedure TZStyles.Clear();
 var
   i: integer;
-  
+
 begin
   //очистка стилей
   for i:= 0 to FCount - 1 do
@@ -1723,6 +1726,18 @@ Var err: integer;
 begin
   Val(FData, Result, err); // need old-school to ignore regional settings
   if err>0 then Raise EConvertError.Create('ZxCell: Cannot cast data to number');
+end;
+
+function TZCell.GetDataAsInteger: integer;
+begin
+  Result := StrToInt(Data);
+end;
+
+procedure TZCell.SetDataAsInteger(const Value: integer);
+begin
+  Data := Trim(IntToStr(Value));
+// Val adds the prepending space, maybe some I2S implementation would adds too
+// and Excel dislikes it. Better safe than sorry.
 end;
 
 procedure TZCell.SetDataAsDouble(const Value: double);
