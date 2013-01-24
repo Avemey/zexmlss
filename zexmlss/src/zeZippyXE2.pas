@@ -68,6 +68,9 @@ end;
 function TZxZipXE2.DoSealStream(const Data: TStream;
   const RelName: TFileName): boolean;
 begin
+  Data.Position := 0;
+  // like TZipper of Lazarus, XE2's zip goes nuts if not resetting a position
+  // it even generates broken zip file with fake CRC
   FZ.Add(Data, RelName);
   Result := true;
 end;
