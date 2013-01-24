@@ -18,3 +18,7 @@
 *.dll
 
 *.ppu
+*.o
+*.compiled
+*.obj
+*.dbg

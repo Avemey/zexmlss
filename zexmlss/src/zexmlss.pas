@@ -1736,6 +1736,7 @@ end;
 procedure TZCell.SetDataAsInteger(const Value: integer);
 begin
   Data := Trim(IntToStr(Value));
+  CellType := ZENumber;
 // Val adds the prepending space, maybe some I2S implementation would adds too
 // and Excel dislikes it. Better safe than sorry.
 end;
