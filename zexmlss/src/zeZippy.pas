@@ -99,7 +99,7 @@ procedure TZxZipGen.BeforeDestruction;
   begin
     for i := sl.Count - 1 downto 0 do begin
         sl.Objects[i].Free; // can be nil - that is okay for .Free
-        sl.Delete(i);
+       // sl.Delete(i); like anyone cares, really :-)
     end;
     sl.Free;
   end;

@@ -5,7 +5,8 @@ unit Unit1;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls, zexmlss, zeodfs, zexmlssutils, zeformula, zsspxml;
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
+  EditBtn, zexmlss, zeodfs, zexmlssutils, zeformula, zsspxml;
 
 type
 
@@ -14,6 +15,8 @@ type
   TForm1 = class(TForm)
     btnCreate: TButton;
     btnFormula: TButton;
+    edSavePath: TDirectoryEdit;
+    Label1: TLabel;
     procedure btnCreateClick(Sender: TObject);
     procedure btnFormulaClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -27,6 +30,7 @@ var
   Form1: TForm1; 
 
 implementation
+uses zexlsx, zeZippy, zeZippyLazip;
 
 {$R *.lfm}
 
@@ -43,8 +47,12 @@ var
   i, j: integer;
   TextConverter: TAnsiToCPConverter;
   sEOL: string;
-
+  Path: TFileName;
 begin
+  Path := edSavePath.Directory;
+  ForceDirectories(ExcludeTrailingPathDelimiter(Path));
+  Path := IncludeTrailingPathDelimiter(Path);
+
   TextConverter := nil;
   {$IFNDEF FPC}
     {$IF CompilerVersion < 20} // < RAD Studio 2009
@@ -200,6 +208,9 @@ begin
         Cell[6, i].CellStyle := i + 3;
         Rows[i].HeightMM := 14;
       end;
+
+      for i := 1 to 10 do
+         Cell[i, 26].AsDouble := 5.0 / i;
     end;
 
     //копирование с 0 на 1-ую страницу
@@ -208,21 +219,33 @@ begin
 
     //сохранить 0-ую и 1-ую страницу
     //сохранить как excel xml
-    SaveXmlssToEXML(XMLSS, {какой-то путь}'save_test.xml',
+    SaveXmlssToEXML(XMLSS, {какой-то путь} Path +'save_test.xml',
     	[0, 1], [], TextConverter, 'UTF-8');
     //Примеры путей:
     //	/home/user_name/some_path/
     //	d:\some_path\
     //Путь должен существовать!
     //сохранить как незапакованный ods
-    SaveXmlssToODFSPath(XMLSS, 'd:\work\ods_path\',
+    SaveXmlssToODFSPath(XMLSS, Path+'ods_path\',
     	[0, 1], [], TextConverter, 'UTF-8');
     {$IFDEF FPC}
     //Пока только для лазаруса
     //сохранить как ods
-    SaveXmlssToODFS(XMLSS, {какой-то путь}'save_test.ods',
+    SaveXmlssToODFS(XMLSS, Path+'save_test.ods',
     	[0, 1], [], TextConverter, 'UTF-8');
     {$ENDIF}
+
+    SaveXmlssToXLSX(XMLSS, Path+'save_test_laz.xlsx',
+    	[0, 1], [], TextConverter, 'UTF-8');
+
+    SaveXmlssToXLSXPath(XMLSS, Path+'xlsx_path_laz\',
+    	[0, 1], [], TextConverter, 'UTF-8');
+
+    ExportXmlssToXLSX( XMLSS, Path+'xlsx_path_generic',
+    	[0, 1], [], TextConverter, 'UTF-8', '', true, QueryDummyZipGen);
+
+    ExportXmlssToXLSX( XMLSS, Path+'save_test_generic.xlsx',
+    	[0, 1], [], TextConverter, 'UTF-8');
 
   finally
     FreeAndNil(XMLSS);
@@ -234,7 +257,7 @@ var
   XMLSS: TZEXMLSS;
   i, j: integer;
   TextConverter: TAnsiToCPConverter;
-  sEOL, s: string;
+  (*sEOL,*) s: string;
 
 begin
   TextConverter := nil;
@@ -244,11 +267,11 @@ begin
     {$IFEND}
   {$ENDIF}
 
-  {$IFDEF FPC}
+ (* {$IFDEF FPC}
   sEOL := LineEnding;
   {$ELSE}
   sEOL := sLineBreak;
-  {$ENDIF}
+  {$ENDIF}      *)
 
   XMLSS := TZEXMLSS.Create(nil);
   try

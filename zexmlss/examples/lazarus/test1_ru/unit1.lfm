@@ -1,13 +1,13 @@
 object Form1: TForm1
-  Left = 467
+  Left = 649
   Height = 240
-  Top = 252
+  Top = 178
   Width = 320
   Caption = 'Form1'
   ClientHeight = 240
   ClientWidth = 320
   OnCreate = FormCreate
-  LCLVersion = '0.9.30.2RC2'
+  LCLVersion = '1.1'
   object btnCreate: TButton
     Left = 96
     Height = 25
@@ -25,5 +25,25 @@ object Form1: TForm1
     Caption = 'btnFormula'
     OnClick = btnFormulaClick
     TabOrder = 1
+  end
+  object edSavePath: TDirectoryEdit
+    Left = 24
+    Height = 23
+    Top = 40
+    Width = 248
+    Directory = 'd:\tmp'
+    ShowHidden = False
+    ButtonWidth = 23
+    NumGlyphs = 1
+    MaxLength = 0
+    TabOrder = 2
+  end
+  object Label1: TLabel
+    Left = 9
+    Height = 15
+    Top = 19
+    Width = 68
+    Caption = 'Save files to: '
+    ParentColor = False
   end
 end
