@@ -1744,18 +1744,22 @@ end;
 procedure TZCell.SetDataAsDouble(const Value: double);
 var s: string;
 begin
-   Str(Value, s); // need old-school to ignore regional settings
+ if Value = 0
+    then SetDataAsInteger(0) // work around Excel 2010 weird XLSX bug
+    else begin
+       Str(Value, s); // need old-school to ignore regional settings
 
-   s := UpperCase(Trim(s));
-// UpperCase for exponent w.r.t OpenXML format
-// Trim for leading space w.r.t XML SS format
+       s := UpperCase(Trim(s));
+      // UpperCase for exponent w.r.t OpenXML format
+      // Trim for leading space w.r.t XML SS format
 
-   FData := s;
+       FData := s;
 
-   CellType := ZENumber;
-// Seem natural and logical thing to do w.r.t further export...
-// Seem out of "brain-dead no-automation overall aproach of a component...
-// Correct choice? dunno. I prefer making export better
+       CellType := ZENumber;
+      // Seem natural and logical thing to do w.r.t further export...
+      // Seem out of "brain-dead no-automation overall aproach of a component...
+      // Correct choice? dunno. I prefer making export better
+    end
 end;
 
 procedure TZCell.Assign(Source: TPersistent);
