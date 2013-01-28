@@ -36,3 +36,4 @@ Float numbers:
 # OpenXML
 1. Exponent can only be "E", "e" is read eroneously (Excel 2010)
 2. Spaces around the value seem to work, maybe changing type to string, but at least page loada
+3. zero can only be integer, not float for Excel 2003 - 2010: http://social.msdn.microsoft.com/Forums/en-US/oxmlsdk/thread/0f8a47df-a8e2-4519-a63d-b15c9725931e
