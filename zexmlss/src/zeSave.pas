@@ -20,9 +20,9 @@ type IZXMLSSave = interface
         function Pages(const numbers: array of integer): iZXMLSSave; overload;
         function Pages(const titles: array of string): iZXMLSSave; overload;
 
-        function CharSet(const cs: string): iZXMLSSave; overload;
+        function CharSet(const cs: AnsiString): iZXMLSSave; overload;
         function CharSet(const converter: TAnsiToCPConverter): iZXMLSSave; overload;
-        function CharSet(const cs: string; const converter: TAnsiToCPConverter): iZXMLSSave; overload;
+        function CharSet(const cs: AnsiString; const converter: TAnsiToCPConverter): iZXMLSSave; overload;
         function CharSet(const codepage: word): iZXMLSSave; overload;
 
         function BOM(const Unicode_BOM: AnsiString): iZXMLSSave; // better rawbytestring ?
@@ -33,6 +33,7 @@ type IZXMLSSave = interface
         /// returns zero on success, according to original
         ///     description for SaveXmlssToEXML
         function Save: integer;
+        function InternalSave: integer; // ugly, but implementation-specific typcast would be ugly too
 end;
 
 type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
@@ -52,9 +53,9 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
         function Pages(const numbers: array of integer): iZXMLSSave; overload;
         function Pages(const titles: array of string): iZXMLSSave; overload;
 
-        function CharSet(const cs: string): iZXMLSSave; overload;
+        function CharSet(const cs: AnsiString): iZXMLSSave; overload;
         function CharSet(const converter: TAnsiToCPConverter): iZXMLSSave; overload;
-        function CharSet(const cs: string; const converter: TAnsiToCPConverter): iZXMLSSave; overload;
+        function CharSet(const cs: AnsiString; const converter: TAnsiToCPConverter): iZXMLSSave; overload;
         function CharSet(const codepage: word): iZXMLSSave; overload;
 
         function BOM(const Unicode_BOM: AnsiString): iZXMLSSave; // better rawbytestring ?
@@ -89,7 +90,7 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
         ///
         /// tries to guess format by filename in the base class
         function InternalSave: integer; virtual;
-        class function FormatDescriptions: TStringDynArray; virtual; abstract;
+        class function FormatDescriptions: TStringDynArray; virtual;
      end;
 
      EZXSaveException = class (Exception);
@@ -106,7 +107,7 @@ begin
    Result := self;
 end;
 
-function TZXMLSSave.CharSet(const cs: string;
+function TZXMLSSave.CharSet(const cs: AnsiString;
   const converter: TAnsiToCPConverter): iZXMLSSave;
 begin
   Result := CharSet(cs);
@@ -120,14 +121,14 @@ var t: TEncoding;
 begin
   t := TEncoding.GetEncoding(codepage);
   try
-    fCharSet := t.EncodingName;
+    fCharSet := AnsiString(t.EncodingName);
   finally
     t.Free;
   end;
   Result := self;
 end;
 
-function TZXMLSSave.CharSet(const cs: string): iZXMLSSave;
+function TZXMLSSave.CharSet(const cs: AnsiString): iZXMLSSave;
 begin
   fCharSet := cs; // check that encoding is real ???
   Result := self;
@@ -158,8 +159,8 @@ begin
   Self.FZipGen  := zxsaver.FZipGen;
 end;
 
-function TZXMLSSave.CreateSaverForDescription(const desc: string): IZXMLSSave;
-var s, tgt: ansiString;
+function TZXMLSSave.CreateSaverForDescription(const desc: String): IZXMLSSave;
+var tgt: ansiString; s: string;
     cs: CZXMLSSaveClass; cc: TClass;
     i: integer;
 begin
@@ -171,7 +172,7 @@ begin
           then continue;
        cs := CZXMLSSaveClass(cc);
        for s in cs.FormatDescriptions do begin
-           if Trim(s) = tgt then begin
+           if UpperCase(Trim(AnsiString(s))) = tgt then begin
               Result := cs.Create(self);
               exit;
            end;
@@ -207,6 +208,11 @@ begin
    FFile := fname;
 
    Result := Self;
+end;
+
+class function TZXMLSSave.FormatDescriptions: TStringDynArray;
+begin
+  Result := nil;  // make compiler happy
 end;
 
 function TZXMLSSave.GetPageNumbers: TIntegerDynArray; var i: integer;
@@ -289,7 +295,7 @@ end;
 
 function TZXMLSSave.InternalSave;
 begin
-  Result := CreateSaverForDescription(ExtractFileExt(FFile)).Save;
+  Result := CreateSaverForDescription(ExtractFileExt(FFile)).InternalSave;
 end;
 
 
