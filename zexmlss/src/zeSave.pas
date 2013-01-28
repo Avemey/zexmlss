@@ -281,7 +281,7 @@ begin
   Result := InternalSave;
 end;
 
-procedure TZXMLSSave.InternalSave;
+function TZXMLSSave.InternalSave;
 begin
   Result := CreateSaverForDescription(ExtractFileExt(FFile)).Save;
 end;
