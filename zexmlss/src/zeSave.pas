@@ -114,6 +114,8 @@ begin
 end;
 
 function TZXMLSSave.CharSet(const codepage: word): iZXMLSSave;
+// todo - add implementation for pre-Unicode Delphi
+// if anyone would need it :-)
 var t: TEncoding;
 begin
   t := TEncoding.GetEncoding(codepage);
@@ -154,7 +156,6 @@ begin
   Self.FPath    := zxsaver.FPath;
   Self.fPages   := zxsaver.fPages;
   Self.FZipGen  := zxsaver.FZipGen;
-  Self.fBook    := zxsaver.fBook;
 end;
 
 function TZXMLSSave.CreateSaverForDescription(const desc: string): IZXMLSSave;
@@ -166,9 +167,9 @@ begin
 
    for i := 0 to SaveClasses.Count - 1 do begin
        cc := SaveClasses[i];
-       if cc.InheritsFrom( TZXMLSSave )
-          then cs := CZXMLSSaveClass(cc)
-          else continue;
+       if not cc.InheritsFrom( TZXMLSSave )
+          then continue;
+       cs := CZXMLSSaveClass(cc);
        for s in cs.FormatDescriptions do begin
            if Trim(s) = tgt then begin
               Result := cs.Create(self);
@@ -195,7 +196,6 @@ begin
   Result := ExportTo(fname);
 end;
 
-
 function TZXMLSSave.ExportTo(const fname: TFileName): iZXMLSSave;
 var fp: TFileName;
 begin
@@ -205,6 +205,8 @@ begin
 
    FPath := fp;
    FFile := fname;
+
+   Result := Self;
 end;
 
 function TZXMLSSave.GetPageNumbers: TIntegerDynArray; var i: integer;
@@ -233,6 +235,8 @@ begin
   SetLength(fPages, Length(pages));
   for i := 0 to High(pages) do
       fPages[i] := pages[i];
+
+  Result := Self;
 end;
 
 function TZXMLSSave.Pages(const numbers: array of integer): iZXMLSSave;
@@ -249,6 +253,8 @@ begin
       no := numbers[i];
       name := '';
   end;
+
+  Result := Self;
 end;
 
 function TZXMLSSave.Pages(const titles: array of string): iZXMLSSave;
@@ -300,11 +306,13 @@ end;
 function TZXMLSSave.NoZip: iZXMLSSave;
 begin
   FZipGen := QueryDummyZipGen;
+  Result := Self;
 end;
 
 function TZXMLSSave.ZipWith(const ZipGenerator: CZxZipGens): iZXMLSSave;
 begin
   FZipGen := ZipGenerator;
+  Result := Self;
 end;
 
 initialization
