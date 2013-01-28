@@ -28,7 +28,7 @@ type IZXMLSSave = interface
         function BOM(const Unicode_BOM: AnsiString): iZXMLSSave; // better rawbytestring ?
 
         function ZipWith(const ZipGenerator: CZxZipGens): iZXMLSSave;
-        function UnZip: iZXMLSSave;   // save to folder
+        function NoZip: iZXMLSSave;   // save to folder
 
         /// returns zero on success, according to original
         ///     description for SaveXmlssToEXML
@@ -60,7 +60,7 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
         function BOM(const Unicode_BOM: AnsiString): iZXMLSSave; // better rawbytestring ?
 
         function ZipWith(const ZipGenerator: CZxZipGens): iZXMLSSave;
-        function UnZip: iZXMLSSave;  // save to folder
+        function NoZip: iZXMLSSave;  // save to folder
 
         /// returns zero on success, according to original
         ///     description for SaveXmlssToEXML
@@ -297,7 +297,7 @@ begin
   SaveClasses.Add(sv);
 end;
 
-function TZXMLSSave.UnZip: iZXMLSSave;
+function TZXMLSSave.NoZip: iZXMLSSave;
 begin
   FZipGen := QueryDummyZipGen;
 end;
