@@ -76,5 +76,7 @@ begin
 end;
 
 initialization
-  RegisterZipGen(TZxZipJcl7z);
+  TZxZipGen.RegisterZipGen(TZxZipJcl7z);
+finalization
+  TZxZipGen.UnRegisterZipGen(TZxZipJcl7z);
 end.

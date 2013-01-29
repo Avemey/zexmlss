@@ -4487,10 +4487,10 @@ begin
     end;
 
     if nil = ZipGenerator then begin
-      ZipGenerator := QueryZipGen;
+      ZipGenerator := TZxZipGen.QueryZipGen;
       if nil = ZipGenerator then
         if AllowUnzippedFolder
-           then ZipGenerator := QueryDummyZipGen
+           then ZipGenerator := TZxZipGen.QueryDummyZipGen
            else raise EZxZipGen.Create('No zip generators registered, folder output disabled.');
            // result := 3 ????
     end;

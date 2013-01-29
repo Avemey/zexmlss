@@ -13,6 +13,8 @@ type
 
    EZxZipGen = class(Exception);
 
+   TZxZipGen = class;
+   CZxZipGens = class of TZxZipGen;
    TZxZipGen = class abstract
      public
        /// creates new empty generator, ready to accept files
@@ -60,19 +62,19 @@ type
      public
        procedure AfterConstruction; override;
        procedure BeforeDestruction; override;
+
+
+     public
+        class procedure RegisterZipGen(const zgc: CZxZipGens);
+        class procedure UnRegisterZipGen(const zgc: CZxZipGens);
+
+        /// The spreadsheet exporter may enumerate them increasing parameter until nil is returned
+        class function QueryZipGen(const idx: integer = 0): CZxZipGens;
+
+        /// Returns the empty "fall-back" class that just makes a folder with uncompressed files
+        /// You may register it if you want ;-)
+        class function QueryDummyZipGen: CZxZipGens;
    end;
-
-   CZxZipGens = class of TZxZipGen;
-
-procedure RegisterZipGen(const zgc: CZxZipGens);
-procedure UnRegisterZipGen(const zgc: CZxZipGens);
-
-/// The spreadsheet exporter may enumerate them increasing parameter until nil is returned
-function QueryZipGen(const idx: integer = 0): CZxZipGens;
-
-/// Returns the empty "fall-back" class that just makes a folder with uncompressed files
-/// You may register it if you want ;-)
-function QueryDummyZipGen: CZxZipGens;
 
 implementation uses TypInfo, Contnrs;
 
@@ -300,7 +302,7 @@ end;
 
 var ZxZipMakers: TClassList;
 
-procedure RegisterZipGen(const zgc: CZxZipGens);
+class procedure TZxZipGen.RegisterZipGen(const zgc: CZxZipGens);
 begin
   if (nil = zgc) or not zgc.InheritsFrom(TZxZipGen) then
      raise EZxZipGen.Create('Can only register zip generating subclasses.');
@@ -308,13 +310,13 @@ begin
   ZxZipMakers.Insert(0, zgc); // LIFO
 end;
 
-procedure UnRegisterZipGen(const zgc: CZxZipGens);
+class procedure TZxZipGen.UnRegisterZipGen(const zgc: CZxZipGens);
 begin
   ZxZipMakers.Remove(zgc);
 end;
 
 /// The spreadsheet exporter may enumerate them increasing parameter until nil is returned
-function QueryZipGen(const idx: integer): CZxZipGens;
+class function TZxZipGen.QueryZipGen(const idx: integer): CZxZipGens;
 var c: TClass;
 begin
   Result := nil;
@@ -330,7 +332,7 @@ end;
 
 /// Returns the empty "fall-back" class that just makes a folder with uncompressed files
 /// You may register it if you want ;-)
-function QueryDummyZipGen: CZxZipGens;
+class function TZxZipGen.QueryDummyZipGen: CZxZipGens;
 begin
   Result := TZxFolderInsteadOfZip;
 end;

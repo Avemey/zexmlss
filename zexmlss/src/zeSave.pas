@@ -305,7 +305,7 @@ end;
 function TZXMLSSave.Save;
 var i: integer;
 begin
-  if FZipGen = nil then FZipGen := QueryZipGen;
+  if FZipGen = nil then FZipGen := TZxZipGen.QueryZipGen;
   if fCharSet = '' then fCharSet := 'UTF-8';
 //todo - default Ansi-converter (fConv)?
 
@@ -338,7 +338,7 @@ end;
 
 function TZXMLSSave.NoZip: iZXMLSSave;
 begin
-  FZipGen := QueryDummyZipGen;
+  FZipGen := TZxZipGen.QueryDummyZipGen;
   Result := Self;
 end;
 

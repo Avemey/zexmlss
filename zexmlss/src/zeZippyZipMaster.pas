@@ -80,5 +80,7 @@ begin
 end;
 
 initialization
-  RegisterZipGen(TZxZipMastered);
+  TZxZipGen.RegisterZipGen(TZxZipMastered);
+finalization
+  TZxZipGen.UnRegisterZipGen(TZxZipMastered);
 end.
