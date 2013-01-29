@@ -96,8 +96,41 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
      EZXSaveException = class (Exception);
 
 implementation
-uses Contnrs, AnsiStrings;
+uses
+{$IfDef MSWINDOWS}Registry, Windows, {$EndIf}
+  Contnrs, AnsiStrings;
+
 var SaveClasses: TClassList;
+
+
+/// todo - add implementation for non-Windows platforms
+/// if anyone would need it :-)
+/// probably via http://sourceforge.net/projects/natspec/
+function CharSetByCodePage(const cp: Word): AnsiString;
+{$IfDef MSWINDOWS }
+var reg: TRegistry;
+begin
+// HKEY_CLASSES_ROOT\MIME\DataBase\Codepage
+  reg := TRegistry.Create(KEY_READ);
+  try
+    reg.RootKey := HKEY_CLASSES_ROOT;
+    if reg.OpenKeyReadOnly('MIME\DataBase\Codepage\' + IntToStr(cp)) then begin
+       Result := Trim(AnsiString(reg.ReadString('WebCharset'))); // This key prevails, see #1251 for example
+       if Result = '' then
+          Result := Trim(AnsiString(reg.ReadString('BodyCharset')));
+       if Result > '' then exit;
+    end;
+  finally
+    reg.Free;
+  end;
+  Raise EZXSaveException.Create('No charset (MIME id) found for codepage '+IntToStr(cp));
+end;
+{$Else}
+begin
+  Raise EZXSaveException.Create('Cannot get charset by numeric codepage on this platform.');
+  //not implemented, perhaps http://sourceforge.net/projects/natspec/ ?
+end;
+{$EndIf}
 
 { TZXMLSSave }
 
@@ -115,17 +148,8 @@ begin
 end;
 
 function TZXMLSSave.CharSet(const codepage: word): iZXMLSSave;
-// todo - add implementation for pre-Unicode Delphi
-// if anyone would need it :-)
-var t: TEncoding;
 begin
-  t := TEncoding.GetEncoding(codepage);
-  try
-    fCharSet := AnsiString(t.EncodingName);
-  finally
-    t.Free;
-  end;
-  Result := self;
+  fCharSet := CharSetByCodePage(codepage);
 end;
 
 function TZXMLSSave.CharSet(const cs: AnsiString): iZXMLSSave;
@@ -160,9 +184,9 @@ begin
 end;
 
 function TZXMLSSave.CreateSaverForDescription(const desc: String): IZXMLSSave;
-var tgt: ansiString; s: string;
+var tgt: ansiString; ss: TStringDynArray;  //s: string;
     cs: CZXMLSSaveClass; cc: TClass;
-    i: integer;
+    i, j: integer;
 begin
    tgt := UpperCase(Trim(AnsiString(desc))); // target
 
@@ -171,8 +195,11 @@ begin
        if not cc.InheritsFrom( TZXMLSSave )
           then continue;
        cs := CZXMLSSaveClass(cc);
-       for s in cs.FormatDescriptions do begin
-           if UpperCase(Trim(AnsiString(s))) = tgt then begin
+//       for s in cs.FormatDescriptions do begin
+//           if UpperCase(Trim(AnsiString(s))) = tgt then begin
+       ss := cs.FormatDescriptions;
+       for j := Low(ss) to High(ss) do begin
+           if UpperCase(Trim(AnsiString(ss[j]))) = tgt then begin
               Result := cs.Create(self);
               exit;
            end;
@@ -323,6 +350,11 @@ end;
 
 initialization
   SaveClasses := TClassList.Create;
+
+// Ersatz-testing below
+//  if '' = CharSetByCodePage(866) then ;
+//  if '' = CharSetByCodePage(1251) then ;
+//  if '' = CharSetByCodePage(20866) then ;
 finalization
   SaveClasses.Free;
 end.
