@@ -1006,6 +1006,8 @@ begin
   end;
 end;
 
+const RepeatablePrintedHeadersName = 'Print_Titles';
+
 //Сохраняет в поток в формате Excel XML SpreadSheet
 //      XMLSS: TZEXMLSS                 - хранилище
 //      Stream: TStream                 - поток
@@ -1350,11 +1352,12 @@ var
     i, j, t: integer;
     b, CellIndex: boolean;
     CountCells: integer;
-    AttrCell, AttrData, AttrComment, AttrCommentData: TZAttributesH;
+    AttrCell, AttrData, AttrComment, AttrCommentData, AttrPrintTitles: TZAttributesH;
     NumTopLeft, NumArea: integer;
     kol: integer;
     s: string;
-    isFormula: boolean;
+    isFormula, isRepeatablePrint: boolean;
+    ProcessedSheet: TZSheet; ProcessedCell: TZCell;
 
     procedure AddCellInRow(var CountCells: integer; var CellIndex: boolean);
     begin
@@ -1402,13 +1405,13 @@ var
 
         b := false;
         b1 := false;
-        for i := 1 to XMLSS.Sheets[PageNum].ColCount - 1 do
-          WriteBreak(XMLSS.Sheets[PageNum].Columns[i].Breaked, 'ColBreaks', 'ColBreak', 'Column', b, b1, i);
+        for i := 1 to ProcessedSheet.ColCount - 1 do
+          WriteBreak(ProcessedSheet.Columns[i].Breaked, 'ColBreaks', 'ColBreak', 'Column', b, b1, i);
         if b1 then
           WriteEndTagNode(); //ColBreaks
         b1 := false;
-        for i := 1 to XMLSS.Sheets[PageNum].RowCount - 1 do
-          WriteBreak(XMLSS.Sheets[PageNum].Rows[i].Breaked, 'RowBreaks', 'RowBreak', 'Row', b, b1, i);
+        for i := 1 to ProcessedSheet.RowCount - 1 do
+          WriteBreak(ProcessedSheet.Rows[i].Breaked, 'RowBreaks', 'RowBreak', 'Row', b, b1, i);
         if b1 then
           WriteEndTagNode(); //RowBreaks
         if b then
@@ -1417,35 +1420,60 @@ var
     end; //WritePageBreaks (Разрывы страницы)
 
   begin
+    ProcessedSheet := XMLSS.Sheets[PageNum];
+
     with _xml do
     begin
       Attributes.Clear();
       Attributes.Add('ss:Name',PageName);
-      AddAttribute('ss:Protected', XMLSS.Sheets[PageNum].Protect, false, false, true);
-      AddAttribute('ss:RightToLeft', XMLSS.Sheets[PageNum].RightToLeft, false, false, true);
+      AddAttribute('ss:Protected', ProcessedSheet.Protect, false, false, true);
+      AddAttribute('ss:RightToLeft', ProcessedSheet.RightToLeft, false, false, true);
       WriteTagNode('Worksheet', true, true, true);
+
+      // Repeatable on print rows/columns
+      if ProcessedSheet.RowsToRepeat.Active or ProcessedSheet.ColsToRepeat.Active then
+      begin
+        Attributes.Clear();
+        WriteTagNode('Names', []);
+        Attributes.Add( 'ss:Name', RepeatablePrintedHeadersName);
+
+        s := ProcessedSheet.ColsToRepeat.ToString + ',' + ProcessedSheet.RowsToRepeat.ToString;
+        //at least one of those calls should return non-empty street
+
+        t := Length(s);
+        if s[t] = ',' then SetLength(s, t-1); // no rows if ends with comma
+
+        if s[1] = ','  // no columns if starts with comma
+           then s[1] := '='
+           else s := '=' + s;
+
+        Attributes.Add( 'ss:RefersTo', s);
+        WriteEmptyTag('NamedRange');
+        WriteEndTagNode(); // Names
+      end;
+
       //Table
       Attributes.Clear();
-      Attributes.Add('ss:ExpandedColumnCount', inttostr(XMLSS.Sheets[PageNum].ColCount), false);
-      Attributes.Add('ss:ExpandedRowCount', inttostr(XMLSS.Sheets[PageNum].RowCount), false);
-      if round(XMLSS.Sheets[PageNum].DefaultColWidth*100) <> 4800 then
-        Attributes.Add('ss:DefaultColumnWidth', ZEFloatSeparator(FormatFloat('0.#####',XMLSS.Sheets[PageNum].DefaultColWidth)), false);
-      if round(XMLSS.Sheets[PageNum].DefaultRowHeight*100) <> 1275 then
-        Attributes.Add('ss:DefaultRowHeight', ZEFloatSeparator(FormatFloat('0.#####',XMLSS.Sheets[PageNum].DefaultRowHeight * 100)), false);
+      Attributes.Add('ss:ExpandedColumnCount', inttostr(ProcessedSheet.ColCount), false);
+      Attributes.Add('ss:ExpandedRowCount', inttostr(ProcessedSheet.RowCount), false);
+      if round(ProcessedSheet.DefaultColWidth*100) <> 4800 then
+        Attributes.Add('ss:DefaultColumnWidth', ZEFloatSeparator(FormatFloat('0.#####',ProcessedSheet.DefaultColWidth)), false);
+      if round(ProcessedSheet.DefaultRowHeight*100) <> 1275 then
+        Attributes.Add('ss:DefaultRowHeight', ZEFloatSeparator(FormatFloat('0.#####',ProcessedSheet.DefaultRowHeight * 100)), false);
       Attributes.Add('x:FullRows', '1', false);
       Attributes.Add('x:FullColumns', '1', false);
       WriteTagNode('Table', true, true, true);
       //Columns
       b := false;
-      for i := 0 to XMLSS.Sheets[PageNum].ColCount - 1 do
+      for i := 0 to ProcessedSheet.ColCount - 1 do
       begin
         Attributes.Clear();
-        if round(XMLSS.Sheets[PageNum].DefaultColWidth*100) <> round(XMLSS.Sheets[PageNum].Columns[i].Width*100) then
-          Attributes.Add('ss:Width', ZEFloatSeparator(FormatFloat('0.#####',XMLSS.Sheets[PageNum].Columns[i].Width)), false);
-        if (XMLSS.Sheets[PageNum].Columns[i].StyleID <> -1) and (XMLSS.Sheets[PageNum].Columns[i].StyleID < XMLSS.Styles.Count) then
-          AddAttribute('ss:StyleID', 's' + IntToStr(XMLSS.Sheets[PageNum].Columns[i].StyleID + 20), '', '', true);
-        AddAttribute('ss:AutoFitWidth', XMLSS.Sheets[PageNum].Columns[i].AutoFitWidth, true, true, true);
-        AddAttribute('ss:Hidden', XMLSS.Sheets[PageNum].Columns[i].Hidden, false, false, true);
+        if round(ProcessedSheet.DefaultColWidth*100) <> round(ProcessedSheet.Columns[i].Width*100) then
+          Attributes.Add('ss:Width', ZEFloatSeparator(FormatFloat('0.#####',ProcessedSheet.Columns[i].Width)), false);
+        if (ProcessedSheet.Columns[i].StyleID <> -1) and (ProcessedSheet.Columns[i].StyleID < XMLSS.Styles.Count) then
+          AddAttribute('ss:StyleID', 's' + IntToStr(ProcessedSheet.Columns[i].StyleID + 20), '', '', true);
+        AddAttribute('ss:AutoFitWidth', ProcessedSheet.Columns[i].AutoFitWidth, true, true, true);
+        AddAttribute('ss:Hidden', ProcessedSheet.Columns[i].Hidden, false, false, true);
         if (Attributes.Count > 0) and (b) then
           Attributes.Insert(0, 'ss:Index', inttostr(i+1));
         if Attributes.Count > 0 then
@@ -1461,16 +1489,20 @@ var
       AttrData := TZAttributesH.Create();
       AttrComment := TZAttributesH.Create();
       AttrCommentData := TZAttributesH.Create();
-      for i := 0 to XMLSS.Sheets[PageNum].RowCount - 1 do
+
+      AttrPrintTitles := TZAttributesH.Create();
+        AttrPrintTitles.Add('ss:Name', RepeatablePrintedHeadersName);
+
+      for i := 0 to ProcessedSheet.RowCount - 1 do
       begin
         Attributes.Clear();
         Attributes.Add('ss:Index', inttostr(i+1));
-        if round(XMLSS.Sheets[PageNum].DefaultRowHeight*100) <> round(XMLSS.Sheets[PageNum].Rows[i].Height*100) then
-          Attributes.Add('ss:Height', ZEFloatSeparator(FormatFloat('0.#####',XMLSS.Sheets[PageNum].Rows[i].Height)), false);
-        if (XMLSS.Sheets[PageNum].Rows[i].StyleID <> -1) and (XMLSS.Sheets[PageNum].Rows[i].StyleID < XMLSS.Styles.Count) then
-          AddAttribute('ss:StyleID', 's' + IntToStr(XMLSS.Sheets[PageNum].Rows[i].StyleID + 20), '', '', true);
-        AddAttribute('ss:AutoFitHeight', XMLSS.Sheets[PageNum].Rows[i].AutoFitHeight, true, true, true);
-        AddAttribute('ss:Hidden', XMLSS.Sheets[PageNum].Rows[i].Hidden, false, false, true);
+        if round(ProcessedSheet.DefaultRowHeight*100) <> round(ProcessedSheet.Rows[i].Height*100) then
+          Attributes.Add('ss:Height', ZEFloatSeparator(FormatFloat('0.#####',ProcessedSheet.Rows[i].Height)), false);
+        if (ProcessedSheet.Rows[i].StyleID <> -1) and (ProcessedSheet.Rows[i].StyleID < XMLSS.Styles.Count) then
+          AddAttribute('ss:StyleID', 's' + IntToStr(ProcessedSheet.Rows[i].StyleID + 20), '', '', true);
+        AddAttribute('ss:AutoFitHeight', ProcessedSheet.Rows[i].AutoFitHeight, true, true, true);
+        AddAttribute('ss:Hidden', ProcessedSheet.Rows[i].Hidden, false, false, true);
 
         if (Attributes.Count > 1)  then
           WriteTagNode('Row', true, true, true);
@@ -1478,14 +1510,15 @@ var
         //Пробегаем по всем ячейкам
         CountCells := 0;
         CellIndex := false;
-        for j := 0 to XMLSS.Sheets[PageNum].ColCount - 1 do
+        for j := 0 to ProcessedSheet.ColCount - 1 do
         begin
+          ProcessedCell := ProcessedSheet.Cell[j, i];
           AttrCell.Clear();
           if CellIndex then
             AttrCell.Add('ss:Index', IntToStr(j+1));
 
-          NumTopLeft := XMLSS.Sheets[PageNum].MergeCells.InLeftTopCorner(j, i);
-          NumArea := XMLSS.Sheets[PageNum].MergeCells.InMergeRange(j, i);
+          NumTopLeft := ProcessedSheet.MergeCells.InLeftTopCorner(j, i);
+          NumArea := ProcessedSheet.MergeCells.InMergeRange(j, i);
 
           // если ячейка входит в объединённые области и не является
           // верхней левой ячейков в этой области - пропускаем её
@@ -1494,46 +1527,59 @@ var
             if NumTopLeft >= 0 then
             begin
               //ss:MergeAcross - влево
-              t := XMLSS.Sheets[PageNum].MergeCells.Items[NumTopLeft].Right -
-                   XMLSS.Sheets[PageNum].MergeCells.Items[NumTopLeft].Left;
+              t := ProcessedSheet.MergeCells.Items[NumTopLeft].Right -
+                   ProcessedSheet.MergeCells.Items[NumTopLeft].Left;
               if t > 0 then
                 AttrCell.Add('ss:MergeAcross', InttOstr(t), false);
               //ss:MergeDown - вниз
-              t := XMLSS.Sheets[PageNum].MergeCells.Items[NumTopLeft].Bottom -
-                   XMLSS.Sheets[PageNum].MergeCells.Items[NumTopLeft].Top;
+              t := ProcessedSheet.MergeCells.Items[NumTopLeft].Bottom -
+                   ProcessedSheet.MergeCells.Items[NumTopLeft].Top;
               if t > 0 then
                 AttrCell.Add('ss:MergeDown', InttOstr(t), false);
             end;
             {tut}
             //Сделать проверку на формулу?
             isFormula := false;
-            if length(XMLSS.Sheets[PageNum].Cell[j, i].Formula) > 0 then
+            if length(ProcessedCell.Formula) > 0 then
             begin
-              AttrCell.Add('ss:Formula', XMLSS.Sheets[PageNum].Cell[j, i].Formula, false);
+              AttrCell.Add('ss:Formula', ProcessedCell.Formula, false);
               isFormula := true;
             end;
             //Href
-            if length(XMLSS.Sheets[PageNum].Cell[j, i].Href) > 0 then
+            if length(ProcessedCell.Href) > 0 then
             begin
-              AttrCell.Add('ss:HRef', XMLSS.Sheets[PageNum].Cell[j, i].Href, false);
-              if length(XMLSS.Sheets[PageNum].Cell[j, i].HRefScreenTip) > 0 then
-                AttrCell.Add('x:HRefScreenTip', XMLSS.Sheets[PageNum].Cell[j, i].HRefScreenTip, false);
+              AttrCell.Add('ss:HRef', ProcessedCell.Href, false);
+              if length(ProcessedCell.HRefScreenTip) > 0 then
+                AttrCell.Add('x:HRefScreenTip', ProcessedCell.HRefScreenTip, false);
             end;
             //StyleID
-            if (XMLSS.Sheets[PageNum].Cell[j, i].CellStyle <> -1) and
-               (XMLSS.Sheets[PageNum].Cell[j, i].CellStyle < XMLSS.Styles.Count) then
-               AttrCell.Add('ss:StyleID', 's'+inttostr(20 + XMLSS.Sheets[PageNum].Cell[j, i].CellStyle), false);
+            if (ProcessedCell.CellStyle <> -1) and
+               (ProcessedCell.CellStyle < XMLSS.Styles.Count) then
+               AttrCell.Add('ss:StyleID', 's'+inttostr(20 + ProcessedCell.CellStyle), false);
 
             kol := 0;
 
+            /// Repeatable printed Rows/Columns
+            isRepeatablePrint := false;
+            if ( ProcessedSheet.RowsToRepeat.Active and
+                 (ProcessedSheet.RowsToRepeat.From <= i) and
+                 (ProcessedSheet.RowsToRepeat.Till >= i) )
+            or ( ProcessedSheet.ColsToRepeat.Active and
+                 (ProcessedSheet.ColsToRepeat.From <= j) and
+                 (ProcessedSheet.ColsToRepeat.Till >= j) )
+            then begin
+                 inc(kol);
+                 isRepeatablePrint := true;
+            end;
+
             /// DATA
             AttrData.Clear();
-            // для OpenOffice Calc добавлен текст "or (j = XMLSS.Sheets[PageNum].ColCount - 1)"
+            // для OpenOffice Calc добавлен текст "or (j = ProcessedSheet.ColCount - 1)"
             // т.к. в ОО таблицы отображались в некоторых случаях некорректно
-            if (length(XMLSS.Sheets[PageNum].Cell[j, i].Data) > 0) or (j = XMLSS.Sheets[PageNum].ColCount - 1) or
+            if (length(ProcessedCell.Data) > 0) or (j = ProcessedSheet.ColCount - 1) or
                (isFormula) then
             begin
-              AttrData.Add('ss:Type', ZCellTypeToStr(XMLSS.Sheets[PageNum].Cell[j, i].CellType), false);
+              AttrData.Add('ss:Type', ZCellTypeToStr(ProcessedCell.CellType), false);
               inc(kol);
             end;
 
@@ -1541,11 +1587,11 @@ var
             {tut}  //Добавить проверки
             AttrComment.Clear();
             AttrCommentData.Clear();
-            if XMLSS.Sheets[PageNum].Cell[j, i].ShowComment then
+            if ProcessedCell.ShowComment then
             begin
-              if length(XMLSS.Sheets[PageNum].Cell[j, i].CommentAuthor) > 0 then
-                AttrComment.Add('ss:Author', XMLSS.Sheets[PageNum].Cell[j, i].CommentAuthor);
-              if XMLSS.Sheets[PageNum].Cell[j, i].AlwaysShowComment then
+              if length(ProcessedCell.CommentAuthor) > 0 then
+                AttrComment.Add('ss:Author', ProcessedCell.CommentAuthor);
+              if ProcessedCell.AlwaysShowComment then
                 AttrComment.Add('ss:ShowAlways','1', false);
               inc(kol);
             end;
@@ -1560,20 +1606,23 @@ var
               AddCellInRow(CountCells, CellIndex);
               //Cell
               WriteTagNode('Cell', AttrCell,true, true, false);
+
+              if isRepeatablePrint then
+                  WriteEmptyTag('NamedCell', AttrPrintTitles );
               //Data
-              if (length(XMLSS.Sheets[PageNum].Cell[j, i].Data) > 0) or
+              if (length(ProcessedCell.Data) > 0) or
                  (isFormula) then
               begin
-                CorrectStrForXML(XMLSS.Sheets[PageNum].Cell[j, i].Data, s, b);
+                CorrectStrForXML(ProcessedCell.Data, s, b);
                 if b then
                   AttrData.Add('xmlns','http://www.w3.org/TR/REC-html40');
                 WriteTag('ss:Data', s, AttrData, true, false, false);
               end;
               //Comment
-              if XMLSS.Sheets[PageNum].Cell[j, i].ShowComment then
+              if ProcessedCell.ShowComment then
               begin
                 WriteTagNode('Comment', AttrComment, true, true, true);
-                CorrectStrForXML(XMLSS.Sheets[PageNum].Cell[j, i].Comment, s, b);
+                CorrectStrForXML(ProcessedCell.Comment, s, b);
                 if b then
                   AttrCommentData.Add('xmlns','http://www.w3.org/TR/REC-html40');
                 WriteTag('ss:Data', s, AttrCommentData, true, false, false);
@@ -1613,42 +1662,42 @@ var
       WriteTagNode('PageSetup',true, true, true);
 
       //Layout
-      if not XMLSS.Sheets[PageNum].SheetOptions.PortraitOrientation then
+      if not ProcessedSheet.SheetOptions.PortraitOrientation then
         Attributes.Add('x:Orientation', 'Landscape');
-      if XMLSS.Sheets[PageNum].SheetOptions.CenterHorizontal then
+      if ProcessedSheet.SheetOptions.CenterHorizontal then
         Attributes.Add('x:CenterHorizontal', '1', false);
-      if XMLSS.Sheets[PageNum].SheetOptions.CenterVertical then
+      if ProcessedSheet.SheetOptions.CenterVertical then
         Attributes.Add('x:CenterVertical', '1', false);
-      if XMLSS.Sheets[PageNum].SheetOptions.StartPageNumber <> 1 then
-        Attributes.Add('x:StartPageNumber', inttostr(XMLSS.Sheets[PageNum].SheetOptions.StartPageNumber), false);
+      if ProcessedSheet.SheetOptions.StartPageNumber <> 1 then
+        Attributes.Add('x:StartPageNumber', inttostr(ProcessedSheet.SheetOptions.StartPageNumber), false);
       if Attributes.Count > 0 then
         WriteEmptyTag('Layout', true, false);
 
       //PageMargins
       Attributes.Clear();
-      Attributes.Add('x:Bottom', ZEFloatSeparator(FormatFloat('0.###############',XMLSS.Sheets[PageNum].SheetOptions.MarginBottom / ZE_MMinInch)));
-      Attributes.Add('x:Left', ZEFloatSeparator(FormatFloat('0.###############',XMLSS.Sheets[PageNum].SheetOptions.MarginLeft / ZE_MMinInch)), false);
-      Attributes.Add('x:Right', ZEFloatSeparator(FormatFloat('0.###############',XMLSS.Sheets[PageNum].SheetOptions.MarginRight / ZE_MMinInch)), false);
-      Attributes.Add('x:Top', ZEFloatSeparator(FormatFloat('0.###############',XMLSS.Sheets[PageNum].SheetOptions.MarginTop / ZE_MMinInch)), false);
+      Attributes.Add('x:Bottom', ZEFloatSeparator(FormatFloat('0.###############',ProcessedSheet.SheetOptions.MarginBottom / ZE_MMinInch)));
+      Attributes.Add('x:Left', ZEFloatSeparator(FormatFloat('0.###############',ProcessedSheet.SheetOptions.MarginLeft / ZE_MMinInch)), false);
+      Attributes.Add('x:Right', ZEFloatSeparator(FormatFloat('0.###############',ProcessedSheet.SheetOptions.MarginRight / ZE_MMinInch)), false);
+      Attributes.Add('x:Top', ZEFloatSeparator(FormatFloat('0.###############',ProcessedSheet.SheetOptions.MarginTop / ZE_MMinInch)), false);
       WriteEmptyTag('PageMargins', true, false);
 
       //Header
       Attributes.Clear();
-      if length(XMLSS.Sheets[PageNum].SheetOptions.HeaderData) > 0 then
+      if length(ProcessedSheet.SheetOptions.HeaderData) > 0 then
       begin
-        if XMLSS.Sheets[PageNum].SheetOptions.HeaderMargin <> 13 then
-          Attributes.Add('x:Margin', ZEFloatSeparator(FormatFloat('0.##',XMLSS.Sheets[PageNum].SheetOptions.HeaderMargin / ZE_MMinInch)));
-        Attributes.Add('x:Data', XMLSS.Sheets[PageNum].SheetOptions.HeaderData, false);
+        if ProcessedSheet.SheetOptions.HeaderMargin <> 13 then
+          Attributes.Add('x:Margin', ZEFloatSeparator(FormatFloat('0.##',ProcessedSheet.SheetOptions.HeaderMargin / ZE_MMinInch)));
+        Attributes.Add('x:Data', ProcessedSheet.SheetOptions.HeaderData, false);
         WriteEmptyTag('Header', true, true);
       end;
 
       //Footer
       Attributes.Clear();
-      if length(XMLSS.Sheets[PageNum].SheetOptions.FooterData) > 0 then
+      if length(ProcessedSheet.SheetOptions.FooterData) > 0 then
       begin
-        if XMLSS.Sheets[PageNum].SheetOptions.FooterMargin <> 13 then
-          Attributes.Add('x:Margin', ZEFloatSeparator(FormatFloat('0.##',XMLSS.Sheets[PageNum].SheetOptions.FooterMargin / ZE_MMinInch)));
-        Attributes.Add('x:Data', XMLSS.Sheets[PageNum].SheetOptions.FooterData, false);
+        if ProcessedSheet.SheetOptions.FooterMargin <> 13 then
+          Attributes.Add('x:Margin', ZEFloatSeparator(FormatFloat('0.##',ProcessedSheet.SheetOptions.FooterMargin / ZE_MMinInch)));
+        Attributes.Add('x:Data', ProcessedSheet.SheetOptions.FooterData, false);
         WriteEmptyTag('Footer', true, true);
       end;
 
@@ -1656,36 +1705,36 @@ var
 
       //Print
       Attributes.Clear();
-      if XMLSS.Sheets[PageNum].SheetOptions.PaperSize <> 0 then
+      if ProcessedSheet.SheetOptions.PaperSize <> 0 then
       begin
         WriteTagNode('Print',true, true, true);
         WriteEmptyTag('ValidPrinterInfo');
-        WriteTag('PaperSizeIndex',inttostr(XMLSS.Sheets[PageNum].SheetOptions.PaperSize), true, false, false);
+        WriteTag('PaperSizeIndex',inttostr(ProcessedSheet.SheetOptions.PaperSize), true, false, false);
         WriteTag('HorizontalResolution', '600', true, false, false);  //может, тоже добавить?
         WriteTag('VerticalResolution', '600', true, false, false);
         WriteEndTagNode(); //Print
       end;
 
-      if XMLSS.Sheets[PageNum].Selected then
+      if ProcessedSheet.Selected then
         WriteEmptyTag('Selected', true, false);
 
-      if not((XMLSS.Sheets[PageNum].SheetOptions.ActiveCol = 0) and
-         (XMLSS.Sheets[PageNum].SheetOptions.ActiveRow = 0)) then
+      if not((ProcessedSheet.SheetOptions.ActiveCol = 0) and
+         (ProcessedSheet.SheetOptions.ActiveRow = 0)) then
       begin
         WriteTagNode('Panes',true, true, false);
         WriteTagNode('Pane',true, true, false);
         WriteTag('Number', '3', true, false, false);
-        if XMLSS.Sheets[PageNum].SheetOptions.ActiveRow <> 0 then
-          WriteTag('ActiveRow', inttostr(XMLSS.Sheets[PageNum].SheetOptions.ActiveRow), true, false, false);
-        if XMLSS.Sheets[PageNum].SheetOptions.ActiveCol <> 0 then
-          WriteTag('ActiveCol', inttostr(XMLSS.Sheets[PageNum].SheetOptions.ActiveCol), true, false, false);
+        if ProcessedSheet.SheetOptions.ActiveRow <> 0 then
+          WriteTag('ActiveRow', inttostr(ProcessedSheet.SheetOptions.ActiveRow), true, false, false);
+        if ProcessedSheet.SheetOptions.ActiveCol <> 0 then
+          WriteTag('ActiveCol', inttostr(ProcessedSheet.SheetOptions.ActiveCol), true, false, false);
         WriteEndTagNode(); //Pane
         WriteEndTagNode(); //Panes
       end;
 
       {tut}//Узнать, как шифруются индексы цветов
-      if XMLSS.Sheets[PageNum].TabColor <> ClWindow then
-        WriteTag('TabColorIndex', inttostr(XMLSS.Sheets[PageNum].TabColor), true, false, false);
+      if ProcessedSheet.TabColor <> ClWindow then
+        WriteTag('TabColorIndex', inttostr(ProcessedSheet.TabColor), true, false, false);
 
       WriteEndTagNode(); //WorksheetOptions
 

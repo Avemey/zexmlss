@@ -91,7 +91,7 @@ type
     property CellType: TZCellType read FCellType write FCellType default ZEansistring; //тип данных €чейки
     property Data: string read FData write FData;              //отображаемое содержимое €чейки
     property Formula: string read FFormula write FFormula;     //формула в стиле R1C1
-    property Href: string read FHref write FHref;              //гиперссылка
+    property HRef: string read FHref write FHref;              //гиперссылка
     property HRefScreenTip: string read FHRefScreenTip write FHRefScreenTip; //подпись гиперссылки
     property ShowComment: boolean read FShowComment write FShowComment default false;
 
@@ -320,6 +320,36 @@ type
     property HeightPix: integer read GetSizePix write SetSizePix;
   end;
 
+  /// repeating columns or rows when printing the sheet
+  ///   implemented as binary mess in XLSX
+  ///   implemented as named range and overriding cell names in XML SS
+  ///   ???? OpenDocument
+  TZSheetPrintTitles = class(TPersistent)
+  private
+    FOwner: TZSheet;
+    FColumns: boolean;
+
+    FActive: boolean;
+    FTill: word;
+    FFrom: word;
+    procedure SetActive(const Value: boolean);
+    procedure SetFrom(const Value: word);
+    procedure SetTill(const Value: word);
+    function  Valid(const AFrom, ATill: word): boolean;
+    procedure RequireValid(const AFrom, ATill: word);
+  public
+    procedure Assign(Source: TPersistent); override;
+    constructor Create(const owner: TZSheet; const ForColumns: boolean);
+
+    function ToString: string; {$IfDef Delphi_Unicode} override; {$EndIf}
+// introduced in D2009 according to http://blog.marcocantu.com/blog/6hidden_delphi2009.html
+  published
+
+    property From: word read FFrom write SetFrom;
+    property Till: word read FTill write SetTill;
+    property Active: boolean read FActive write SetActive;
+  end;
+
   //WorkSheetOptions
   TZSheetOptions = class (TPersistent)
   private
@@ -379,12 +409,16 @@ type
     FRightToLeft: boolean;
     FSheetOptions: TZSheetOptions;
     FSelected: boolean;
+    FPrintRows, FPrintCols: TZSheetPrintTitles;
+
     procedure SetColumn(num: integer; const Value:TZColOptions);
     function  GetColumn(num: integer): TZColOptions;
     procedure SetRow(num: integer; const Value:TZRowOptions);
     function  GetRow(num: integer): TZRowOptions;
     function  GetSheetOptions(): TZSheetOptions;
     procedure SetSheetOptions(Value: TZSheetOptions);
+    procedure SetPrintCols(const Value: TZSheetPrintTitles);
+    procedure SetPrintRows(const Value: TZSheetPrintTitles);
   protected
     procedure SetColWidth(num: integer; const Value: real); virtual;
     function  GetColWidth(num: integer): real; virtual;
@@ -419,6 +453,9 @@ type
     property MergeCells: TZMergeCells read FMergeCells write FMergeCells;
     property SheetOptions: TZSheetOptions read GetSheetOptions write SetSheetOptions;
     property Selected: boolean read FSelected write FSelected;
+
+    property RowsToRepeat: TZSheetPrintTitles read FPrintRows write SetPrintRows;
+    property ColsToRepeat: TZSheetPrintTitles read FPrintCols write SetPrintCols;
   end;
 
   //—траницы
@@ -2183,12 +2220,17 @@ begin
   if FStore <> nil then
     if FStore.DefaultSheetOptions <> nil then
       FSheetOptions.Assign(FStore.DefaultSheetOptions);
+
+  FPrintRows := TZSheetPrintTitles.Create(Self, false);
+  FPrintCols := TZSheetPrintTitles.Create(Self, true);
 end;
 
 destructor TZSheet.Destroy();
 begin
   FreeAndNil(FMergeCells);
   FreeAndNil(FSheetOptions);
+  FPrintRows.Free;
+  FPrintCols.Free;
   Clear();
   FCells := nil;
   FRows := nil;
@@ -2236,6 +2278,8 @@ begin
 
     {дописать что ещЄ нужно копировать}
     {tut!}
+    RowsToRepeat.Assign(zSource.RowsToRepeat);
+    ColsToRepeat.Assign(zSource.ColsToRepeat);
   end else
     inherited Assign(Source);
 end;
@@ -2323,6 +2367,16 @@ begin
     FDefaultRowHeight := round(Value*100)/100;
 end;
 
+procedure TZSheet.SetPrintCols(const Value: TZSheetPrintTitles);
+begin
+  FPrintCols.Assign( Value );
+end;
+
+procedure TZSheet.SetPrintRows(const Value: TZSheetPrintTitles);
+begin
+  FPrintRows.Assign( Value );
+end;
+
 procedure TZSheet.Clear();
 var
   i, j: integer;
@@ -2370,7 +2424,7 @@ var
 
 begin
   if Value < 0 then exit;
-  if FColCount > Value then
+  if FColCount > Value then // todo Repeatable columns may be affected
   begin
     for i := Value to FColCount - 1 do
     begin
@@ -2410,7 +2464,7 @@ var
 
 begin
   if Value < 0 then exit;
-  if FRowCount > Value then
+  if FRowCount > Value then  // todo Repeatable rows may be affected
   begin
     for i := 0 to FColCount - 1 do
     begin
@@ -2705,6 +2759,87 @@ end;
 initialization
   {$I zexmlss.lrs}
 {$ENDIF}
+
+{ TZSheetPrintTitles }
+
+procedure TZSheetPrintTitles.Assign(Source: TPersistent);
+var f, t: word;  a: boolean;
+begin
+  if Source is TZSheetPrintTitles then
+    begin
+      F   := TZSheetPrintTitles(Source).From;
+      T   := TZSheetPrintTitles(Source).Till;
+      A   := TZSheetPrintTitles(Source).Active;
+
+      if A then RequireValid(F, T);
+
+      FFrom   := F;
+      FTill   := T;
+      FActive := A;
+    end
+  else inherited;
+end;
+
+constructor TZSheetPrintTitles.Create(const owner: TZSheet; const ForColumns: boolean);
+begin
+  if nil = owner then raise Exception.Create(Self.ClassName+' requires an existing worksheet for owners.');
+
+  Self.FOwner := owner;
+  Self.FColumns := ForColumns;
+end;
+
+procedure TZSheetPrintTitles.SetActive(const Value: boolean);
+begin
+  if Value then RequireValid(FFrom, FTill);
+
+  FActive := Value
+end;
+
+procedure TZSheetPrintTitles.SetFrom(const Value: word);
+begin
+  if Active then RequireValid(Value, FTill);
+
+  FFrom := Value;
+end;
+
+procedure TZSheetPrintTitles.SetTill(const Value: word);
+begin
+  if Active then RequireValid(FFrom, Value);
+
+  FTill := Value;
+end;
+
+function TZSheetPrintTitles.ToString: string;
+var c: char;
+begin
+  If Active then begin
+     if FColumns then c := 'C' else c := 'R';
+     Result := c + IntToStr(From + 1) + ':' + c + IntToStr(Till + 1);
+  end else
+     Result := '';
+end;
+
+procedure TZSheetPrintTitles.RequireValid(const AFrom, ATill: word);
+begin
+  if not Valid(AFrom, ATill) then
+     raise Exception.Create('Invalid printable titles for the worksheet.');
+end;
+
+function TZSheetPrintTitles.Valid(const AFrom, ATill: word): boolean;
+var UpperLimit: word;
+begin
+  Result := False;
+  if AFrom > ATill then exit;
+  if AFrom < 0 then exit; // if datatype would be changed to traditional integer
+
+  if FColumns
+     then UpperLimit := FOwner.ColCount
+     else UpperLimit := FOwner.RowCount;
+
+  If ATill >= UpperLimit then exit;
+
+  Result := True;
+end;
 
 end.
 
