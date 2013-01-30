@@ -360,6 +360,11 @@ var
 
 begin
   l := length(st);
+  if (l = 0) then
+   begin
+     l := 4;
+     st := 'List';
+   end;
   if st[l] <>')' then
     st := st + '(' + inttostr(n) + ')'
   else
