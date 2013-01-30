@@ -20,7 +20,6 @@ type TZxZipXE2 = class (TZxZipGen)
 
        procedure DoAbortAndDelete;  override;
        procedure DoSaveAndSeal;  override;
-       function  DoNewStream(const RelativeName: TFileName): TStream; override;
 
        /// Returns True if the stream was flushed and clearance is given to free it.
        /// Otherwise is transmitted to the sealed list
@@ -53,11 +52,6 @@ begin
   end;
   FZ.Close;
   DeleteFile(ZipFileName);
-end;
-
-function TZxZipXE2.DoNewStream(const RelativeName: TFileName): TStream;
-begin
-  Result := TMemoryStream.Create;
 end;
 
 procedure TZxZipXE2.DoSaveAndSeal;

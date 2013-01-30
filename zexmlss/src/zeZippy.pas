@@ -43,7 +43,7 @@ type
 
        procedure DoAbortAndDelete;  virtual; abstract;
        procedure DoSaveAndSeal;  virtual; abstract;
-       function  DoNewStream(const RelativeName: TFileName): TStream; virtual; abstract;
+       function  DoNewStream(const RelativeName: TFileName): TStream; virtual;
 
        /// Returns True if the stream was flushed and clearance is given to free it.
        /// Otherwise is transmitted to the sealed list
@@ -218,6 +218,11 @@ constructor TZxZipGen.Create(const ZipFile: TFileName);
 begin
    inherited Create;
    FFileName := ZipFile;
+end;
+
+function TZxZipGen.DoNewStream(const RelativeName: TFileName): TStream;
+begin
+  Result := TMemoryStream.Create;
 end;
 
 (*********************************************************)

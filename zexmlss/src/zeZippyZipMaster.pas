@@ -20,7 +20,6 @@ type TZxZipMastered = class (TZxZipGen)
 
        procedure DoAbortAndDelete;  override;
        procedure DoSaveAndSeal;  override;
-       function  DoNewStream(const RelativeName: TFileName): TStream; override;
 
        /// Returns True if the stream was flushed and clearance is given to free it.
        /// Otherwise is transmitted to the sealed list
@@ -57,11 +56,6 @@ begin
   end;
   FZM.Clear;
   FZM.ZipFileName := ''; // hopefully it would close it
-end;
-
-function TZxZipMastered.DoNewStream(const RelativeName: TFileName): TStream;
-begin
-  Result := TMemoryStream.Create;
 end;
 
 function TZxZipMastered.DoSealStream(const Data: TStream; const RelName: TFileName): boolean;

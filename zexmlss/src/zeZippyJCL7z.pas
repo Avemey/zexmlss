@@ -23,7 +23,6 @@ type TZxZipJcl7z = class (TZxZipGen)
 
        procedure DoAbortAndDelete;  override;
        procedure DoSaveAndSeal;  override;
-       function  DoNewStream(const RelativeName: TFileName): TStream; override;
 
        /// Returns True if the stream was flushed and clearance is given to free it.
        /// Otherwise the stream object is transmitted to the sealed list
@@ -55,11 +54,6 @@ begin
   end;
 //  FZ.Close;   - probably nothign is created on disk  before actual compression
 //  DeleteFile(ZipFileName);
-end;
-
-function TZxZipJcl7z.DoNewStream(const RelativeName: TFileName): TStream;
-begin
-  Result := TMemoryStream.Create;
 end;
 
 procedure TZxZipJcl7z.DoSaveAndSeal;
