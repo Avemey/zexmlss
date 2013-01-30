@@ -41,7 +41,7 @@ type
      protected
        FActiveStreams, FSealedStreams: TStringList;
 
-       procedure DoAbortAndDelete;  virtual; abstract;
+       procedure DoAbortAndDelete;  virtual;
        procedure DoSaveAndSeal;  virtual; abstract;
        function  DoNewStream(const RelativeName: TFileName): TStream; virtual;
 
@@ -218,6 +218,16 @@ constructor TZxZipGen.Create(const ZipFile: TFileName);
 begin
    inherited Create;
    FFileName := ZipFile;
+end;
+
+procedure TZxZipGen.DoAbortAndDelete; // var i: integer;
+begin
+//  for i := FActiveStreams.Count - 1 downto 0 do begin
+//      FActiveStreams.Objects[i].Free; // can be nil - that is okay for .Free
+//      FActiveStreams.Delete(i);
+//  end;
+  FActiveStreams.OwnsObjects := True; // force freeing them
+  FActiveStreams.Clear;
 end;
 
 function TZxZipGen.DoNewStream(const RelativeName: TFileName): TStream;

@@ -21,7 +21,6 @@ type TZxZipJcl7z = class (TZxZipGen)
      protected
        FZ: TJclCompressArchive;
 
-       procedure DoAbortAndDelete;  override;
        procedure DoSaveAndSeal;  override;
 
        /// Returns True if the stream was flushed and clearance is given to free it.
@@ -43,17 +42,6 @@ constructor TZxZipJcl7z.Create(const ZipFile: TFileName);
 begin
   inherited;
   FZ := TJclZipCompressArchive.Create(self.ZipFileName);
-end;
-
-procedure TZxZipJcl7z.DoAbortAndDelete;
-var i: integer;
-begin
-  for i := FActiveStreams.Count - 1 downto 0 do begin
-      FActiveStreams.Objects[i].Free; // can be nil - that is okay for .Free
-      FActiveStreams.Delete(i);
-  end;
-//  FZ.Close;   - probably nothign is created on disk  before actual compression
-//  DeleteFile(ZipFileName);
 end;
 
 procedure TZxZipJcl7z.DoSaveAndSeal;

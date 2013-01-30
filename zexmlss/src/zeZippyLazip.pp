@@ -27,7 +27,6 @@ type
      protected
        FZ: TZipper;
 
-       procedure DoAbortAndDelete;  override;
        procedure DoSaveAndSeal;  override;
 
        /// Returns True if the stream was flushed and clearance is given to free it.
@@ -51,11 +50,6 @@ procedure TZxZipLazip.BeforeDestruction;
 begin
   inherited;  // before freeing - may throw exception on unsealed data
   FZ.Free;    // perhaps there can be second attempt ?
-end;
-
-procedure TZxZipLazip.DoAbortAndDelete;
-begin
-  // nothing to do ? Seems TZipper creates nothing until SaveToFile called
 end;
 
 procedure TZxZipLazip.DoSaveAndSeal;

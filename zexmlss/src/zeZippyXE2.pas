@@ -44,12 +44,9 @@ begin
 end;
 
 procedure TZxZipXE2.DoAbortAndDelete;
-var i: integer;
 begin
-  for i := FActiveStreams.Count - 1 downto 0 do begin
-      FActiveStreams.Objects[i].Free; // can be nil - that is okay for .Free
-      FActiveStreams.Delete(i);
-  end;
+  inherited;
+
   FZ.Close;
   DeleteFile(ZipFileName);
 end;
