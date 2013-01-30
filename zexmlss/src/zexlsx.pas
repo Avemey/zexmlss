@@ -4,8 +4,10 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2012.08.12
+// Last update: 2013.01.30
 //----------------------------------------------------------------
+// Modified by the_Arioch@nm.ru - uniform save API for creating
+//     XLSX files in Delphi/Windows
 {
  Copyright (C) 2012 Ruslan Neborak
 
@@ -4473,7 +4475,7 @@ var
   azg: TZxZipGen; // Actual Zip Generator
 
 begin
-  result := 0;
+  Result := 0;
   Stream := nil;
   kol := 0;
   need_comments := false;
@@ -4615,7 +4617,7 @@ var
   _commentArray: TZESaveIntArray;
 
 begin
-  result := 0;
+  Result := 0;
   Stream := nil;
   kol := 0;
   need_comments := false;
@@ -4862,6 +4864,7 @@ begin
     SetLength(Stream, 0);
     Stream := nil;
   end;
+  Result := 0;
 end; //SaveXmlssToXSLX
 
 {$ENDIF}

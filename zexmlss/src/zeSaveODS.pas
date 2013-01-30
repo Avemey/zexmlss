@@ -16,7 +16,7 @@ type TZxODSSaver = class(TZXMLSSave)
         class function FormatDescriptions: TStringDynArray; override;
 end;
 
-{ TZxXlsxSaver }
+{ TZxODSSaver }
 
 class function TZxODSSaver.FormatDescriptions: TStringDynArray;
 begin

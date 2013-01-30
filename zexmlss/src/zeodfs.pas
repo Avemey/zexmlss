@@ -4,8 +4,10 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2012.08.12
+// Last update: 2013.01.30
 //----------------------------------------------------------------
+// Modified by the_Arioch@nm.ru - added uniform save API
+//     to create ODS in Delphi/Windows
 {
  Copyright (C) 2012 Ruslan Neborak
 
@@ -43,7 +45,7 @@ interface
 {$ENDIF}
 
 uses
-  SysUtils, classes, zsspxml, zexmlss, zesavecommon, graphics
+  SysUtils,  graphics, classes, zsspxml, zexmlss, zesavecommon, zeZippy
   {$IFDEF FPC},zipper{$ENDIF};
 
 //Сохраняет незапакованный документ в формате Open Document
@@ -54,6 +56,12 @@ function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string; const Sheets
 function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring = ''): integer; overload;
 {$ENDIF}
+
+function ExportXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
+                           const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString;
+                           BOM: ansistring = '';
+                           AllowUnzippedFolder: boolean = false; ZipGenerator: CZxZipGens = nil): integer; overload;
+
 
 function ReadODFSPath(var XMLSS: TZEXMLSS; DirName: string): integer;
 
@@ -1595,9 +1603,73 @@ begin
       FreeAndNil(StreamMA);
   end;
 
+  Result := 0;
 end; //SaveXmlssToODFS
 
 {$ENDIF}
+
+function ExportXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
+                           const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString;
+                           BOM: ansistring = '';
+                           AllowUnzippedFolder: boolean = false; ZipGenerator: CZxZipGens = nil): integer; overload;
+var
+  _pages: TZESaveIntArray;      //номера страниц
+  _names: TZESaveStrArray;      //названия страниц
+  kol: integer;
+  Stream: TStream;
+  azg: TZxZipGen; // Actual Zip Generator
+
+begin
+  azg := nil;
+  try
+
+    if (not ZECheckTablesTitle(XMLSS, SheetsNumbers, SheetsNames, _pages, _names, kol)) then
+    begin
+      result := 2;
+      exit;
+    end;
+
+    // Todo - common block and exception const with XLSX output in zexlsx unit => need merge
+    if nil = ZipGenerator then begin
+      ZipGenerator := TZxZipGen.QueryZipGen;
+      if nil = ZipGenerator then
+        if AllowUnzippedFolder
+           then ZipGenerator := TZxZipGen.QueryDummyZipGen
+           else raise EZxZipGen.Create('No zip generators registered, folder output disabled.');
+           // result := 3 ????
+    end;
+    azg := ZipGenerator.Create(FileName);
+
+
+    Stream := azg.NewStream('content.xml');
+    ODFCreateContent(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM);
+    azg.SealStream(Stream);
+
+    Stream := azg.NewStream('meta.xml');
+    ODFCreateMeta(XMLSS, Stream, TextConverter, CodePageName, BOM);
+    azg.SealStream(Stream);
+
+    Stream := azg.NewStream('settings.xml');
+    ODFCreateSettings(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM);
+    azg.SealStream(Stream);
+
+    Stream := azg.NewStream('styles.xml');
+    ODFCreateStyles(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM);
+    azg.SealStream(Stream);
+
+    Stream := azg.NewStream('META-INF/manifest.xml');
+    ODFCreateManifest(Stream, TextConverter, CodePageName, BOM);
+    azg.SealStream(Stream);
+
+    azg.SaveAndSeal;
+  finally
+    ZESClearArrays(_pages, _names);
+    azg.Free;
+  end;
+  Result := 0;
+end; //ExportXmlssToODFS
+
+
 
 /////////////////// чтение
 

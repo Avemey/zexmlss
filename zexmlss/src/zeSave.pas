@@ -184,11 +184,11 @@ begin
 end;
 
 function TZXMLSSave.CreateSaverForDescription(const desc: String): IZXMLSSave;
-var tgt: ansiString; ss: TStringDynArray;  //s: string;
+var tgt: String; ss: TStringDynArray;  //s: string;
     cs: CZXMLSSaveClass; cc: TClass;
     i, j: integer;
 begin
-   tgt := UpperCase(Trim(AnsiString(desc))); // target
+   tgt := UpperCase(Trim(desc)); // target
 
    for i := 0 to SaveClasses.Count - 1 do begin
        cc := SaveClasses[i];
@@ -199,7 +199,7 @@ begin
 //           if UpperCase(Trim(AnsiString(s))) = tgt then begin
        ss := cs.FormatDescriptions;
        for j := Low(ss) to High(ss) do begin
-           if UpperCase(Trim(AnsiString(ss[j]))) = tgt then begin
+           if UpperCase(Trim(ss[j])) = tgt then begin
               Result := cs.Create(self);
               exit;
            end;
