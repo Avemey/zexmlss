@@ -66,8 +66,6 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
         /// returns zero on success, according to original
         ///     description for SaveXmlssToEXML
         function Save: integer;
-        class procedure RegisterFormat(const sv: CZXMLSSaveClass);
-        class procedure UnRegisterFormat(const sv: CZXMLSSaveClass);
 
      protected
         fBook: TZEXMLSS;
@@ -91,6 +89,11 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
         /// tries to guess format by filename in the base class
         function InternalSave: integer; virtual;
         class function FormatDescriptions: TStringDynArray; virtual;
+        class procedure RegisterFormat(const sv: CZXMLSSaveClass);
+        class procedure UnRegisterFormat(const sv: CZXMLSSaveClass);
+     public
+        class procedure Register;
+        class procedure UnRegister;
      end;
 
      EZXSaveException = class (Exception);
@@ -326,9 +329,19 @@ begin
 end;
 
 
+class procedure TZXMLSSave.UnRegister;
+begin
+  UnRegisterFormat(Self);
+end;
+
 class procedure TZXMLSSave.UnRegisterFormat(const sv: CZXMLSSaveClass);
 begin
   SaveClasses.Remove(sv);
+end;
+
+class procedure TZXMLSSave.Register;
+begin
+  RegisterFormat(Self);
 end;
 
 class procedure TZXMLSSave.RegisterFormat(const sv: CZXMLSSaveClass);

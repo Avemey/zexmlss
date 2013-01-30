@@ -34,7 +34,9 @@ begin
 end;
 
 initialization
-    TZXMLSSave.RegisterFormat(TZxXlsxSaver);
+    TZxXlsxSaver.Register;
+//    TZXMLSSave.RegisterFormat(TZxXlsxSaver);
 finalization
-    TZXMLSSave.UnRegisterFormat(TZxXlsxSaver);
+    TZxXlsxSaver.UnRegister;
+//    TZXMLSSave.UnRegisterFormat(TZxXlsxSaver);
 end.

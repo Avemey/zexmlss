@@ -71,7 +71,7 @@ begin
 end;
 
 initialization
-  TZxZipGen.RegisterZipGen(TZxZipMastered);
+  TZxZipMastered.Register;
 finalization
-  TZxZipGen.UnRegisterZipGen(TZxZipMastered);
+  TZxZipMastered.UnRegister;
 end.

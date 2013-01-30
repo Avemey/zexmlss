@@ -30,7 +30,9 @@ begin
 end;
 
 initialization
-    TZXMLSSave.RegisterFormat(TZxXMLSSSaver);
+    TZxXMLSSSaver.Register;
+//    TZXMLSSave.RegisterFormat(TZxXMLSSSaver);
 finalization
-    TZXMLSSave.UnRegisterFormat(TZxXMLSSSaver);
+    TZxXMLSSSaver.UnRegister;
+//    TZXMLSSave.UnRegisterFormat(TZxXMLSSSaver);
 end.

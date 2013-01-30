@@ -63,10 +63,13 @@ type
        procedure AfterConstruction; override;
        procedure BeforeDestruction; override;
 
-
-     public
+     protected // private ?  strict private ?
         class procedure RegisterZipGen(const zgc: CZxZipGens);
         class procedure UnRegisterZipGen(const zgc: CZxZipGens);
+
+     public
+        class procedure Register;
+        class procedure UnRegister;
 
         /// The spreadsheet exporter may enumerate them increasing parameter until nil is returned
         class function QueryZipGen(const idx: integer = 0): CZxZipGens;
@@ -317,12 +320,22 @@ end;
 
 var ZxZipMakers: TClassList;
 
+class procedure TZxZipGen.Register;
+begin
+  RegisterZipGen(Self);
+end;
+
 class procedure TZxZipGen.RegisterZipGen(const zgc: CZxZipGens);
 begin
   if (nil = zgc) or not zgc.InheritsFrom(TZxZipGen) then
      raise EZxZipGen.Create('Can only register zip generating subclasses.');
 
   ZxZipMakers.Insert(0, zgc); // LIFO
+end;
+
+class procedure TZxZipGen.UnRegister;
+begin
+  UnRegisterZipGen(Self);
 end;
 
 class procedure TZxZipGen.UnRegisterZipGen(const zgc: CZxZipGens);

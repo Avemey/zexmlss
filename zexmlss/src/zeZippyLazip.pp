@@ -70,8 +70,8 @@ begin
 end;
 
 initialization
-  TZxZipGen.RegisterZipGen(TZxZipLazip);
+  TZxZipLazip.Register;
 finalization
-  TZxZipGen.UnRegisterZipGen(TZxZipLazip);
+  TZxZipLazip.UnRegister;
 end.
 

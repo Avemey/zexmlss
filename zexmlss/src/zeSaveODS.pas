@@ -34,7 +34,9 @@ begin
 end;
 
 initialization
-    TZXMLSSave.RegisterFormat(TZxODSSaver);
+    TZxODSSaver.Register;
+//    TZXMLSSave.RegisterFormat(TZxODSSaver);
 finalization
-    TZXMLSSave.UnRegisterFormat(TZxODSSaver);
+    TZxODSSaver.UnRegister;
+//    TZXMLSSave.UnRegisterFormat(TZxODSSaver);
 end.
