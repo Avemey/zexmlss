@@ -1741,10 +1741,13 @@ var
       //PageBreaks
       WritePageBreaks();
 
+      //Todo: consider moving this FANs upwards after "WriteEndTagNode(); //Table" and try-finally it
+      FreeAndNil(AttrPrintTitles);
       FreeAndNil(AttrCell);
       FreeAndNil(AttrData);
       FreeAndNil(AttrComment);
       FreeAndNil(AttrCommentData);
+
       WriteEndTagNode(); //Worksheet
     end;
   end; //WritePage
