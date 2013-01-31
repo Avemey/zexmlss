@@ -1017,7 +1017,7 @@ var
   //      PageNum: integer    - номер страницы в хранилище
   //  const TableName: string - название страницы
   //      PageIndex: integer  - номер в массиве страниц
-  procedure WriteODFTable(PageNum: integer; const TableName: string; PageIndex: integer);
+  procedure WriteODFTable(const PageNum: integer; const TableName: string; PageIndex: integer);
   var
     b: boolean;
     i, j: integer;
@@ -1028,6 +1028,8 @@ var
     isNotEmpty: boolean;
     _StyleID: integer;
     _CellData: string;
+    ProcessedSheet: TZSheet;
+    DivedIntoHeader: boolean; // начали запись повтор€ющегос€ на печати столбца
 
     //¬ыводит содержимое €чейки с учЄтом переноса строк
     procedure WriteTextP(xml: TZsspXMLWriterH; const CellData: string; const href: string = '');
@@ -1065,6 +1067,7 @@ var
     end; //WriteTextP
 
   begin
+    ProcessedSheet := XMLSS.Sheets[PageNum];
     _xml.Attributes.Clear();
     //јтрибуты дл€ таблицы:
     //    table:name        - название таблицы
@@ -1075,7 +1078,7 @@ var
     //?   table:display     - признак отображаемости таблицы (мощнее печати, true - по-умолчани.)
     //?   table:print-ranges - диапазон печати
     _xml.Attributes.Add('table:name', Tablename, false);
-    b := XMLSS.Sheets[PageNum].Protect;
+    b := ProcessedSheet.Protect;
     if (b) then
       _xml.Attributes.Add('table:protected', ODFBoolToStr(b), false);
     _xml.WriteTagNode('table:table', true, true, false);
@@ -1087,46 +1090,74 @@ var
     //    table:style-name                - стиль столбца
     //    table:visibility                - видимость столбца (по-умолчанию visible);
     //    table:default-cell-style-name   - стиль €чеек по умолчанию (если не задан стиль строки и €чейки)
-    for i := 0 to XMLSS.Sheets[PageNum].ColCount - 1 do
+    DivedIntoHeader := False;
+    for i := 0 to ProcessedSheet.ColCount - 1 do
     begin
       _xml.Attributes.Clear();
       _xml.Attributes.Add('table:style-name', 'co' + IntToStr(ColumnStyle[PageIndex][i]));
       //¬идимость: table:visibility (visible | collapse | filter)
-      if (XMLSS.Sheets[PageNum].Columns[i].Hidden) then
+      if (ProcessedSheet.Columns[i].Hidden) then
         _xml.Attributes.Add('table:visibility', 'collapse', false); //или всЄ-таки filter?
       s := 'Default';
-      k := XMLSS.Sheets[PageNum].Columns[i].StyleID;
+      k := ProcessedSheet.Columns[i].StyleID;
       if (k >= 0) then
         s := 'ce' + IntToStr(k);
       _xml.Attributes.Add('table:default-cell-style-name', s, false);
       //table:default-cell-style-name
+
+      // на пам€ть: учЄт столбцов-заголовков сам по себе
+      //  должен вли€ть на table:number-columns-repeated
+      with ProcessedSheet.ColsToRepeat do
+        if Active and (i = From) then begin // входим в зону заголовка
+           _xml.WriteTagNode('table:table-header-columns', []);
+           DivedIntoHeader := true;
+        end;
+
       _xml.WriteEmptyTag('table:table-column', true, false);
+
+      if DivedIntoHeader and (i = ProcessedSheet.ColsToRepeat.Till) then begin
+         // выходим из зоны заголовка
+           _xml.WriteEndTagNode;//  TagNode('table:table-header-columns', []);
+           DivedIntoHeader := False;
+        end;
     end;
+    if DivedIntoHeader then // может кто-то уменьшил ColCount после установки ColsToRepeat ?
+       _xml.WriteEndTagNode;//  TagNode('table:table-header-columns', []);
 
     //::::::: строки :::::::::
-    for i := 0 to XMLSS.Sheets[PageNum].RowCount - 1 do
+    DivedIntoHeader := False;
+    for i := 0 to ProcessedSheet.RowCount - 1 do
     begin
       //table:table-row
       _xml.Attributes.Clear();
       _xml.Attributes.Add('table:style-name', 'ro' + IntToStr(RowStyle[PageIndex][i]));
       //?? table:number-rows-repeated - кол-во повтор€емых строк
       // table:default-cell-style-name - стиль €чейки по-умолчанию
-      k := XMLSS.Sheets[PageNum].Rows[i].StyleID;
+      k := ProcessedSheet.Rows[i].StyleID;
       if (k >= 0) then
       begin
         s := 'ce' + IntToStr(k);
         _xml.Attributes.Add('table:default-cell-style-name', s, false);
       end;
       // table:visibility - видимость строки
-      if (XMLSS.Sheets[PageNum].Rows[i].Hidden) then
+      if (ProcessedSheet.Rows[i].Hidden) then
         _xml.Attributes.Add('table:visibility', 'collapse', false);
+
+      // на пам€ть: учЄт строк-заголовков сам по себе
+      //  должен вли€ть на table:number-rows-repeated
+      with ProcessedSheet.RowsToRepeat do
+        if Active and (i = From) then begin // входим в зону заголовка
+           _xml.WriteTagNode('table:table-header-rows', []);
+           DivedIntoHeader := true;
+        end;
+
       _xml.WriteTagNode('table:table-row', true, true, false);
       {€чейки}
       //**** пробегаем по всем €чейкам
-      for j := 0 to XMLSS.Sheets[PageNum].ColCount - 1 do
+      for j := 0 to ProcessedSheet.ColCount - 1 do
       begin
-        NumTopLeft := XMLSS.Sheets[PageNum].MergeCells.InLeftTopCorner(j, i);
-        NumArea := XMLSS.Sheets[PageNum].MergeCells.InMergeRange(j, i);
+        NumTopLeft := ProcessedSheet.MergeCells.InLeftTopCorner(j, i);
+        NumArea := ProcessedSheet.MergeCells.InMergeRange(j, i);
         s := 'table:table-cell';
         _xml.Attributes.Clear();
         isNotEmpty := false;
@@ -1152,30 +1183,29 @@ var
         end else
         if (NumTopLeft >= 0) then   //объединЄнна€ €чейка (лева€ верхн€€)
         begin
-          t := XMLSS.Sheets[PageNum].MergeCells.Items[NumTopLeft].Right -
-               XMLSS.Sheets[PageNum].MergeCells.Items[NumTopLeft].Left + 1;
+          t := ProcessedSheet.MergeCells.Items[NumTopLeft].Right -
+               ProcessedSheet.MergeCells.Items[NumTopLeft].Left + 1;
           _xml.Attributes.Add('table:number-columns-spanned', IntToStr(t), false);
-          t := XMLSS.Sheets[PageNum].MergeCells.Items[NumTopLeft].Bottom -
-               XMLSS.Sheets[PageNum].MergeCells.Items[NumTopLeft].Top + 1;
+          t := ProcessedSheet.MergeCells.Items[NumTopLeft].Bottom -
+               ProcessedSheet.MergeCells.Items[NumTopLeft].Top + 1;
           _xml.Attributes.Add('table:number-rows-spanned', IntToStr(t), false);
         end;
 
         //стиль
-        _StyleID := XMLSS.Sheets[PageNum].Cell[j, i].CellStyle;
+        _StyleID := ProcessedSheet.Cell[j, i].CellStyle;
         if ((_StyleID >= 0) and (_StyleID < XMLSS.Styles.Count)) then
           _xml.Attributes.Add('table:style-name', 'ce' + IntToStr(_StyleID), false);
 
         //защита €чейки
-
         b := XMLSS.Styles[_StyleID].Protect;
         if (b) then
           _xml.Attributes.Add('table:protected', ODFBoolToStr(b), false);
 
-        _CellData := XMLSS.Sheets[PageNum].Cell[j, i].Data;
+        _CellData := ProcessedSheet.Cell[j, i].Data;
         //table:value-type + office:some_type_value
         //  ZENumber -> float
         ss := '';
-        case (XMLSS.Sheets[PageNum].Cell[j, i].CellType) of
+        case (ProcessedSheet.Cell[j, i].CellType) of
           ZENumber:
             begin
               ss := 'float';
@@ -1194,7 +1224,7 @@ var
           _xml.Attributes.Add('office:value-type', ss, false);
 
         //формула  
-        ss := XMLSS.Sheets[PageNum].Cell[j, i].Formula;
+        ss := ProcessedSheet.Cell[j, i].Formula;
         if (Length(ss) > 0) then
           _xml.Attributes.Add('table:formula', ss, false);
 
@@ -1210,24 +1240,24 @@ var
         //??  svg:y
         //??  draw:caption-point-x
         //??  draw:caption-point-y
-        if (XMLSS.Sheets[PageNum].Cell[j, i].ShowComment) then
+        if (ProcessedSheet.Cell[j, i].ShowComment) then
         begin
           if (not isNotEmpty) then
             _xml.WriteTagNode(s, true, true, true);
           isNotEmpty := true;
           _xml.Attributes.Clear();
-          b := XMLSS.Sheets[PageNum].Cell[j, i].AlwaysShowComment;
+          b := ProcessedSheet.Cell[j, i].AlwaysShowComment;
           if (b) then
             _xml.Attributes.Add('office:display', ODFBoolToStr(b), false);
           _xml.WriteTagNode('office:annotation', true, true, false);
           //автор примечани€
-          if (length(XMLSS.Sheets[PageNum].Cell[j, i].CommentAuthor) > 0) then
+          if (length(ProcessedSheet.Cell[j, i].CommentAuthor) > 0) then
           begin
             _xml.Attributes.Clear();
-            _xml.WriteTag('dc:creator', XMLSS.Sheets[PageNum].Cell[j, i].CommentAuthor, true, false, true);
+            _xml.WriteTag('dc:creator', ProcessedSheet.Cell[j, i].CommentAuthor, true, false, true);
           end;
           _xml.Attributes.Clear();
-          WriteTextP(_xml, XMLSS.Sheets[PageNum].Cell[j, i].Comment);
+          WriteTextP(_xml, ProcessedSheet.Cell[j, i].Comment);
           _xml.WriteEndTagNode(); //office:annotation
         end;
 
@@ -1238,7 +1268,7 @@ var
             _xml.WriteTagNode(s, true, true, true);
           isNotEmpty := true;
           _xml.Attributes.Clear();
-          WriteTextP(_xml, _CellData, XMLSS.Sheets[PageNum].Cell[j, i].Href);
+          WriteTextP(_xml, _CellData, ProcessedSheet.Cell[j, i].Href);
         end;
 
         if (isNotEmpty) then
@@ -1247,8 +1277,17 @@ var
           _xml.WriteEmptyTag(s, true, true);
       end;
       {/€чейки}
+
+      if DivedIntoHeader and (i = ProcessedSheet.RowsToRepeat.Till) then begin
+         // выходим из зоны заголовка
+           _xml.WriteEndTagNode;//  TagNode('table:table-header-rows', []);
+           DivedIntoHeader := False;
+        end;
+
       _xml.WriteEndTagNode(); //table:table-row
     end;
+    if DivedIntoHeader then // может кто-то уменьшил RowCount после установки RowsToRepeat ?
+       _xml.WriteEndTagNode;//  TagNode('table:table-header-rows', []);
 
     _xml.WriteEndTagNode(); //table:table
   end; //WriteODFTable
