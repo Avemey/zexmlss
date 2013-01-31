@@ -2755,11 +2755,6 @@ begin
   RegisterComponents('ZColor', [TZEXMLSS]);
 end;
 
-{$IFDEF FPC}
-initialization
-  {$I zexmlss.lrs}
-{$ENDIF}
-
 { TZSheetPrintTitles }
 
 procedure TZSheetPrintTitles.Assign(Source: TPersistent);
@@ -2840,6 +2835,11 @@ begin
 
   Result := True;
 end;
+
+{$IFDEF FPC}
+initialization
+  {$I zexmlss.lrs}
+{$ENDIF}
 
 end.
 

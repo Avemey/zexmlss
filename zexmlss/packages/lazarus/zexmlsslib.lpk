@@ -1,11 +1,12 @@
 <?xml version="1.0"?>
 <CONFIG>
-  <Package Version="3">
+  <Package Version="4">
     <PathDelim Value="\"/>
     <Name Value="zexmlsslib"/>
+    <AddToProjectUsesSection Value="True"/>
     <Author Value="Ruslan Neborak"/>
     <CompilerOptions>
-      <Version Value="9"/>
+      <Version Value="11"/>
       <PathDelim Value="\"/>
       <SearchPaths>
         <OtherUnitFiles Value="../../src/;..\..\src"/>
@@ -23,7 +24,7 @@
     <Description Value="Работа с документами Excel XML SpreadSheet (excel xml), ODS и XLSX (пока только на чтение)"/>
     <License Value="zlib"/>
     <Version Release="5"/>
-    <Files Count="7">
+    <Files Count="13">
       <Item1>
         <Filename Value="..\..\src\zexmlss.pas"/>
         <HasRegisterProc Value="True"/>
@@ -50,9 +51,33 @@
         <UnitName Value="zesavecommon"/>
       </Item6>
       <Item7>
-        <Filename Value="..\..\src\zexslx.pas"/>
-        <UnitName Value="zexslx"/>
+        <Filename Value="..\..\src\zeSave.pas"/>
+        <UnitName Value="zeSave"/>
       </Item7>
+      <Item8>
+        <Filename Value="..\..\src\zeSaveEXML.pas"/>
+        <UnitName Value="zeSaveEXML"/>
+      </Item8>
+      <Item9>
+        <Filename Value="..\..\src\zeSaveODS.pas"/>
+        <UnitName Value="zeSaveODS"/>
+      </Item9>
+      <Item10>
+        <Filename Value="..\..\src\zeSaveXLSX.pas"/>
+        <UnitName Value="zeSaveXLSX"/>
+      </Item10>
+      <Item11>
+        <Filename Value="..\..\src\zeZippy.pas"/>
+        <UnitName Value="zeZippy"/>
+      </Item11>
+      <Item12>
+        <Filename Value="..\..\src\zeZippyLazip.pp"/>
+        <UnitName Value="zeZippyLazip"/>
+      </Item12>
+      <Item13>
+        <Filename Value="..\..\src\zexlsx.pas"/>
+        <UnitName Value="zexlsx"/>
+      </Item13>
     </Files>
     <Type Value="RunAndDesignTime"/>
     <RequiredPkgs Count="2">

@@ -49,7 +49,7 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
         function ExportTo(const fname: TFileName): iZXMLSSave;
         function To_(const fname: TFileName): iZXMLSSave; inline;
 
-        function Pages(const pages: array of TZxPageInfo): iZXMLSSave; overload;
+        function Pages(const APages: array of TZxPageInfo): iZXMLSSave; overload;
         function Pages(const numbers: array of integer): iZXMLSSave; overload;
         function Pages(const titles: array of string): iZXMLSSave; overload;
 
@@ -101,7 +101,7 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
 implementation
 uses
 {$IfDef MSWINDOWS}Registry, Windows, {$EndIf}
-  Contnrs, AnsiStrings;
+  Contnrs {$IfNDef FPC}, AnsiStrings{$EndIf};
 
 var SaveClasses: TClassList;
 
@@ -153,6 +153,7 @@ end;
 function TZXMLSSave.CharSet(const codepage: word): iZXMLSSave;
 begin
   fCharSet := CharSetByCodePage(codepage);
+  Result := Self;
 end;
 
 function TZXMLSSave.CharSet(const cs: AnsiString): iZXMLSSave;
@@ -259,18 +260,18 @@ begin
       Result[i] := fPages[i].name;
 end;
 
-function TZXMLSSave.Pages(const pages: array of TZxPageInfo): iZXMLSSave;
+function TZXMLSSave.Pages(const APages: array of TZxPageInfo): iZXMLSSave;
 var i, c: integer;
 begin
   c := fBook.Sheets.Count - 1;
 
-  for i := Low(pages) to High(pages) do
-    if (pages[i].no < 0) or (pages[i].no > c) then
-       raise EZXSaveException.Create ('There is no sheet #'+IntToStr(pages[i].no) +' in the book');
+  for i := Low(APages) to High(APages) do
+    if (APages[i].no < 0) or (APages[i].no > c) then
+       raise EZXSaveException.Create ('There is no sheet #'+IntToStr(APages[i].no) +' in the book');
 
-  SetLength(fPages, Length(pages));
-  for i := 0 to High(pages) do
-      fPages[i] := pages[i];
+  SetLength(fPages, Length(APages));
+  for i := 0 to High(APages) do
+      fPages[i] := APages[i];
 
   Result := Self;
 end;
@@ -305,7 +306,7 @@ begin
   Result := self;
 end;
 
-function TZXMLSSave.Save;
+function TZXMLSSave.Save:integer;
 var i: integer;
 begin
   if FZipGen = nil then FZipGen := TZxZipGen.QueryZipGen;
@@ -323,7 +324,7 @@ begin
   Result := InternalSave;
 end;
 
-function TZXMLSSave.InternalSave;
+function TZXMLSSave.InternalSave:integer;
 begin
   Result := CreateSaverForDescription(ExtractFileExt(FFile)).InternalSave;
 end;
