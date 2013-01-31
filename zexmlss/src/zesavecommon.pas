@@ -348,6 +348,9 @@ begin
   _pages := nil;
 end;
 
+resourcestring
+  DefaultSheetName = 'Sheet';
+
 //делает уникальную строку, добавляя к строке '(num)'
 //топорно, но работает
 //INPUT
@@ -359,17 +362,15 @@ var
   s: string;
 
 begin
+  if Trim(st) = '' then
+     st := DefaultSheetName;  // behave uniformly with ZECheckTablesTitle
+
   l := length(st);
-  if (l = 0) then
-   begin
-     l := 4;
-     st := 'List';
-   end;
-  if st[l] <>')' then
+  if st[l] <> ')' then
     st := st + '(' + inttostr(n) + ')'
   else
   begin
-    m :=  l;
+    m := l;
     for i := l downto 1 do
     if st[i] = '(' then
     begin
@@ -436,6 +437,30 @@ function ZECheckTablesTitle(var XMLSS: TZEXMLSS; const SheetsNumbers:array of in
 var
   t1, t2, i: integer;
 
+  // '!' is allowed; ':' is not; whatever else ?
+  procedure SanitizeTitle(var s: string);   var i: integer;
+  begin
+    s := Trim(s);
+    for i := 1 to length(s) do
+       if s[i] = ':' then s[i] := ';';
+  end;
+  function CoalesceTitle(const i: integer; const checkArray: boolean): string;
+  begin
+    if checkArray then begin
+       Result := SheetsNames[i];
+       SanitizeTitle(Result);
+    end else
+       Result := '';
+
+    if Result = '' then begin
+       Result := XMLSS.Sheets[_pages[i]].Title;
+       SanitizeTitle(Result);
+    end;
+
+    if Result = '' then
+       Result := DefaultSheetName + ' ' + IntToStr(_pages[i] + 1);
+  end;
+
 begin
   result := false;
   t1 :=  Low(SheetsNumbers);
@@ -466,29 +491,33 @@ begin
     exit;
 
   //названия страниц
-  t1 :=  Low(SheetsNames);
+//  t1 :=  Low(SheetsNames); // we anyway assume later that Low(_names) == t1 - then let us just skip this.
   t2 := High(SheetsNames);
   setlength(_names, retCount);
-  if t1 = t2 + 1 then
-  begin
-    for i := 0 to retCount - 1 do
-    begin
-      _names[i] := XMLSS.Sheets[_pages[i]].Title;
-      if trim(_names[i]) = '' then _names[i] := 'list';
-    end;
-  end else
-  begin
-    if (t2 > retCount) then
-      t2 := retCount - 1;
-    for i := t1 to t2 do
-      _names[i] := SheetsNames[i];
-    if (t2 < retCount) then
-    for i := t2 + 1 to retCount - 1 do
-    begin
-      _names[i] := XMLSS.Sheets[_pages[i]].Title;
-      if trim(_names[i]) = '' then _names[i] := 'list';
-    end;
+//  if t1 = t2 + 1 then
+//  begin
+//    for i := 0 to retCount - 1 do
+//    begin
+//      _names[i] := XMLSS.Sheets[_pages[i]].Title;
+//      if trim(_names[i]) = '' then _names[i] := 'list';
+//    end;
+//  end else
+//  begin
+//    if (t2 > retCount) then
+//      t2 := retCount - 1;
+//    for i := t1 to t2 do
+//      _names[i] := SheetsNames[i];
+//    if (t2 < retCount) then
+//    for i := t2 + 1 to retCount - 1 do
+//    begin
+//      _names[i] := XMLSS.Sheets[_pages[i]].Title;
+//      if trim(_names[i]) = '' then _names[i] := 'list';
+//    end;
+//  end;
+  for i := Low(_names) to High(_names) do begin
+      _names[i] := CoalesceTitle(i, i <= t2);
   end;
+
 
   ZECorrectTitles(_names);
   result := true;
