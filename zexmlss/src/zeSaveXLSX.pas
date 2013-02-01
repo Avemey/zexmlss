@@ -8,7 +8,12 @@ unit zeSaveXLSX;
 interface
 
 implementation
-uses zeSave, zexmlss, zexlsx, Types, StrUtils;
+uses zeSave, zexmlss, zexlsx, Types,
+{$IfDef Delphi_Unicode}
+  StrUtils;
+{$Else}       // SplitString
+  zexmlssutils;
+{$EndIf}
 
 type TZxXlsxSaver = class(TZXMLSSave)
      protected

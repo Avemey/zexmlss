@@ -28,7 +28,7 @@ uses
   {$IFNDEF FPC}
   Windows,
   {$ENDIF}
-  SysUtils, Classes, Grids,
+  SysUtils, Types, Classes, Grids,
   {$IFNDEF NOZCOLORSTRINGGRID}
   ZColorStringGrid,
   {$ENDIF}
@@ -89,10 +89,46 @@ function ReadEXMLSS(var XMLSS: TZEXMLSS; Stream: TStream): integer; overload;
 //      FileName: string                - טלÿ פאיכא
 function ReadEXMLSS(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
 
+// needed for uniform save routines: zeSave*
+// missed in pre-Unicode Dlephi and in FPC
+function SplitString(const buffer: string; const delimeter: char): TStringDynArray;
+{$IfDef DELPHI_UNICODE} overload; inline; {$EndIf}
+
 implementation
 {$IfDef DELPHI_UNICODE}
-uses AnsiStrings;  // AnsiString targeted overloaded versions of Pos, Trim, etc
+uses  StrUtils,  // stock SplitString(string, string) implementation
+      AnsiStrings;  // AnsiString targeted overloaded versions of Pos, Trim, etc
 {$EndIf}
+
+
+function SplitString(const buffer: string; const delimeter: char): TStringDynArray;
+{$IfDef DELPHI_UNICODE}
+begin
+   Result := StrUtils.SplitString(buffer, delimeter); // implicit typecast
+end;
+{$Else}
+var i, from, till: integer; L: TList;
+begin
+  L := TList.Create;
+  try
+    for i := 1 to length(buffer) do
+        if delimeter = buffer[i] then L.Add(pointer(i));
+    L.Add(pointer(length(buffer) + 1));
+
+    SetLength(Result, L.Count);
+
+    from := 1;
+    for i := 0 to L.Count - 1 do begin
+        till := Integer(L[i]);
+        Result[i] := Copy(buffer, from, till - from);
+        from := till + 1;
+    end;
+  finally
+    L.Free;
+  end;
+end;
+{$EndIf}
+
 
 {$IFNDEF NOZCOLORSTRINGGRID}
 

@@ -8,7 +8,12 @@ unit zeSaveODS;
 interface
 
 implementation
-uses zeSave, zexmlss, zeodfs, Types, StrUtils;
+uses zeSave, zexmlss, zeodfs, Types,
+{$IfDef Delphi_Unicode}
+  StrUtils;
+{$Else}      // SplitString
+  zexmlssutils;
+{$EndIf}
 
 type TZxODSSaver = class(TZXMLSSave)
      protected

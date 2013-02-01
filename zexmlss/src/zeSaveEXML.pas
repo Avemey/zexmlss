@@ -8,7 +8,7 @@ unit zeSaveEXML;
 interface
 
 implementation
-uses zeSave, zexmlss, Types, StrUtils, zexmlssutils;
+uses zeSave, zexmlss, Types, zexmlssutils;
 
 type TZxXMLSSSaver = class(TZXMLSSave)
      protected
