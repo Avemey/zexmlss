@@ -28,7 +28,7 @@ object Form1: TForm1
   end
   object edSavePath: TDirectoryEdit
     Left = 24
-    Height = 23
+    Height = 28
     Top = 40
     Width = 248
     Directory = 'd:\tmp'
@@ -40,9 +40,9 @@ object Form1: TForm1
   end
   object Label1: TLabel
     Left = 9
-    Height = 15
+    Height = 20
     Top = 19
-    Width = 68
+    Width = 87
     Caption = 'Save files to: '
     ParentColor = False
   end

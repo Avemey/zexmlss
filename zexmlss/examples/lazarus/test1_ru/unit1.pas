@@ -30,7 +30,7 @@ var
   Form1: TForm1; 
 
 implementation
-uses zexlsx, zeZippy, zeZippyLazip;
+uses zexlsx, zeZippy, zeZippyLazip, zeSave;
 
 {$R *.lfm}
 
@@ -219,34 +219,41 @@ begin
 
     //сохранить 0-ую и 1-ую страницу
     //сохранить как excel xml
-    SaveXmlssToEXML(XMLSS, {какой-то путь} Path +'save_test.xml',
-    	[0, 1], [], TextConverter, 'UTF-8');
+    //SaveXmlssToEXML(XMLSS, {какой-то путь} Path +'save_test.xml',
+    //	[0, 1], [], TextConverter, 'UTF-8');
     //Примеры путей:
     //	/home/user_name/some_path/
     //	d:\some_path\
     //Путь должен существовать!
     //сохранить как незапакованный ods
-    SaveXmlssToODFSPath(XMLSS, Path+'ods_path\',
-    	[0, 1], [], TextConverter, 'UTF-8');
-    {$IFDEF FPC}
-    //Пока только для лазаруса
-    //сохранить как ods
-    SaveXmlssToODFS(XMLSS, Path+'save_test.ods',
-    	[0, 1], [], TextConverter, 'UTF-8');
-    {$ENDIF}
+    //SaveXmlssToODFSPath(XMLSS, Path+'ods_path\',
+    //	[0, 1], [], TextConverter, 'UTF-8');
+    //{$IFDEF FPC}
+    ////Пока только для лазаруса
+    ////сохранить как ods
+    //SaveXmlssToODFS(XMLSS, Path+'save_test.ods',
+    //	[0, 1], [], TextConverter, 'UTF-8');
+    //{$ENDIF}
+    //
+    //SaveXmlssToXLSX(XMLSS, Path+'save_test_laz.xlsx',
+    //	[0, 1], [], TextConverter, 'UTF-8');
+    //
+    //SaveXmlssToXLSXPath(XMLSS, Path+'xlsx_path_laz\',
+    //	[0, 1], [], TextConverter, 'UTF-8');
+    //
+    //ExportXmlssToXLSX( XMLSS, Path+'xlsx_path_generic',
+    //	[0, 1], [], TextConverter, 'UTF-8', '', true, QueryDummyZipGen);
 
-    SaveXmlssToXLSX(XMLSS, Path+'save_test_laz.xlsx',
-    	[0, 1], [], TextConverter, 'UTF-8');
+    //ExportXmlssToXLSX( XMLSS, Path+'save_test_generic.xlsx',
+    //	[0, 1], [], TextConverter, 'UTF-8');
 
-    SaveXmlssToXLSXPath(XMLSS, Path+'xlsx_path_laz\',
-    	[0, 1], [], TextConverter, 'UTF-8');
+    TZXMLSSave.Create(XMLSS).Save(Path+'LazZexSample.xml');
+    TZXMLSSave.Create(XMLSS).Save(Path+'LazZexSample.xlsx');
+    TZXMLSSave.Create(XMLSS).Save(Path+'LazZexSample.ods');
 
-    ExportXmlssToXLSX( XMLSS, Path+'xlsx_path_generic',
-    	[0, 1], [], TextConverter, 'UTF-8', '', true, QueryDummyZipGen);
-
-    ExportXmlssToXLSX( XMLSS, Path+'save_test_generic.xlsx',
-    	[0, 1], [], TextConverter, 'UTF-8');
-
+    TZXMLSSave.Create(XMLSS).Pages([0,1]).NoZip.To_(Path+'LazZexSample.Dir.xml').Save;
+    TZXMLSSave.Create(XMLSS).Pages([0,1]).NoZip.To_(Path+'LazZexSample.Dir.xlsx').Save;
+    TZXMLSSave.Create(XMLSS).Pages([0,1]).NoZip.To_(Path+'LazZexSample.Dir.ods').Save;
   finally
     FreeAndNil(XMLSS);
   end;

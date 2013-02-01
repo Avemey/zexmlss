@@ -7,8 +7,8 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, zexmlsslib, Unit1, zeZippyLazip
-  { you can add units after this };
+  Forms, Unit1, zeZippyLazip, zeZippy, zeSave,
+  zeSaveEXML, zeSaveODS, zeSaveXLSX;
 
 {$R *.res}
 

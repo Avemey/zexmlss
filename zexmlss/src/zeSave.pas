@@ -32,11 +32,14 @@ type IZXMLSSave = interface
 
         /// returns zero on success, according to original
         ///     description for SaveXmlssToEXML
-        function Save: integer;
+        function Save: integer;  overload;
+        function Save(Const FileName: TFileName): integer;  overload;
         function InternalSave: integer; // ugly, but implementation-specific typcast would be ugly too
 end;
 
 type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
+
+     { TZXMLSSave }
 
      TZXMLSSave = class (tInterfacedObject, IzXMLSSave)
      public
@@ -65,7 +68,8 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
 
         /// returns zero on success, according to original
         ///     description for SaveXmlssToEXML
-        function Save: integer;
+        function Save: integer;  overload;
+        function Save(Const FileName: TFileName): integer;  overload;
 
      protected
         fBook: TZEXMLSS;
@@ -277,13 +281,16 @@ begin
 end;
 
 function TZXMLSSave.Pages(const numbers: array of integer): iZXMLSSave;
-var i, c: integer;
+var i, j, c: integer;
 begin
   c := fBook.Sheets.Count - 1;
 
-  for i in numbers do
+//  for i in numbers do  //  Screw Delphi 7 !
+  for j := 0 to High(numbers) do begin
+    i := numbers[j];
     if (i < 0) or (i > c) then
-       raise EZXSaveException.Create ('There is no sheet #'+IntToStr(i) +' in the book');
+       raise EZXSaveException.Create ('There is no sheet #'+IntToStr(i) +' in the workbook');
+  end;
 
   SetLength(fPages, Length(numbers));
   for i := 0 to High(numbers) do with fPages[i] do begin
@@ -304,6 +311,11 @@ begin
       fPages[i].name := titles[i];
 
   Result := self;
+end;
+
+function TZXMLSSave.Save(const FileName: TFileName): integer;
+begin
+  Result := Self.ExportTo( FileName ).Save();
 end;
 
 function TZXMLSSave.Save:integer;
