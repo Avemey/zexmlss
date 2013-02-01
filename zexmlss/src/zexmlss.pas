@@ -323,7 +323,7 @@ type
   /// repeating columns or rows when printing the sheet
   ///   implemented as binary mess in XLSX
   ///   implemented as named range and overriding cell names in XML SS
-  ///   ???? OpenDocument
+  ///   implemented as special container tags in OpenDocument
   TZSheetPrintTitles = class(TPersistent)
   private
     FOwner: TZSheet;

@@ -36,7 +36,7 @@ contains
   duansistr in '..\..\src\duansistr.pas',
   zesavecommon in '..\..\src\zesavecommon.pas',
   zeformula in '..\..\src\zeformula.pas',
-  zexmlssutils in '..\..\src\zexmlssutils.pas';
+  zexmlssutils in '..\..\src\zexmlssutils.pas',
   zexslx in '..\..\src\zexslx.pas';
 
 end.

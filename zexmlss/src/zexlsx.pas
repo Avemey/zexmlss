@@ -2813,6 +2813,7 @@ begin
         for i := 0 to FilesCount - 1 do
         if (FileArray[i].ftype = 2) then
         begin
+          FreeAndNil(stream);
           stream := TFileStream.Create(DirName + FileArray[i].name, fmOpenRead or fmShareDenyNone);
           if (not ZEXSLXReadWorkBook(XMLSS, stream, RelationsArray[SheetRelationNumber], RelationsCounts[SheetRelationNumber])) then
           begin
@@ -4657,7 +4658,7 @@ begin
     FreeAndNil(Stream);
 
     // xl/_rels/workbook.xml.rels 
-    path_relsw := path_xl + PathDelim + '_rels' + PathDelim;
+    path_relsw := path_xl + '_rels' + PathDelim;
     if (not DirectoryExists(path_relsw)) then
       ForceDirectories(path_relsw);
     Stream := TFileStream.Create(path_relsw + 'workbook.xml.rels', fmCreate);
@@ -4718,7 +4719,7 @@ begin
     SetLength(_commentArray, 0);
     _commentArray := nil;
   end;
-end; //SaveXmlssToXLSXPath                        
+end; //SaveXmlssToXLSXPath
 
 {$IFDEF FPC}
 //Сохраняет документ в формате Open Office XML (xlsx)

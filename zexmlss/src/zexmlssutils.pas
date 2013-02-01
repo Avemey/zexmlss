@@ -7,7 +7,7 @@
 // URL:    http://avemey.com
 // Ver:    0.0.5
 // Лицензия: zlib
-// Last update: 2012.08.05
+// Last update: 2012.08.14
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -184,6 +184,7 @@ begin
     taRightJustify : XStyle.Alignment.Horizontal := ZHRight;
     taCenter       : XStyle.Alignment.Horizontal := ZHCenter;
   end;
+  XStyle.Alignment.Rotate := CellStyle.Rotate;
 end;
 {$ENDIF}
 

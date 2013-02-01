@@ -60,7 +60,7 @@
 			<DCC_UsePackage>vcl;$(DCC_UsePackage)</DCC_UsePackage>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base_Win32)'!=''">
-			<DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
+			<DCC_Namespace>System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
 			<VerInfo_Locale>1033</VerInfo_Locale>
 			<VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
 			<DCC_UsePackage>vcl;$(DCC_UsePackage)</DCC_UsePackage>
@@ -95,7 +95,13 @@
 			<DCCReference Include="..\..\src\zesavecommon.pas"/>
 			<DCCReference Include="..\..\src\zeformula.pas"/>
 			<DCCReference Include="..\..\src\zexmlssutils.pas"/>
-			<DCCReference Include="..\..\src\zexslx.pas"/>
+			<DCCReference Include="..\..\src\zexlsx.pas"/>
+			<DCCReference Include="..\..\src\zeSave.pas"/>
+			<DCCReference Include="..\..\src\zeSaveEXML.pas"/>
+			<DCCReference Include="..\..\src\zeSaveODS.pas"/>
+			<DCCReference Include="..\..\src\zeSaveXLSX.pas"/>
+			<DCCReference Include="..\..\src\zeZippy.pas"/>
+			<DCCReference Include="..\..\src\zeZippyXE2.pas"/>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
