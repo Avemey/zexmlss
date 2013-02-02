@@ -12,7 +12,7 @@ uses zeSave, zexmlss, Types, zexmlssutils;
 
 type TZxXMLSSSaver = class(TZXMLSSave)
      protected
-        function InternalSave: integer; override;
+        function DoSave: integer; override;
         class function FormatDescriptions: TStringDynArray; override;
 end;
 
@@ -24,7 +24,7 @@ begin
 // http://support.microsoft.com/kb/288130
 end;
 
-function TZxXMLSSSaver.InternalSave: integer;
+function TZxXMLSSSaver.DoSave: integer;
 begin
   Result := SaveXmlssToEXML( fBook, FFile, GetPageNumbers, GetPageTitles, fConv, fCharSet, fBOM);
 end;

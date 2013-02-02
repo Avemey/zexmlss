@@ -17,7 +17,7 @@ uses zeSave, zexmlss, zeodfs, Types,
 
 type TZxODSSaver = class(TZXMLSSave)
      protected
-        function InternalSave: integer; override;
+        function DoSave: integer; override;
         class function FormatDescriptions: TStringDynArray; override;
 end;
 
@@ -31,7 +31,7 @@ begin
    'OpenDocument*OpenDocument SpreadSheet*ISO/IEC 26300*ISO 26300', '*');
 end;
 
-function TZxODSSaver.InternalSave: integer;
+function TZxODSSaver.DoSave: integer;
 begin
   Result := ExportXmlssToODFS( // todo
     fBook, FFile, GetPageNumbers, GetPageTitles, fConv, fCharSet, fBOM,

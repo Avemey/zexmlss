@@ -34,8 +34,8 @@ implementation
 
 procedure TZxZipJcl7z.BeforeDestruction;
 begin
-  inherited;  // before freeing - may throw exception on unsealed data
-  FZ.Free;    // perhaps there can be second attempt ?
+  FZ.Free;
+  inherited;
 end;
 
 constructor TZxZipJcl7z.Create(const ZipFile: TFileName);

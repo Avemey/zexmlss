@@ -34,6 +34,7 @@ var
 
 implementation
 
+uses zeSave, zeSaveODS, zeSaveXLSX, zeSaveEXML;
 {$IFNDEF FPC}
   {$R *.dfm}
 {$ENDIF}  
@@ -60,7 +61,7 @@ begin
     {$IFEND}
   {$ENDIF}
   sd := TSaveDialog.Create(nil);
-  sd.Filter := 'Excel XML (*.xml)|*.xml';
+  sd.Filter := 'Excel XML (*.xml)|*.xml|OpenDocument|*.ods;*.fods|Office OpenXML|*.xlsx;*.xlsm';
   sd.DefaultExt := 'xml';
   sd.Options := sd.Options + [ofOverwritePrompt];
   if sd.Execute then
@@ -170,7 +171,8 @@ begin
 
       //сохраняем 0-ую и 1-ую страницу в файл
       //кодировка - utf8, имя кодировки='utf8' (для utf8 можно ''), BOM=''
-      SaveXmlssToEXML(tz, sd.FileName, [0, 1], [], @TextConverter, 'utf8');
+//      SaveXmlssToEXML(tz, sd.FileName, [0, 1], [], @TextConverter, 'utf8');
+      TZXMLSSave.From(tz).Pages([0,1]).Charset('utf8', TextConverter).Save(sd.FileName);
     finally
       tz.free();
     end;

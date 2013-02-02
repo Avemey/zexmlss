@@ -92,7 +92,7 @@ function ReadEXMLSS(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
 // needed for uniform save routines: zeSave*
 // missed in pre-Unicode Dlephi and in FPC
 function SplitString(const buffer: string; const delimeter: char): TStringDynArray;
-{$IfDef DELPHI_UNICODE} overload; inline; {$EndIf}
+{$IfDef DELPHI_UNICODE} overload; {$EndIf}
 
 implementation
 {$IfDef DELPHI_UNICODE}

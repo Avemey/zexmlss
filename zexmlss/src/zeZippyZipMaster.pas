@@ -33,8 +33,8 @@ implementation
 
 procedure TZxZipMastered.BeforeDestruction;
 begin
-  inherited; // before freeing - may throw exception on unsealed data
-  FZM.Free;  // perhaps there can be second attempt ?
+  FZM.Free;
+  inherited;
 end;
 
 constructor TZxZipMastered.Create(const ZipFile: TFileName);

@@ -17,7 +17,7 @@ uses zeSave, zexmlss, zexlsx, Types,
 
 type TZxXlsxSaver = class(TZXMLSSave)
      protected
-        function InternalSave: integer; override;
+        function DoSave: integer; override;
         class function FormatDescriptions: TStringDynArray; override;
 end;
 
@@ -31,7 +31,7 @@ begin
    'Office Open XML*OOXML*OpenXML*ECMA-376*ISO/IEC 29500*ISO 29500', '*');
 end;
 
-function TZxXlsxSaver.InternalSave: integer;
+function TZxXlsxSaver.DoSave: integer;
 begin
   Result := ExportXmlssToXLSX(
     fBook, FFile, GetPageNumbers, GetPageTitles, fConv, fCharSet, fBOM,

@@ -15,7 +15,7 @@ type
 
    TZxZipGen = class;
    CZxZipGens = class of TZxZipGen;
-   TZxZipGen = class abstract
+   TZxZipGen = class  // abstract   D7 does not support the word, and it actually does not mean much
      public
        /// creates new empty generator, ready to accept files
        /// Implementations should try to create the file for writing
@@ -110,14 +110,16 @@ procedure TZxZipGen.BeforeDestruction;
   end;
 
 begin
-  if State <> zgsSealed then
-     raise EZxZipGen.Create('Zip file should be either saved or destroyed before freeing');
-// even if no streams were added - the file garbage may remain
-
   Wipe(FSealedStreams);
   Wipe(FActiveStreams);
 
   inherited;
+
+  if State <> zgsSealed then begin
+     FState := zgsSealed; // breaking infinite loop destructor -> exception -> destructor -> exception ->....
+     raise EZxZipGen.Create('Zip file should be either saved or destroyed before freeing');
+  end;
+// even if no streams were added - the file garbage may remain
 end;
 
 procedure TZxZipGen.AbortAndDelete;

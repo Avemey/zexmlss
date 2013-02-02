@@ -34,15 +34,43 @@ type IZXMLSSave = interface
         ///     description for SaveXmlssToEXML
         function Save: integer;  overload;
         function Save(Const FileName: TFileName): integer;  overload;
-        function InternalSave: integer; // ugly, but implementation-specific typcast would be ugly too
-end;
+
+        /// Marks instance as intentionally discarded and cleared to be freed.
+        ///  Otherwise you should only free it via .Save call/
+        procedure Discard;
+     end;
+
+     // Pity it is public, but at least in user-targeted interface API
+     IZXMLSSaveImpl = interface(IZXMLSSave) ['{DAB9A318-ADD4-466C-AFE3-CE8623EC8977}']
+        function DoSave: integer;
+     end;
+
+
 
 type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
 
      { TZXMLSSave }
 
-     TZXMLSSave = class (tInterfacedObject, IzXMLSSave)
+     TZXMLSSave = class (tInterfacedObject, IzXMLSSave, IZXMLSSaveImpl)
+     protected
+        (* two functions below are implementors interface and should be
+           mandatory overriden and re-implemented *)
+
+        /// returns zero on success, according to original
+        ///     description for SaveXmlssToEXML
+        ///
+        /// tries to guess format by filename in the base class
+        function DoSave: integer; virtual;
+        class function FormatDescriptions: TStringDynArray; virtual;
+
      public
+        procedure AfterConstruction; override;
+        procedure BeforeDestruction; override;
+
+        /// Factory function. I \wish it could be default class property.
+        ///   Anscestors may chose to override it to return their instances.
+        class function From(const zxbook: TZEXMLSS): IzXMLSSave; virtual;
+     protected
         constructor Create (const zxbook: TZEXMLSS); overload;
         constructor Create (const zxsaver: TZXMLSSave); overload; virtual;
 
@@ -70,7 +98,8 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
         ///     description for SaveXmlssToEXML
         function Save: integer;  overload;
         function Save(Const FileName: TFileName): integer;  overload;
-
+        procedure Discard; virtual;
+        function InternalSave: integer;
      protected
         fBook: TZEXMLSS;
         fPages: array of TZxPageInfo;
@@ -83,16 +112,18 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
 
         FZipGen: CZxZipGens;
 
+        FDoNotDestroyMe: Boolean; // guard in case the user loses reference unexpectedly
+
         function GetPageNumbers: TIntegerDynArray;
         function GetPageTitles:  TStringDynArray;
         function CreateSaverForDescription(const desc: string): IZXMLSSave;
 
-        /// returns zero on success, according to original
-        ///     description for SaveXmlssToEXML
-        ///
-        /// tries to guess format by filename in the base class
-        function InternalSave: integer; virtual;
-        class function FormatDescriptions: TStringDynArray; virtual;
+        {$IfOpt D+}
+        function _AddRef: Integer; stdcall;
+        function _Release: Integer; stdcall;
+        {$EndIf}
+
+     protected
         class procedure RegisterFormat(const sv: CZXMLSSaveClass);
         class procedure UnRegisterFormat(const sv: CZXMLSSaveClass);
      public
@@ -105,7 +136,7 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
 implementation
 uses
 {$IfDef MSWINDOWS}Registry, Windows, {$EndIf}
-  Contnrs {$IfNDef FPC}, AnsiStrings{$EndIf};
+  Contnrs {$IfNDef FPC}{$IfDef Delphi_Unicode}, AnsiStrings{$EndIf}{$EndIf};
 
 var SaveClasses: TClassList;
 
@@ -141,6 +172,11 @@ end;
 
 { TZXMLSSave }
 
+class function TZXMLSSave.From(const zxbook: TZEXMLSS): IzXMLSSave;
+begin
+  Result := TZXMLSSave.Create(zxbook);
+end;
+
 function TZXMLSSave.BOM(const Unicode_BOM: AnsiString): iZXMLSSave;
 begin
    fBOM := Unicode_BOM;
@@ -172,9 +208,29 @@ begin
   Result := Self;
 end;
 
+procedure TZXMLSSave.AfterConstruction;
+begin
+  if fBook = nil then raise EZXSaveException.Create ('Cannot export nil book. Do not use inherited TObject.Create');
+  inherited;
+  FDoNotDestroyMe := True;
+end;
+
+procedure TZXMLSSave.Discard;
+begin
+  FDoNotDestroyMe := false;
+end;
+
+procedure TZXMLSSave.BeforeDestruction;
+begin
+  inherited;
+  if FDoNotDestroyMe then begin
+     FDoNotDestroyMe := false; // breaking infinite loop
+     raise EzXSaveException.Create('Premature exporter destroying: worksheet export process should end either with .Save or with .Discard.');
+  end;
+end;
+
 constructor TZXMLSSave.Create(const zxbook: TZEXMLSS);
 begin
-  if zxbook = nil then raise EZXSaveException.Create ('Cannot export nil book');
   fBook := zxbook;
   fCharSet := 'UTF-8';
 end;
@@ -221,6 +277,7 @@ function TZXMLSSave.ExportFormat(const fmt: string): iZXMLSSave;
 begin
   Result := CreateSaverForDescription(fmt);
 end;
+
 
 function TZXMLSSave.As_(const fmt: string): iZXMLSSave;
 begin
@@ -318,9 +375,10 @@ begin
   Result := Self.ExportTo( FileName ).Save();
 end;
 
-function TZXMLSSave.Save:integer;
+function TZXMLSSave.Save: integer;
 var i: integer;
 begin
+  FDoNotDestroyMe := false;
   if FZipGen = nil then FZipGen := TZxZipGen.QueryZipGen;
   if fCharSet = '' then fCharSet := 'UTF-8';
 //todo - default Ansi-converter (fConv)?
@@ -336,11 +394,18 @@ begin
   Result := InternalSave;
 end;
 
-function TZXMLSSave.InternalSave:integer;
+function TZXMLSSave.InternalSave: integer;
 begin
-  Result := CreateSaverForDescription(ExtractFileExt(FFile)).InternalSave;
+  FDoNotDestroyMe := false;
+  Result := DoSave;
 end;
 
+function TZXMLSSave.DoSave: integer;
+begin
+  Result := (
+    CreateSaverForDescription(ExtractFileExt(FFile))
+    as IZXMLSSaveImpl ).DoSave;
+end;
 
 class procedure TZXMLSSave.UnRegister;
 begin
@@ -373,6 +438,18 @@ begin
   FZipGen := ZipGenerator;
   Result := Self;
 end;
+
+{$IfOpt D+}
+function TZXMLSSave._AddRef: Integer; StdCall;
+begin
+  Result := inherited _AddRef;
+end;
+
+function TZXMLSSave._Release: Integer; StdCall;
+begin
+  Result := inherited _Release;
+end;
+{$EndIf}
 
 initialization
   SaveClasses := TClassList.Create;
