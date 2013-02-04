@@ -15,6 +15,10 @@ type
 
    TZxZipGen = class;
    CZxZipGens = class of TZxZipGen;
+{$IfNDef FPC} {$IfNDef Unicode }
+   TStringList = class;
+{$EndIf} {$EndIf}
+
    TZxZipGen = class  // abstract   D7 does not support the word, and it actually does not mean much
      public
        /// creates new empty generator, ready to accept files
@@ -78,6 +82,19 @@ type
         /// You may register it if you want ;-)
         class function QueryDummyZipGen: CZxZipGens;
    end;
+
+{$IfNDef FPC} {$IfNDef Unicode }
+   TStringList = class(Classes.TStringList)
+     public
+       OwnsObjects: boolean;
+
+       constructor Create; overload;
+       constructor Create(OwnsObjects: Boolean); overload;
+       destructor Destroy; override;
+       procedure Delete(Index: Integer); override;
+       procedure Clear; override;
+   end;
+{$EndIf} {$EndIf}
 
 implementation uses TypInfo, Contnrs;
 
@@ -366,6 +383,59 @@ class function TZxZipGen.QueryDummyZipGen: CZxZipGens;
 begin
   Result := TZxFolderInsteadOfZip;
 end;
+
+
+(*********************)
+{$IfNDef FPC} {$IfNDef Unicode }
+constructor TStringList.Create; //overload;
+begin
+  inherited Create; // introduced overload - need explicit routing
+end;
+constructor TStringList.Create(OwnsObjects: Boolean); //overload;
+begin
+  inherited Create;
+  Self.OwnsObjects := OwnsObjects;
+end;
+
+destructor TStringList.Destroy;
+begin
+  If OwnsObjects then begin
+     OnChange := nil;
+     OnChanging := nil;
+     Clear;
+  end;
+  inherited;
+end;
+
+procedure TStringList.Delete(Index: Integer);
+var o: TObject;
+begin
+    if OwnsObjects
+       then o := Objects[Index]
+       else o := nil;
+    inherited;
+    o.Free;
+end;
+
+procedure TStringList.Clear;
+var i: integer;
+    o: array of TObject;
+begin
+  if OwnsObjects then begin
+     SetLength(o, Count);
+     for i := 0 to Count-1 do begin
+         o[i] := Objects[i];
+     end;
+  end;
+
+  inherited;
+   // calls OnChang*** events in (almost) proper order
+   // laos this "free later" approach matches the one from Delphi 2010+
+
+  if OwnsObjects then
+     for i := Low(o) to High(o) do o[i].Free;
+end;
+{$EndIf} {$EndIf}
 
 
 
