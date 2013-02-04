@@ -186,25 +186,25 @@ var
 
 begin
   s := UpperCase(value);
-  if (value = 'FLOAT') then
+  if (s = 'FLOAT') then
     result := ZENumber
   else
-  if (value = 'PERCENTAGE') then
+  if (s = 'PERCENTAGE') then
     result := ZENumber
   else
-  if (value = 'CURRENCY') then
+  if (s = 'CURRENCY') then
     result := ZENumber
   else
-  if (value = 'DATE') then
+  if (s = 'DATE') then
     result := ZEDateTime
   else
-  if (value = 'TIME') then
+  if (s = 'TIME') then
     result := ZEDateTime
   else
-  if (value = 'BOOLEAN') then
+  if (s = 'BOOLEAN') then
     result := ZEBoolean
   else
-  if (value = 'STRING') then
+  if (s = 'STRING') then
     result := ZEansistring
   else
     result := ZEansistring;
