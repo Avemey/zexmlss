@@ -83,16 +83,16 @@ function ReadXSLX(var XMLSS: TZEXMLSS; FileName: string): integer; deprecated {$
 function ReadXLSX(var XMLSS: TZEXMLSS; FileName: string): integer;
 {$ENDIF}
 
-function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
-                             const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring = ''): integer;
+function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
+                             const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
 
 {$IFDEF FPC}
-function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring = ''): integer;
+function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
 {$ENDIF}
 
-function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString;
+function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string;
                          BOM: ansistring = '';
                          AllowUnzippedFolder: boolean = false;
                          ZipGenerator: CZxZipGens = nil): integer;
@@ -108,16 +108,17 @@ function ZEXSLXReadSheet(var XMLSS: TZEXMLSS; var Stream: TStream; const SheetNa
 function ZEXSLXReadComments(var XMLSS: TZEXMLSS; var Stream: TStream): boolean;
 
 //Дополнительные функции для экспорта отдельных файлов
-function ZEXLSXCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+function ZEXLSXCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateWorkBook(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
-                              const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
-function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring; out isHaveComments: boolean): integer;
+                              const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
+function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring; out isHaveComments: boolean): integer;
 function ZEXLSXCreateContentTypes(var XMLSS: TZEXMLSS; Stream: TStream; PageCount: integer; CommentCount: integer; const PagesComments: TIntegerDynArray;
-                                  TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
-function ZEXLSXCreateRelsMain(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
-function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
-function ZEXLSXCreateDocPropsApp(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
-function ZEXLSXCreateDocPropsCore(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+
+                                  TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
+function ZEXLSXCreateRelsMain(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
+function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
+function ZEXLSXCreateDocPropsApp(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
+function ZEXLSXCreateDocPropsCore(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 
 implementation
 {$IfDef DELPHI_UNICODE}
@@ -3136,12 +3137,12 @@ end; //ReadXLSX
 //    PageCount: integer                - кол-во страниц
 //    CommentCount: integer             - кол-во страниц с комментариями
 //  const PagesComments: TIntegerDynArray- номера страниц с комментариями (нумеряция с нуля)
-//    CodePageName: AnsiString              - название кодовой страници
+//    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
 function ZEXLSXCreateContentTypes(var XMLSS: TZEXMLSS; Stream: TStream; PageCount: integer; CommentCount: integer; const PagesComments: TIntegerDynArray;
-                                  TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+                                  TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 var
   _xml: TZsspXMLWriterH;    //писатель
   s: string;
@@ -3220,13 +3221,13 @@ end; //ZEXLSXCreateContentTypes
 //    Stream: TStream                   - поток для записи
 //    SheetNum: integer                 - номер листа в документе
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: AnsiString              - название кодовой страници
+//    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
 //  var isHaveComments: boolean         - возвращает true, если были комментарии (чтобы создать comments*.xml)
 //RETURN
 //      integer
 function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter;
-                                     CodePageName: AnsiString; BOM: ansistring; out isHaveComments: boolean): integer;
+                                     CodePageName: String; BOM: ansistring; out isHaveComments: boolean): integer;
 var
   _xml: TZsspXMLWriterH;    //писатель
   _sheet: TZSheet;
@@ -3524,12 +3525,12 @@ end; //ZEXLSXCreateSheet
 //  const _names: TStringDynArray       - массив имён страниц
 //    PageCount: integer                - кол-во страниц
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: AnsiString              - название кодовой страници
+//    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
 function ZEXLSXCreateWorkBook(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
-                              const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+                              const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
 var
   _xml: TZsspXMLWriterH;    //писатель
 
@@ -3625,11 +3626,11 @@ end; //ZEXLSXCreateWorkBook
 //  var XMLSS: TZEXMLSS                 - хранилище
 //    Stream: TStream                   - поток для записи
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: AnsiString              - название кодовой страници
+//    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
-function ZEXLSXCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+function ZEXLSXCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 var
   _xml: TZsspXMLWriterH;        //писатель
   _FontIndex: TIntegerDynArray;  //соответствия шрифтов
@@ -4224,11 +4225,11 @@ end; //ZEAddRelsID
 //INPUT
 //    Stream: TStream                   - поток для записи
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: AnsiString              - название кодовой страници
+//    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
-function ZEXLSXCreateRelsMain(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+function ZEXLSXCreateRelsMain(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 var
   _xml: TZsspXMLWriterH;
 
@@ -4268,11 +4269,11 @@ end; //ZEXLSXCreateRelsMain
 //    PageCount: integer                - кол-во страниц
 //    Stream: TStream                   - поток для записи
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: AnsiString              - название кодовой страници
+//    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
-function ZEXLSXCreateRelsWorkBook(PageCount: integer; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+function ZEXLSXCreateRelsWorkBook(PageCount: integer; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 var
   _xml: TZsspXMLWriterH;
   i: integer;
@@ -4316,11 +4317,11 @@ end; //ZEXLSXCreateRelsWorkBook
 //  var XMLSS: TZEXMLSS                 - хранилище
 //    Stream: TStream                   - поток для записи
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: AnsiString              - название кодовой страници
+//    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
-function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 var
   _xml: TZsspXMLWriterH;
 
@@ -4359,11 +4360,11 @@ end; //ZEXLSXCreateSharedStrings
 //INPUT
 //    Stream: TStream                   - поток для записи
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: AnsiString              - название кодовой страници
+//    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
-function ZEXLSXCreateDocPropsApp(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+function ZEXLSXCreateDocPropsApp(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 var
   _xml: TZsspXMLWriterH;
   s: string;
@@ -4411,11 +4412,11 @@ end; //ZEXLSXCreateDocPropsApp
 //  var XMLSS: TZEXMLSS                 - хранилище
 //    Stream: TStream                   - поток для записи
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: AnsiString              - название кодовой страници
+//    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
-function ZEXLSXCreateDocPropsCore(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+function ZEXLSXCreateDocPropsCore(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 var
   _xml: TZsspXMLWriterH;
   s: string;
@@ -4468,12 +4469,12 @@ end; //ZEXLSXCreateDocPropsCore
 //  const SheetsNames: array of string    - массив названий страниц
 //                                          (количество элементов в двух массивах должны совпадать)
 //      TextConverter: TAnsiToCPConverter - конвертер
-//      CodePageName: AnsiString              - имя кодировки
+//      CodePageName: string              - имя кодировки
 //      BOM: ansistring                   - Byte Order Mark
 //RETURN
 //      integer
 function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string;
                          BOM: ansistring = '';
                          AllowUnzippedFolder: boolean = false;
                          ZipGenerator: CZxZipGens = nil): integer;
@@ -4615,12 +4616,12 @@ end; //SaveXmlssToXLSXPath     //Сохраняет незапакованный документ в формате Off
 //  const SheetsNames: array of string    - массив названий страниц
 //                                          (количество элементов в двух массивах должны совпадать)
 //      TextConverter: TAnsiToCPConverter - конвертер
-//      CodePageName: AnsiString              - имя кодировки
+//      CodePageName: string              - имя кодировки
 //      BOM: ansistring                   - Byte Order Mark
 //RETURN
 //      integer
-function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring = ''): integer;
+function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
 var
   _pages: TIntegerDynArray;      //номера страниц
   _names: TStringDynArray;      //названия страниц
@@ -4743,12 +4744,12 @@ end; //SaveXmlssToXLSXPath
 //  const SheetsNames: array of string    - массив названий страниц
 //                                          (количество элементов в двух массивах должны совпадать)
 //      TextConverter: TAnsiToCPConverter - конвертер
-//      CodePageName: AnsiString              - имя кодировки
+//      CodePageName: string              - имя кодировки
 //      BOM: ansistring                   - Byte Order Mark
 //RETURN
 //      integer
 function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring = ''): integer;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
 var
   _pages: TIntegerDynArray;      //номера страниц
   _names: TStringDynArray;      //названия страниц

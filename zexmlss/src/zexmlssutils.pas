@@ -66,18 +66,18 @@ function XmlSSToGrid(var Grid: TStringGrid; var XMLSS: TZEXMLSS; const PageNum: 
                          ToCol: integer; ToRow: integer; BCol, BRow, ECol, ERow: integer; InsertMode: byte; StyleCopy: integer = 511): boolean; overload;
 
 function SaveXmlssToHtml(var XMLSS: TZEXMLSS; const PageNum: integer; Title: string; Stream: TStream;
-                         TextConverter: TAnsiToCPConverter; CodePageName: AnsiString): integer; overload;
+                         TextConverter: TAnsiToCPConverter; CodePageName: string): integer; overload;
 
 function SaveXmlssToHtml(var XMLSS: TZEXMLSS; const PageNum: integer; Title: string; FileName: string;
-                         TextConverter: TAnsiToCPConverter; CodePageName: AnsiString): integer; overload;
+                         TextConverter: TAnsiToCPConverter; CodePageName: string): integer; overload;
 
 //Сохраняет в поток в формате Excel XML SpreadSheet
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream; const SheetsNumbers:array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring = ''): integer; overload;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 
 //Сохраняет в файл в формате Excel XML SpreadSheet
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring = ''): integer; overload;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 
 //Читает из потока Excel XML SpreadSheet (EXMLSS)
 //      XMLSS: TZEXMLSS                 - хранилище
@@ -817,11 +817,11 @@ end;
 //      Title: string - Заголовок
 //      Stream: TStream - поток
 //      TextConverter: TAnsiToCodePageConverter - конвертер
-//      CodePageName: AnsiString - имя кодировки
+//      CodePageName: string - имя кодировки
 //Output:
 //      0 - сохранение удалось
 function SaveXmlssToHtml(var XMLSS: TZEXMLSS; const PageNum: integer; Title: string; Stream: TStream;
-                         TextConverter: TAnsiToCPConverter; CodePageName: AnsiString): integer; overload;
+                         TextConverter: TAnsiToCPConverter; CodePageName: string): integer; overload;
 var
   _xml: TZsspXMLWriterH;
   i, j, t, l: integer;
@@ -908,7 +908,7 @@ begin
 
       s := '';
       if length(trim(CodePageName)) > 0 then
-        s := '; CHARSET='+ string(CodePageName);
+        s := '; CHARSET='+ CodePageName;
       Attributes.Add('CONTENT', 'TEXT/HTML'+s);
       WriteTag('META','', true, false, false);
       WriteEndTagNode(); // HEAD
@@ -1018,11 +1018,11 @@ end;
 //      Title: string - Заголовок
 //      FileName: String - имя файла
 //      TextConverter: TAnsiToCodePageConverter - конвертер
-//      CodePageName: AnsiString - имя кодировки
+//      CodePageName: string - имя кодировки
 //Output:
 //      0 - сохранение удалось
 function SaveXmlssToHtml(var XMLSS: TZEXMLSS; const PageNum: integer; Title: string; FileName: string;
-                         TextConverter: TAnsiToCPConverter; CodePageName: AnsiString): integer; overload;
+                         TextConverter: TAnsiToCPConverter; CodePageName: string): integer; overload;
 var
   Stream: TStream;
 
@@ -1052,9 +1052,9 @@ const RepeatablePrintedHeadersName = 'Print_Titles';
 //      SheetsNames: array of string    - массив названий страниц
 //              количество элементов в двух массивах должны совпадать
 //      TextConverter: TAnsiToCodePageConverter - конвертер
-//      CodePageName: AnsiString - имя кодировки
+//      CodePageName: string - имя кодировки
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream; const SheetsNumbers:array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring = ''): integer; overload;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 var
   _xml: TZsspXMLWriterH;
   _pages: TIntegerDynArray;    //номера страниц
@@ -1823,9 +1823,9 @@ end; //SaveXmlssToEXML
 //      SheetsNames: array of string    - массив названий страниц
 //              количество элементов в двух массивах должны совпадать
 //      TextConverter: TAnsiToCodePageConverter - конвертер
-//      CodePageName: AnsiString - имя кодировки
+//      CodePageName: string - имя кодировки
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring = ''): integer; overload;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 var
   Stream: TStream;
 
