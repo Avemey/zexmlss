@@ -37,7 +37,6 @@ uses
   LResources,
   {$ENDIF}
   zsspxml
-  //{ $IFDEF VER130}, sysd7 { $ENDIF}
   ;
 
 const
@@ -125,7 +124,7 @@ type
   //   3 - Bottom         нижняя граница
   //   4 - DiagonalLeft   диагоняль от верхнего левого угла до нижнего правого
   //   5 - DiagonalRight  диагоняль от нижнего левого угла до правого верхнего
-  TZBorder = class (Tpersistent)
+  TZBorder = class (TPersistent)
   private
     FBorder: array [0..5] of TZBorderStyle;
     procedure SetBorder(Num: integer; Const Value: TZBorderStyle);
@@ -264,7 +263,7 @@ type
     property Items[Num: Integer]: TRect read GetItem; default;
   end;
 
-  TCellColumn = array of TZCell;
+  TZCellColumn = array of TZCell;
 
   TZEXMLSS = class;
 
@@ -395,7 +394,7 @@ type
   TZSheet = class (TPersistent)
   private
     FStore: TZEXMLSS;
-    FCells: array of TCellColumn;
+    FCells: array of TZCellColumn;
     FRows: array of TZRowOptions;
     FColumns: array of TZColOptions;
     FTitle: string;                     //заголовок листа

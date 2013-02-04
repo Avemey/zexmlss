@@ -22,13 +22,13 @@ interface
 {$ENDIF}
 
 uses
-  sysutils, zexmlss, zsspxml;
+  SysUtils, Types, zexmlss, zsspxml;
 
 const
   ZE_MMinInch: real = 25.4;
 
 type
-  TZESaveIntArray = array of integer;
+//  TZESaveIntArray = array of integer; // Since Delphi 7 and FPC 2005 - TIntegerDynArray
   TZESaveStrArray = array of string;
 
 //Попытка преобразовать строку в число
@@ -56,11 +56,11 @@ procedure ZEWriteHeaderCommon(xml: TZsspXMLWriterH; const CodePageName: AnsiStri
 
 //Проверяет заголовки страниц, при необходимости корректирует
 function ZECheckTablesTitle(var XMLSS: TZEXMLSS; const SheetsNumbers:array of integer;
-                            const SheetsNames: array of string; var _pages: TZESaveIntArray;
+                            const SheetsNames: array of string; var _pages: TIntegerDynArray;
                             var _names: TZESaveStrArray; var retCount: integer): boolean;
 
 //Очищает массивы
-procedure ZESClearArrays(var _pages: TZESaveIntArray;  var _names: TZESaveStrArray);
+procedure ZESClearArrays(var _pages: TIntegerDynArray;  var _names: TZESaveStrArray);
 
 //Переводит строку в boolean
 function ZEStrToBoolean(const val: string): boolean;
@@ -81,7 +81,7 @@ implementation
 function ZEReplaceEntity(const st: string): string;
 var
   s, s1: string;
-  i, n: integer;
+  i: integer;
   isAmp: boolean;
   ch: char;
 
@@ -107,8 +107,8 @@ var
 begin
   s := '';
   result := '';
-  n := length(st);
-  i := 1;
+//  n := length(st);
+//  i := 1;
   isAmp := false;
   for i := 1 to length(st) do
   begin
@@ -340,7 +340,7 @@ end;
 
 
 //Очищает массивы
-procedure ZESClearArrays(var _pages: TZESaveIntArray;  var _names: TZESaveStrArray);
+procedure ZESClearArrays(var _pages: TIntegerDynArray;  var _names: TZESaveStrArray);
 begin
   SetLength(_pages, 0);
   SetLength(_names, 0);
@@ -425,14 +425,14 @@ end; //CorrectTitles
 //  var XMLSS: TZEXMLSS
 //  const SheetsNumbers:array of integer
 //  const SheetsNames: array of string
-//  var _pages: TZESaveIntArray
+//  var _pages: TIntegerDynArray
 //  var _names: TZESaveStrArray
 //  var retCount: integer
 //RETURN
 //      boolean - true - всё нормально, можно продолжать дальше
 //                false - что-то не то подсунули, дальше продолжать нельзя
 function ZECheckTablesTitle(var XMLSS: TZEXMLSS; const SheetsNumbers:array of integer;
-                            const SheetsNames: array of string; var _pages: TZESaveIntArray;
+                            const SheetsNames: array of string; var _pages: TIntegerDynArray;
                             var _names: TZESaveStrArray; var retCount: integer): boolean;
 var
   t1, t2, i: integer;
