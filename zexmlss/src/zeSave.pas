@@ -42,7 +42,7 @@ type IZXMLSSave = interface
 
      // Pity it is public, but at least in user-targeted interface API
      IZXMLSSaveImpl = interface(IZXMLSSave) ['{DAB9A318-ADD4-466C-AFE3-CE8623EC8977}']
-        function DoSave: integer;
+        function InternalSave: integer;
      end;
 
 
@@ -404,7 +404,8 @@ function TZXMLSSave.DoSave: integer;
 begin
   Result := (
     CreateSaverForDescription(ExtractFileExt(FFile))
-    as IZXMLSSaveImpl ).DoSave;
+    as IZXMLSSaveImpl ).InternalSave;
+ // should reset DoNotDestroy flag in secondary class as well
 end;
 
 class procedure TZXMLSSave.UnRegister;
@@ -440,6 +441,8 @@ begin
 end;
 
 {$IfOpt D+}
+// debug-only hooks for setting breakpoints
+// and superwising lifetime of saving API-wrapping objects
 function TZXMLSSave._AddRef: Integer; StdCall;
 begin
   Result := inherited _AddRef;
