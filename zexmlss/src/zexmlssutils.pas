@@ -1058,7 +1058,7 @@ function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream; const SheetsNumbe
 var
   _xml: TZsspXMLWriterH;
   _pages: TIntegerDynArray;    //номера страниц
-  _names: TZESaveStrArray;    //названия страниц
+  _names: TStringDynArray;    //названия страниц
   kol: integer;               //количество страниц
   i: integer;
 

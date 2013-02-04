@@ -74,15 +74,15 @@ function ReadODFS(var XMLSS: TZEXMLSS; FileName: string): integer;
 {дл€ записи}
 //«аписывает в поток стили документа (styles.xml)
 function ODFCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
-                          const _names: TZESaveStrArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
 
 //«аписывает в поток настройки (settings.xml)
 function ODFCreateSettings(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
-                          const _names: TZESaveStrArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
 
 //«аписывает в поток документ + автоматические стили (content.xml)
 function ODFCreateContent(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
-                          const _names: TZESaveStrArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
 
 //«аписывает в поток метаинформацию (meta.xml)
 function ODFCreateMeta(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
@@ -703,7 +703,7 @@ end; //ODFWriteTableStyle
 //  var XMLSS: TZEXMLSS                 - хранилище
 //    Stream: TStream                   - поток дл€ записи
 //  const _pages: TIntegerDynArray       - массив страниц
-//  const _names: TZESaveStrArray       - массив имЄн страниц
+//  const _names: TStringDynArray       - массив имЄн страниц
 //    PageCount: integer                - кол-во страниц
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
 //    CodePageName: AnsiString              - название кодовой страници
@@ -711,7 +711,7 @@ end; //ODFWriteTableStyle
 //RETURN
 //      integer
 function ODFCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
-                          const _names: TZESaveStrArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
 var
   _xml: TZsspXMLWriterH; 
 
@@ -761,7 +761,7 @@ end; //ODFCreateStyles
 //  var XMLSS: TZEXMLSS                 - хранилище
 //    Stream: TStream                   - поток дл€ записи
 //  const _pages: TIntegerDynArray       - массив страниц
-//  const _names: TZESaveStrArray       - массив имЄн страниц
+//  const _names: TStringDynArray       - массив имЄн страниц
 //    PageCount: integer                - кол-во страниц
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
 //    CodePageName: AnsiString              - название кодовой страници
@@ -769,7 +769,7 @@ end; //ODFCreateStyles
 //RETURN
 //      integer
 function ODFCreateSettings(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
-                          const _names: TZESaveStrArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
 var
   _xml: TZsspXMLWriterH; 
 
@@ -811,7 +811,7 @@ end; //ODFCreateSettings
 //  var XMLSS: TZEXMLSS                 - хранилище
 //    Stream: TStream                   - поток дл€ записи
 //  const _pages: TIntegerDynArray       - массив страниц
-//  const _names: TZESaveStrArray       - массив имЄн страниц
+//  const _names: TStringDynArray       - массив имЄн страниц
 //    PageCount: integer                - кол-во страниц
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
 //    CodePageName: AnsiString              - название кодовой страници
@@ -819,7 +819,7 @@ end; //ODFCreateSettings
 //RETURN
 //      integer
 function ODFCreateContent(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
-                          const _names: TZESaveStrArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
 var
   _xml: TZsspXMLWriterH;
   ColumnStyle, RowStyle: array of array of integer;  //стили столбцов/строк
@@ -1504,7 +1504,7 @@ function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string; const Sheets
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring = ''): integer; overload;
 var
   _pages: TIntegerDynArray;      //номера страниц
-  _names: TZESaveStrArray;      //названи€ страниц
+  _names: TStringDynArray;      //названи€ страниц
   kol: integer;
   Stream: TStream;
   s: string;
@@ -1573,7 +1573,7 @@ function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumb
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring = ''): integer; overload;
 var
   _pages: TIntegerDynArray;      //номера страниц
-  _names: TZESaveStrArray;      //названи€ страниц
+  _names: TStringDynArray;      //названи€ страниц
   kol: integer;
   zip: TZipper;
   StreamC, StreamME, StreamS, StreamST, StreamMA: TStream;
@@ -1652,7 +1652,7 @@ function ExportXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNu
                            AllowUnzippedFolder: boolean = false; ZipGenerator: CZxZipGens = nil): integer; overload;
 var
   _pages: TIntegerDynArray;      //номера страниц
-  _names: TZESaveStrArray;      //названи€ страниц
+  _names: TStringDynArray;      //названи€ страниц
   kol: integer;
   Stream: TStream;
   azg: TZxZipGen; // Actual Zip Generator

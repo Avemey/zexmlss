@@ -100,17 +100,17 @@ function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; PathName: string; const SheetsNu
 //ƒополнительные функции, на случай чтени€ отдельного файла
 function ZEXSLXReadTheme(var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer): boolean;
 function ZEXSLXReadContentTypes(var Stream: TStream; var FileArray: TZXLSXFileArray; var FilesCount: integer): boolean;
-function ZEXSLXReadSharedStrings(var Stream: TStream; var StrArray: TZESaveStrArray; var StrCount: integer): boolean;
+function ZEXSLXReadSharedStrings(var Stream: TStream; var StrArray: TStringDynArray; var StrCount: integer): boolean;
 function ZEXSLXReadStyles(var XMLSS: TZEXMLSS; var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer): boolean;
 function ZE_XSLXReadRelationships(var Stream: TStream; var Relations: TZXLSXRelationsArray; var RelationsCount: integer; var isWorkSheet: boolean; needReplaceDelimiter: boolean): boolean;
 function ZEXSLXReadWorkBook(var XMLSS: TZEXMLSS; var Stream: TStream; var Relations: TZXLSXRelationsArray; var RelationsCount: integer): boolean;
-function ZEXSLXReadSheet(var XMLSS: TZEXMLSS; var Stream: TStream; const SheetName: string; var StrArray: TZESaveStrArray; StrCount: integer; var Relations: TZXLSXRelationsArray; RelationsCount: integer): boolean;
+function ZEXSLXReadSheet(var XMLSS: TZEXMLSS; var Stream: TStream; const SheetName: string; var StrArray: TStringDynArray; StrCount: integer; var Relations: TZXLSXRelationsArray; RelationsCount: integer): boolean;
 function ZEXSLXReadComments(var XMLSS: TZEXMLSS; var Stream: TStream): boolean;
 
 //ƒополнительные функции дл€ экспорта отдельных файлов
 function ZEXLSXCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
 function ZEXLSXCreateWorkBook(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
-                              const _names: TZESaveStrArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+                              const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
 function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring; var isHaveComments: boolean): integer;
 function ZEXLSXCreateContentTypes(var XMLSS: TZEXMLSS; Stream: TStream; PageCount: integer; CommentCount: integer; const PagesComments: TIntegerDynArray;
                                   TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
@@ -156,8 +156,8 @@ type
     FRelationsCount: integer;
     FSheetRelationNumber: integer;
     FFileNumber: integer;
-    FStrArray: TZESaveStrArray;
-    FArchFiles: TZESaveStrArray;
+    FStrArray: TStringDynArray;
+    FArchFiles: TStringDynArray;
     FArchFilesCount: integer;
     FMaxArchFilesCount: integer;
     FStrCount: integer;
@@ -730,11 +730,11 @@ end; //ZEXSLXReadContentTypes
 //„итает строки из sharedStrings.xml
 //INPUT
 //  var Stream: TStream           - поток дл€ чтени€
-//  var StrArray: TZESaveStrArray - возвращаемый массив со строками
+//  var StrArray: TStringDynArray - возвращаемый массив со строками
 //  var StrCount: integer         - кол-во элементов
 //RETURN
 //      boolean - true - всЄ ок
-function ZEXSLXReadSharedStrings(var Stream: TStream; var StrArray: TZESaveStrArray; var StrCount: integer): boolean;
+function ZEXSLXReadSharedStrings(var Stream: TStream; var StrArray: TStringDynArray; var StrCount: integer): boolean;
 var
   xml: TZsspXMLReaderH;
   s: string;
@@ -788,13 +788,13 @@ end; //ZEXSLXReadSharedStrings
 //  var XMLSS: TZEXMLSS                 - хранилище
 //  var Stream: TStream                 - поток дл€ чтени€
 //  const SheetName: string             - название страницы
-//  var StrArray: TZESaveStrArray       - строки дл€ подстановки
+//  var StrArray: TStringDynArray       - строки дл€ подстановки
 //      StrCount: integer               - кол-во строк подстановки
 //  var Relations: TZXLSXRelationsArray - отношени€
 //      RelationsCount: integer         - кол-во отношений
 //RETURN
 //      boolean - true - страница прочиталась успешно
-function ZEXSLXReadSheet(var XMLSS: TZEXMLSS; var Stream: TStream; const SheetName: string; var StrArray: TZESaveStrArray; StrCount: integer;
+function ZEXSLXReadSheet(var XMLSS: TZEXMLSS; var Stream: TStream; const SheetName: string; var StrArray: TStringDynArray; StrCount: integer;
                          var Relations: TZXLSXRelationsArray; RelationsCount: integer): boolean;
 var
   xml: TZsspXMLReaderH;
@@ -2448,7 +2448,7 @@ var
   xml: TZsspXMLReaderH;
   s: string;
   _authorsCount: integer;
-  _authors: TZESaveStrArray;
+  _authors: TStringDynArray;
   _page: integer;
 
   procedure _ReadAuthors();
@@ -2556,7 +2556,7 @@ var
   stream: TStream;
   FileArray: TZXLSXFileArray;
   FilesCount: integer;
-  StrArray: TZESaveStrArray;
+  StrArray: TStringDynArray;
   StrCount: integer;
   RelationsArray: array of TZXLSXRelationsArray;
   RelationsCounts: array of integer;
@@ -3509,7 +3509,7 @@ end; //ZEXLSXCreateSheet
 //  var XMLSS: TZEXMLSS                 - хранилище
 //    Stream: TStream                   - поток дл€ записи
 //  const _pages: TIntegerDynArray       - массив страниц
-//  const _names: TZESaveStrArray       - массив имЄн страниц
+//  const _names: TStringDynArray       - массив имЄн страниц
 //    PageCount: integer                - кол-во страниц
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
 //    CodePageName: AnsiString              - название кодовой страници
@@ -3517,7 +3517,7 @@ end; //ZEXLSXCreateSheet
 //RETURN
 //      integer
 function ZEXLSXCreateWorkBook(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
-                              const _names: TZESaveStrArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
+                              const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
 var
   _xml: TZsspXMLWriterH;    //писатель
 
@@ -4466,7 +4466,7 @@ function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; PathName: string; const SheetsNu
                          ZipGenerator: CZxZipGens = nil): integer;
 var
   _pages: TIntegerDynArray;      //номера страниц
-  _names: TZESaveStrArray;      //названи€ страниц
+  _names: TStringDynArray;      //названи€ страниц
   kol, i: integer;
   Stream: TStream;
   need_comments: boolean;
@@ -4610,7 +4610,7 @@ function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const Sheets
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring = ''): integer;
 var
   _pages: TIntegerDynArray;      //номера страниц
-  _names: TZESaveStrArray;      //названи€ страниц
+  _names: TStringDynArray;      //названи€ страниц
   kol, i: integer;
   Stream: TStream;
   need_comments: boolean;
@@ -4738,7 +4738,7 @@ function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumb
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring = ''): integer;
 var
   _pages: TIntegerDynArray;      //номера страниц
-  _names: TZESaveStrArray;      //названи€ страниц
+  _names: TStringDynArray;      //названи€ страниц
   kol, i: integer;
   zip: TZipper;
   Stream: array of TStream;

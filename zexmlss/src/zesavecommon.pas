@@ -27,9 +27,9 @@ uses
 const
   ZE_MMinInch: real = 25.4;
 
-type
+//type
 //  TZESaveIntArray = array of integer; // Since Delphi 7 and FPC 2005 - TIntegerDynArray
-  TZESaveStrArray = array of string;
+//  TZESaveStrArray = array of string;  // Since Delphi 7 and FPC 2005 - TStringDynArray
 
 //Попытка преобразовать строку в число
 function ZETryStrToFloat(const st: string; valueIfError: double = 0): double;
@@ -57,10 +57,10 @@ procedure ZEWriteHeaderCommon(xml: TZsspXMLWriterH; const CodePageName: AnsiStri
 //Проверяет заголовки страниц, при необходимости корректирует
 function ZECheckTablesTitle(var XMLSS: TZEXMLSS; const SheetsNumbers:array of integer;
                             const SheetsNames: array of string; var _pages: TIntegerDynArray;
-                            var _names: TZESaveStrArray; var retCount: integer): boolean;
+                            var _names: TStringDynArray; var retCount: integer): boolean;
 
 //Очищает массивы
-procedure ZESClearArrays(var _pages: TIntegerDynArray;  var _names: TZESaveStrArray);
+procedure ZESClearArrays(var _pages: TIntegerDynArray;  var _names: TStringDynArray);
 
 //Переводит строку в boolean
 function ZEStrToBoolean(const val: string): boolean;
@@ -340,7 +340,7 @@ end;
 
 
 //Очищает массивы
-procedure ZESClearArrays(var _pages: TIntegerDynArray;  var _names: TZESaveStrArray);
+procedure ZESClearArrays(var _pages: TIntegerDynArray;  var _names: TStringDynArray);
 begin
   SetLength(_pages, 0);
   SetLength(_names, 0);
@@ -426,14 +426,14 @@ end; //CorrectTitles
 //  const SheetsNumbers:array of integer
 //  const SheetsNames: array of string
 //  var _pages: TIntegerDynArray
-//  var _names: TZESaveStrArray
+//  var _names: TStringDynArray
 //  var retCount: integer
 //RETURN
 //      boolean - true - всё нормально, можно продолжать дальше
 //                false - что-то не то подсунули, дальше продолжать нельзя
 function ZECheckTablesTitle(var XMLSS: TZEXMLSS; const SheetsNumbers:array of integer;
                             const SheetsNames: array of string; var _pages: TIntegerDynArray;
-                            var _names: TZESaveStrArray; var retCount: integer): boolean;
+                            var _names: TStringDynArray; var retCount: integer): boolean;
 var
   t1, t2, i: integer;
 
