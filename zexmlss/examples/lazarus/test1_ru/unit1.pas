@@ -247,13 +247,13 @@ begin
     //ExportXmlssToXLSX( XMLSS, Path+'save_test_generic.xlsx',
     //	[0, 1], [], TextConverter, 'UTF-8');
 
-    TZXMLSSave.Create(XMLSS).Save(Path+'LazZexSample.xml');
-    TZXMLSSave.Create(XMLSS).Save(Path+'LazZexSample.xlsx');
-    TZXMLSSave.Create(XMLSS).Save(Path+'LazZexSample.ods');
+    TZXMLSSave.From(XMLSS).Save(Path+'LazZexSample.xml');
+    TZXMLSSave.From(XMLSS).Save(Path+'LazZexSample.xlsx');
+    TZXMLSSave.From(XMLSS).Save(Path+'LazZexSample.ods');
 
-    TZXMLSSave.Create(XMLSS).Pages([0,1]).NoZip.To_(Path+'LazZexSample.Dir.xml').Save;
-    TZXMLSSave.Create(XMLSS).Pages([0,1]).NoZip.To_(Path+'LazZexSample.Dir.xlsx').Save;
-    TZXMLSSave.Create(XMLSS).Pages([0,1]).NoZip.To_(Path+'LazZexSample.Dir.ods').Save;
+    TZXMLSSave.From(XMLSS).Pages([0,1]).NoZip.To_(Path+'LazZexSample.Dir.xml').Save;
+    TZXMLSSave.From(XMLSS).Pages([0,1]).NoZip.To_(Path+'LazZexSample.Dir.xlsx').Save;
+    TZXMLSSave.From(XMLSS).Pages([0,1]).NoZip.To_(Path+'LazZexSample.Dir.ods').Save;
   finally
     FreeAndNil(XMLSS);
   end;
