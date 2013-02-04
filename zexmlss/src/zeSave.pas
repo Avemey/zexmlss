@@ -133,6 +133,10 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
 
      EZXSaveException = class (Exception);
 
+{$IfNDef MSWINDOWS}
+var ZxCharSetByCodePage: function(const cp: Word): AnsiString;
+{$EndIf}
+
 implementation
 uses
 {$IfDef MSWINDOWS}Registry, Windows, {$EndIf}
@@ -144,8 +148,8 @@ var SaveClasses: TClassList;
 /// todo - add implementation for non-Windows platforms
 /// if anyone would need it :-)
 /// probably via http://sourceforge.net/projects/natspec/
-function CharSetByCodePage(const cp: Word): AnsiString;
 {$IfDef MSWINDOWS }
+function ZxCharSetByCodePage(const cp: Word): AnsiString;
 var reg: TRegistry;
 begin
 // HKEY_CLASSES_ROOT\MIME\DataBase\Codepage
@@ -153,9 +157,9 @@ begin
   try
     reg.RootKey := HKEY_CLASSES_ROOT;
     if reg.OpenKeyReadOnly('MIME\DataBase\Codepage\' + IntToStr(cp)) then begin
-       Result := Trim(AnsiString(reg.ReadString('WebCharset'))); // This key prevails, see #1251 for example
+       Result := AnsiString(Trim(reg.ReadString('WebCharset'))); // This key prevails, see #1251 for example
        if Result = '' then
-          Result := Trim(AnsiString(reg.ReadString('BodyCharset')));
+          Result := AnsiString(Trim(reg.ReadString('BodyCharset')));
        if Result > '' then exit;
     end;
   finally
@@ -164,9 +168,10 @@ begin
   Raise EZXSaveException.Create('No charset (MIME id) found for codepage '+IntToStr(cp));
 end;
 {$Else}
+function ZxCharSetByOops(const cp: Word): AnsiString;
 begin
-  Raise EZXSaveException.Create('Cannot get charset by numeric codepage on this platform.');
-  //not implemented, perhaps http://sourceforge.net/projects/natspec/ ?
+  Raise EZXSaveException.Create('Cannot get charset by numeric codepage on this platform.'#13#10
+          'Make wrapper for something like http://sf.net/projects/natspec/');
 end;
 {$EndIf}
 
@@ -192,7 +197,7 @@ end;
 
 function TZXMLSSave.CharSet(const codepage: word): iZXMLSSave;
 begin
-  fCharSet := CharSetByCodePage(codepage);
+  fCharSet := ZxCharSetByCodePage(codepage);
   Result := Self;
 end;
 
@@ -458,9 +463,13 @@ initialization
   SaveClasses := TClassList.Create;
 
 // Ersatz-testing below
-//  if '' = CharSetByCodePage(866) then ;
-//  if '' = CharSetByCodePage(1251) then ;
-//  if '' = CharSetByCodePage(20866) then ;
+//  if '' = ZxCharSetByCodePage(866) then ;
+//  if '' = ZxCharSetByCodePage(1251) then ;
+//  if '' = ZxCharSetByCodePage(20866) then ;
+
+{$IfNDef MSWindows}
+  ZxCharSetByCodePage := ZxCharSetByOops;
+{$EndIf}
 finalization
   SaveClasses.Free;
 end.
