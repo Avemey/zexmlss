@@ -498,13 +498,13 @@ function ToAttribute(const AttrName: string; const Value: string): TZAttrArrayH;
 
 
 //Распознаёт кодировку XML и HTML текста
-function RecognizeEncodingXML(startpos: integer; var txt: ansistring; var cpfromtext: integer; var cpname: ansistring; var ftype: integer): boolean; overload;
+function RecognizeEncodingXML(startpos: integer; var txt: ansistring; out cpfromtext: integer; out cpname: ansistring; out ftype: integer): boolean; overload;
 
 //Распознаёт BOM (Byte Order Mark) текста
 function RecognizeBOM(var txt: ansistring): integer;
 
 //Распознаёт кодировку XML и HTML текста вместе с BOM
-function RecognizeEncodingXML(var txt: ansistring; var BOM: integer; var cpfromtext: integer; var cpname: ansistring; var ftype: integer): boolean; overload;
+function RecognizeEncodingXML(var txt: ansistring; out BOM: integer; out cpfromtext: integer; out cpname: ansistring; out ftype: integer): boolean; overload;
 
 implementation
 
@@ -1028,7 +1028,7 @@ end;
 //                            2 - html
 //RETURN: boolean         - true - кодировка скорее всего точно опознана
 //                          false - есть сомнение насчёт правильности распознания
-function RecognizeEncodingXML(startpos: integer; var txt: ansistring; var cpfromtext: integer; var cpname: ansistring; var ftype: integer): boolean; overload;
+function RecognizeEncodingXML(startpos: integer; var txt: ansistring; out cpfromtext: integer; out cpname: ansistring; out ftype: integer): boolean; overload;
 var
   i, ll: integer;
   kol16BE: integer;
@@ -1311,7 +1311,7 @@ end;
 //                            2 - html
 //RETURN: boolean         - true - кодировка скорее всего точно опознана
 //                          false - есть сомнение насчёт правильности распознания
-function RecognizeEncodingXML(var txt: ansistring; var BOM: integer; var cpfromtext: integer; var cpname: ansistring; var ftype: integer): boolean; overload;
+function RecognizeEncodingXML(var txt: ansistring; out BOM: integer; out cpfromtext: integer; out cpname: ansistring; out ftype: integer): boolean; overload;
 var
   t: integer;
   

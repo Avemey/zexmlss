@@ -100,7 +100,7 @@ function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; PathName: string; const SheetsNu
 //Дополнительные функции, на случай чтения отдельного файла
 function ZEXSLXReadTheme(var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer): boolean;
 function ZEXSLXReadContentTypes(var Stream: TStream; var FileArray: TZXLSXFileArray; var FilesCount: integer): boolean;
-function ZEXSLXReadSharedStrings(var Stream: TStream; var StrArray: TStringDynArray; var StrCount: integer): boolean;
+function ZEXSLXReadSharedStrings(var Stream: TStream; out StrArray: TStringDynArray; out StrCount: integer): boolean;
 function ZEXSLXReadStyles(var XMLSS: TZEXMLSS; var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer): boolean;
 function ZE_XSLXReadRelationships(var Stream: TStream; var Relations: TZXLSXRelationsArray; var RelationsCount: integer; var isWorkSheet: boolean; needReplaceDelimiter: boolean): boolean;
 function ZEXSLXReadWorkBook(var XMLSS: TZEXMLSS; var Stream: TStream; var Relations: TZXLSXRelationsArray; var RelationsCount: integer): boolean;
@@ -111,7 +111,7 @@ function ZEXSLXReadComments(var XMLSS: TZEXMLSS; var Stream: TStream): boolean;
 function ZEXLSXCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
 function ZEXLSXCreateWorkBook(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
                               const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
-function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring; var isHaveComments: boolean): integer;
+function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring; out isHaveComments: boolean): integer;
 function ZEXLSXCreateContentTypes(var XMLSS: TZEXMLSS; Stream: TStream; PageCount: integer; CommentCount: integer; const PagesComments: TIntegerDynArray;
                                   TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
 function ZEXLSXCreateRelsMain(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring): integer;
@@ -734,7 +734,7 @@ end; //ZEXSLXReadContentTypes
 //  var StrCount: integer         - кол-во элементов
 //RETURN
 //      boolean - true - всё ок
-function ZEXSLXReadSharedStrings(var Stream: TStream; var StrArray: TStringDynArray; var StrCount: integer): boolean;
+function ZEXSLXReadSharedStrings(var Stream: TStream; out StrArray: TStringDynArray; out StrCount: integer): boolean;
 var
   xml: TZsspXMLReaderH;
   s: string;
@@ -2197,6 +2197,8 @@ var
 begin
   result := false;
   xml := nil;
+  CellXfsArray := nil;
+  CellStyleArray := nil;
   try
     xml := TZsspXMLReaderH.Create();
     xml.AttributesMatch := false;
@@ -2672,6 +2674,7 @@ var
 begin
   result := 0;
   FilesCount := 0;
+  FileArray := nil;
 
   if (not ZE_CheckDirExist(DirName)) then
   begin
@@ -2685,6 +2688,7 @@ begin
   RelationsCount := 0;
   ThemaColorCount := 0;
   SheetRelationsCount := 0;
+  ThemaColor := nil;
 
   try
     try
@@ -3218,7 +3222,8 @@ end; //ZEXLSXCreateContentTypes
 //  var isHaveComments: boolean         - возвращает true, если были комментарии (чтобы создать comments*.xml)
 //RETURN
 //      integer
-function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString; BOM: ansistring; var isHaveComments: boolean): integer;
+function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter;
+                                     CodePageName: AnsiString; BOM: ansistring; out isHaveComments: boolean): integer;
 var
   _xml: TZsspXMLWriterH;    //писатель
   _sheet: TZSheet;

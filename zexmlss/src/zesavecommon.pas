@@ -56,8 +56,8 @@ procedure ZEWriteHeaderCommon(xml: TZsspXMLWriterH; const CodePageName: AnsiStri
 
 //Проверяет заголовки страниц, при необходимости корректирует
 function ZECheckTablesTitle(var XMLSS: TZEXMLSS; const SheetsNumbers:array of integer;
-                            const SheetsNames: array of string; var _pages: TIntegerDynArray;
-                            var _names: TStringDynArray; var retCount: integer): boolean;
+                            const SheetsNames: array of string; out _pages: TIntegerDynArray;
+                            out _names: TStringDynArray; out retCount: integer): boolean;
 
 //Очищает массивы
 procedure ZESClearArrays(var _pages: TIntegerDynArray;  var _names: TStringDynArray);
@@ -432,8 +432,8 @@ end; //CorrectTitles
 //      boolean - true - всё нормально, можно продолжать дальше
 //                false - что-то не то подсунули, дальше продолжать нельзя
 function ZECheckTablesTitle(var XMLSS: TZEXMLSS; const SheetsNumbers:array of integer;
-                            const SheetsNames: array of string; var _pages: TIntegerDynArray;
-                            var _names: TStringDynArray; var retCount: integer): boolean;
+                            const SheetsNames: array of string; out _pages: TIntegerDynArray;
+                            out _names: TStringDynArray; out retCount: integer): boolean;
 var
   t1, t2, i: integer;
 

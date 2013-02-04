@@ -1718,7 +1718,7 @@ end; //ExportXmlssToODFS
 //      isMultiply: boolean - флаг необходимости умножать значение с учётом единицы измерения
 //RETURN
 //      boolean - true - размер определён успешно
-function ODFGetValueSizeMM(const value: string; var RetSize: real; isMultiply: boolean = true): boolean;
+function ODFGetValueSizeMM(const value: string; out RetSize: real; isMultiply: boolean = true): boolean;
 var
   i: integer;
   sv, su: string;

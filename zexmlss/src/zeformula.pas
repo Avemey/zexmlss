@@ -637,7 +637,7 @@ var
   end; // _CheckSymbol
 
   //Проверяет, с какого символа в строке начать
-  procedure FindStartNumber(var num: integer);
+  procedure FindStartNumber(out num: integer);
   var
     i: integer;
     z: boolean;

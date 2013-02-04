@@ -342,6 +342,7 @@ type
 
     function ToString: string; {$IfDef Delphi_Unicode} override; {$EndIf}
 // introduced in D2009 according to http://blog.marcocantu.com/blog/6hidden_delphi2009.html
+// introduced don't know when in FPC
   published
 
     property From: word read FFrom write SetFrom;
