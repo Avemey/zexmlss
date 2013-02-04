@@ -1407,11 +1407,12 @@ begin
 end;
 
 ////::::::::::::: TZStyle :::::::::::::::::////
-
+// about default font in Excel - http://support.microsoft.com/kb/214123
 constructor TZStyle.Create();
 begin
   FFont := TFont.Create();
   FFont.Size := 10;
+  FFont.Name := 'Arial';
   FFont.Color := ClBlack;
   FBorder := TZBorder.Create();
   FAlignment := TZAlignment.Create();
