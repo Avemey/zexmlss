@@ -3308,6 +3308,7 @@ var
   var
     i: integer;
     s: string;
+    ProcessedColumn: TZColOptions;
 
   begin
     _xml.Attributes.Clear();
@@ -3327,10 +3328,13 @@ var
       _xml.Attributes.Add('max', s, false); //??
       _xml.Attributes.Add('min', IntToStr(i + 1), false); //??
       s := '0';
-      if ((_sheet.Columns[i].StyleID >= -1) and (_sheet.Columns[i].StyleID < XMLSS.Styles.Count)) then
-        s := IntToStr(_sheet.Columns[i].StyleID + 1);
+      ProcessedColumn := _sheet.Columns[i];
+      if ((ProcessedColumn.StyleID >= -1) and (ProcessedColumn.StyleID < XMLSS.Styles.Count)) then
+        s := IntToStr(ProcessedColumn.StyleID + 1);
       _xml.Attributes.Add('style', s, false);
-      _xml.Attributes.Add('width', ZEFloatSeparator(FormatFloat('0.##########', _sheet.Columns[i].WidthMM * 5.14509803921569 / 10)), false);
+      _xml.Attributes.Add('width', ZEFloatSeparator(FormatFloat('0.##########', ProcessedColumn.WidthMM * 5.14509803921569 / 10)), false);
+      if ProcessedColumn.AutoFitWidth then
+        _xml.Attributes.Add('bestFit', '1', false);
       _xml.WriteEmptyTag('col', true, false);
     end;
     _xml.WriteEndTagNode(); //cols
