@@ -17,11 +17,11 @@ object frmMain: TfrmMain
   PixelsPerInch = 96
   TextHeight = 13
   object btnCreate: TButton
-    Left = 272
+    Left = 184
     Top = 160
-    Width = 241
+    Width = 329
     Height = 73
-    Caption = #1057#1086#1079#1076#1072#1090#1100' '#1092#1072#1081#1083' Excel XML'
+    Caption = #1057#1086#1079#1076#1072#1090#1100' '#1092#1072#1081#1083' Microsoft Excel/OpenOffice.org'
     TabOrder = 0
     OnClick = btnCreateClick
   end
