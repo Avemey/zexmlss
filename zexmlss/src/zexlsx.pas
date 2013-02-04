@@ -1984,6 +1984,9 @@ var
           s := xml.Attributes.ItemsByName['horizontal'];
           if (length(s) > 0) then
           begin
+            if (s = 'general') then
+              CSA[_currCell].alignment.horizontal := ZHAutomatic
+            else
             if (s = 'left') then
               CSA[_currCell].alignment.horizontal := ZHLeft
             else
@@ -4109,8 +4112,9 @@ var
         ZHFill: s := 'fill';
         ZHJustify: s := 'justify';
         ZHDistributed: s := 'distributed';
+        ZHAutomatic:   s := 'general';
         else
-          s := 'center';
+          s := 'general';
       end; //case
       _xml.Attributes.Add('horizontal', s);
       _xml.Attributes.Add('indent', IntToStr(_style.Alignment.Indent), false);
