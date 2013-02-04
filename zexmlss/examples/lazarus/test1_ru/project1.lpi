@@ -73,10 +73,13 @@
       <Unit3>
         <Filename Value="..\..\..\src\zsspxml.pas"/>
         <UnitName Value="zsspxml"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
         <TopLine Value="498"/>
-        <CursorPos X="14" Y="509"/>
+        <CursorPos X="42" Y="526"/>
         <UsageCount Value="10"/>
+        <Loaded Value="True"/>
       </Unit3>
       <Unit4>
         <Filename Value="..\..\..\src\zexslx.pas"/>
@@ -147,7 +150,6 @@
         <Filename Value="..\..\..\src\zeSave.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="zeSave"/>
-        <IsVisibleTab Value="True"/>
         <WindowIndex Value="0"/>
         <TopLine Value="312"/>
         <CursorPos X="1" Y="328"/>
