@@ -45,9 +45,9 @@ interface
 {$ENDIF}
 
 uses
-  SysUtils, Graphics, Classes, Types,
-  zsspxml, zexmlss, zesavecommon, zeZippy
-  {$IFDEF FPC},zipper{$ENDIF};
+  SysUtils, Graphics, Classes, Types, 
+  zsspxml, zexmlss, zesavecommon,
+  {$IFDEF FPC},zipper {$ELSE}{$I odszipuses.inc}{$ENDIF};
 
 //Сохраняет незапакованный документ в формате Open Document
 function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
@@ -68,6 +68,10 @@ function ReadODFSPath(var XMLSS: TZEXMLSS; DirName: string): integer;
 
 {$IFDEF FPC}
 function ReadODFS(var XMLSS: TZEXMLSS; FileName: string): integer;
+{$ENDIF}
+
+{$IFNDEF FPC}
+{$I odszipfunc.inc}
 {$ENDIF}
 
 //////////////////// Дополнительные функции, если понадобится читать/писать отдельные файлы или ещё для чего
@@ -1585,6 +1589,7 @@ begin
   StreamS := nil;
   StreamST := nil;
   StreamMA := nil;
+  result := 0;
   try
 
     if (not ZECheckTablesTitle(XMLSS, SheetsNumbers, SheetsNames, _pages, _names, kol)) then
@@ -1641,7 +1646,6 @@ begin
       FreeAndNil(StreamMA);
   end;
 
-  Result := 0;
 end; //SaveXmlssToODFS
 
 {$ENDIF}
@@ -2627,6 +2631,10 @@ begin
       FreeAndNil(lst);
   end;
 end; //ReadODFS
+{$ENDIF}
+
+{$IFNDEF FPC}
+{$I odszipfuncimpl.inc}
 {$ENDIF}
 
 end.
