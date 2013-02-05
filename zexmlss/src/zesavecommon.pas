@@ -47,12 +47,6 @@ function IntToStrN(value: integer; NullCount: integer): string;
 
 //BOM<?xml version="1.0" encoding="CodePageName"?>
 procedure ZEWriteHeaderCommon(xml: TZsspXMLWriterH; const CodePageName: string; const BOM: ansistring);
-{$IfDef DELPHI_UNICODE}
-   overload;
-
-procedure ZEWriteHeaderCommon(xml: TZsspXMLWriterH; const CodePageName: AnsiString; const BOM: ansistring);
-   overload; inline;
-{$EndIf}
 
 //Проверяет заголовки страниц, при необходимости корректирует
 function ZECheckTablesTitle(var XMLSS: TZEXMLSS; const SheetsNumbers:array of integer;
@@ -328,16 +322,6 @@ begin
     Attributes.Clear();
   end;
 end;
-
-{$IfDef DELPHI_UNICODE}
-procedure ZEWriteHeaderCommon(xml: TZsspXMLWriterH; const CodePageName: AnsiString; const BOM: ansistring);
-begin
-  ZEWriteHeaderCommon(xml, UnicodeString(CodePageName), BOM);
-  // intended typecast - supress warnings
-end;
-{$EndIf}
-
-
 
 //Очищает массивы
 procedure ZESClearArrays(var _pages: TIntegerDynArray;  var _names: TStringDynArray);

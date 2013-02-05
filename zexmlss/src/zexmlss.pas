@@ -1780,12 +1780,13 @@ begin
 end;
 
 procedure TZCell.SetDataAsDouble(const Value: double);
-var s: string;
+var s: String; ss: ShortString;
 begin
  if Value = 0
     then SetDataAsInteger(0) // work around Excel 2010 weird XLSX bug
     else begin
-       Str(Value, s); // need old-school to ignore regional settings
+       Str(Value, ss); // need old-school to ignore regional settings
+       s := string(ss); // make XE2 happy
 
        s := UpperCase(Trim(s));
       // UpperCase for exponent w.r.t OpenXML format
