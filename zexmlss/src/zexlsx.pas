@@ -52,7 +52,7 @@ uses
   ,LCLType,
   LResources
   {$ENDIF}
-  {$IFDEF FPC},zipper{$ENDIF};
+  {$IFDEF FPC},zipper{$ELSE}{$I xlsxzipuses.inc}{$ENDIF};
 
 type
   TZXLSXFileItem = record
@@ -89,6 +89,10 @@ function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const Sheets
 {$IFDEF FPC}
 function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
+{$ENDIF}
+
+{$IFNDEF FPC}
+{$I xlsxzipfunc.inc}
 {$ENDIF}
 
 function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
@@ -4896,6 +4900,10 @@ function ReadXSLX(var XMLSS: TZEXMLSS; FileName: string): integer; //deprecated 
 begin
   result := ReadXLSX(XMLSS, FileName);
 end;
+{$ENDIF}
+
+{$IFNDEF FPC}
+{$I xlsxzipfuncimpl.inc}
 {$ENDIF}
 
 end.

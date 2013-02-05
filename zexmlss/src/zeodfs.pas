@@ -46,7 +46,7 @@ interface
 
 uses
   SysUtils, Graphics, Classes, Types, 
-  zsspxml, zexmlss, zesavecommon,
+  zsspxml, zexmlss, zesavecommon, zeZippy
   {$IFDEF FPC},zipper {$ELSE}{$I odszipuses.inc}{$ENDIF};
 
 //—охран€ет незапакованный документ в формате Open Document
