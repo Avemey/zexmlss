@@ -1319,7 +1319,8 @@ var
       // Indent
       AddAttribute('ss:Indent', _style.Alignment.Indent, 0, XMLSS.Styles.DefaultStyle.Alignment.Indent, _def);
       // Rotate
-      AddAttribute('ss:Rotate', _style.Alignment.Rotate, 0, XMLSS.Styles.DefaultStyle.Alignment.Rotate, _def);
+      AddAttribute('ss:Rotate', zeNormalizeAngle90(_style.Alignment.Rotate), 0,
+                                zeNormalizeAngle90(XMLSS.Styles.DefaultStyle.Alignment.Rotate), _def);
       // ShrinkToFit
       AddAttribute('ss:ShrinkToFit', _style.Alignment.ShrinkToFit, false, XMLSS.Styles.DefaultStyle.Alignment.ShrinkToFit, _def);
       // VerticalText

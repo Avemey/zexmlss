@@ -65,7 +65,49 @@ function ZE_CheckDirExist(var DirName: string): boolean;
 //Заменяет в строке последовательности на спецсимволы
 function ZEReplaceEntity(const st: string): string;
 
+// despite formal angle datatype declaration in default "range check off" mode
+//    it can be anywhere -32K to +32K
+// This fn brings it back into -90 .. +90 range
+function ZENormalizeAngle90(const value: TZCellTextRotate): integer;
+
+// despite formal angle datatype declaration in default "range check off" mode
+//    it can be anywhere -32K to +32K
+// This fn brings it back into 0 .. +179 range
+function ZENormalizeAngle180(const value: TZCellTextRotate): integer;
+
 implementation
+
+// despite formal angle datatype declaration in default "range check off" mode
+//    it can be anywhere -32K to +32K
+// This fn brings it back into -90 .. +90 range for Excel XML
+function ZENormalizeAngle90(const value: TZCellTextRotate): integer;
+var Neg: boolean; A: integer;
+begin
+   if (value >= -90) and (value <= +90)
+      then Result := value
+   else begin                             (* Special values: 270; 450; -450; 180; -180; 135 *)
+      Neg := Value < 0;                             (*  F, F, T, F, T, F *)
+      A := Abs(value) mod 360;      // 0..359       (*  270, 90, 90, 180, 180, 135  *)
+      if A > 180 then A := A - 360; // -179..+180   (*  -90, 90, 90, 180, 180, 135 *)
+      if A < 0 then begin
+         Neg := not Neg;                            (*  T,  -"- F, T, F, T, F  *)
+         A := - A;                  // 0..180       (*  90, -"- 90, 90, 180, 180, 135 *)
+      end;
+      if A > 90 then A := A - 180; // 91..180 -> -89..0 (* 90, 90, 90, 0, 0, -45 *)
+      Result := A;
+      If Neg then Result := - Result;               (* -90, +90, -90, 0, 0, -45 *)
+   end;
+end;
+
+// despite formal angle datatype declaration in default "range check off" mode
+//    it can be anywhere -32K to +32K
+// This fn brings it back into 0 .. +180 range
+function ZENormalizeAngle180(const value: TZCellTextRotate): integer;
+begin
+  Result := ZENormalizeAngle90(value);
+  If Result < 0 then Result := 90 - Result;
+end;
+
 
 //Заменяет в строке последовательности на спецсимволы
 //INPUT

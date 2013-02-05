@@ -245,6 +245,8 @@ begin
       //кодировка - utf8, имя кодировки='utf8' (для utf8 можно ''), BOM=''
 //      SaveXmlssToEXML(tz, sd.FileName, [0, 1], [], @TextConverter, 'utf8');
       TZXMLSSave.From(tz).Pages([0,1]).Charset('utf-8', TextConverter).Save(sd.FileName);
+      // formulae would fail in XLSX format and Excel would complain on "corrupt worksheet"
+      // may be worked around byt only saving 0th page: .Pages([0])
 
       //       TZXMLSSave.From(tz).Save(sd.FileName);
     finally

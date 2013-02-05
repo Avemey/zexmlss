@@ -96,6 +96,7 @@ function ODFCreateMeta(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAns
 function ReadODFContent(var XMLSS: TZEXMLSS; stream: TStream): boolean;
 
 implementation
+uses StrUtils;
 
 const
   ZETag_StyleFontFace       = 'style:font-face';      //style:font-face
@@ -429,11 +430,13 @@ end; //ZEStrToODFBorderStyle
 //      _xml: TZsspXMLWriterH     - писатель
 //      StyleNum: integer         - номер стиля
 //      isDefaultStyle: boolean   - является-ли данный стиль стилем по-умолчанию
-procedure ODFWriteTableStyle(var XMLSS: TZEXMLSS; _xml: TZsspXMLWriterH; StyleNum: integer; isDefaultStyle: boolean);
+procedure ODFWriteTableStyle(var XMLSS: TZEXMLSS; _xml: TZsspXMLWriterH; const StyleNum: integer; isDefaultStyle: boolean);
 var
   b: boolean;
   s, satt: string;
   j, n: integer;
+  ProcessedStyle: TZStyle;
+  ProcessedFont: TFont;
 
 begin
 {
@@ -481,9 +484,11 @@ begin
   //    style:shrink-to-fit - подгонять ли содержимое по размеру, если текст не помещается (bool)
 
   _xml.Attributes.Clear();
+  ProcessedStyle := XMLSS.Styles[StyleNum];
+
   b := true;
   for j := 1 to 3 do
-    if (not XMLSS.Styles[StyleNum].Border[j].IsEqual(XMLSS.Styles[StyleNum].Border[0])) then
+    if (not ProcessedStyle.Border[j].IsEqual(ProcessedStyle.Border[0])) then
     begin
       b := false;
       break;
@@ -493,9 +498,9 @@ begin
   if (b) then
   begin
     n := 4;
-    if (not((XMLSS.Styles[StyleNum].Border[0].LineStyle = ZEContinuous) and (XMLSS.Styles[StyleNum].Border[0].Weight = 0))) then
+    if (not((ProcessedStyle.Border[0].LineStyle = ZEContinuous) and (ProcessedStyle.Border[0].Weight = 0))) then
     begin
-      s := ZEODFBorderStyleTostr(XMLSS.Styles[StyleNum].Border[0]);
+      s := ZEODFBorderStyleTostr(ProcessedStyle.Border[0]);
       _xml.Attributes.Add('fo:border', s);
     end;
   end;
@@ -510,15 +515,15 @@ begin
       4: satt := 'style:diagonal-bl-tr';
       5: satt := 'style:diagonal-tl-br';
     end;
-    if (not((XMLSS.Styles[StyleNum].Border[j].LineStyle = ZEContinuous) and (XMLSS.Styles[StyleNum].Border[j].Weight = 0))) then
+    if (not((ProcessedStyle.Border[j].LineStyle = ZEContinuous) and (ProcessedStyle.Border[j].Weight = 0))) then
     begin
-      s := ZEODFBorderStyleTostr(XMLSS.Styles[StyleNum].Border[j]);
+      s := ZEODFBorderStyleTostr(ProcessedStyle.Border[j]);
       _xml.Attributes.Add(satt, s, false);
     end;
   end;
 
   //Выравнивание по вертикали
-  case (XMLSS.Styles[StyleNum].Alignment.Vertical) of
+  case (ProcessedStyle.Alignment.Vertical) of
     ZVAutomatic: s := 'automatic';
     ZVTop: s := 'top';
     ZVBottom: s := 'bottom';
@@ -528,17 +533,25 @@ begin
   end;
   _xml.Attributes.Add('style:vertical-align', s);
 
+//??  style:text-align-source - источник выравнивания текста (fix | value-type)
+  _xml.Attributes.Add('style:text-align-source',
+      IfThen( ZHAutomatic = ProcessedStyle.Alignment.Horizontal,
+              'value-type', 'fix') );
+
   //Поворот текста
-  if (XMLSS.Styles[StyleNum].Alignment.Rotate <> 0) then
-    _xml.Attributes.Add('style:rotation-angle', IntToStr(XMLSS.Styles[StyleNum].Alignment.Rotate));
+  _xml.Attributes.Add('style:direction',
+       IfThen(ProcessedStyle.Alignment.VerticalText, 'ttb', 'ltr'), false);
+  if (ProcessedStyle.Alignment.Rotate <> 0) then
+    _xml.Attributes.Add('style:rotation-angle',
+        IntToStr( ProcessedStyle.Alignment.Rotate mod 360 ));
 
   //Цвет фона ячейки
-  if ((XMLSS.Styles[StyleNum].BGColor <> XMLSS.Styles.DefaultStyle.BGColor) or (isDefaultStyle)) then
-    if (XMLSS.Styles[StyleNum].BGColor <> clWindow) then
-      _xml.Attributes.Add('fo:background-color', '#' + ColorToHTMLHex(XMLSS.Styles[StyleNum].BGColor));
+  if ((ProcessedStyle.BGColor <> XMLSS.Styles.DefaultStyle.BGColor) or (isDefaultStyle)) then
+    if (ProcessedStyle.BGColor <> clWindow) then
+      _xml.Attributes.Add('fo:background-color', '#' + ColorToHTMLHex(ProcessedStyle.BGColor));
 
   //style:shrink-to-fit
-  if (XMLSS.Styles[StyleNum].Alignment.ShrinkToFit) then
+  if (ProcessedStyle.Alignment.ShrinkToFit) then
     _xml.Attributes.Add('style:shrink-to-fit', ODFBoolToStr(true));
 
   _xml.WriteEmptyTag('style:table-cell-properties', true, true);
@@ -561,21 +574,23 @@ begin
   //??  fo:hyphenation-ladder-count
   //
 
-  _xml.Attributes.Clear();
-  //Выравнивание по горизонтали
-  case (XMLSS.Styles[StyleNum].Alignment.Horizontal) of
-    ZHAutomatic: s := 'start';//'right';
-    ZHLeft: s := 'start';//'left';
-    ZHCenter: s := 'center';
-    ZHRight: s := 'end';//'right';
-    ZHFill: s := 'start';
-    ZHJustify: s := 'justify';
-    ZHCenterAcrossSelection: s := 'center';
-    ZHDistributed: s := 'center';
-    ZHJustifyDistributed: s := 'justify';
+  if ZHAutomatic <> ProcessedStyle.Alignment.Horizontal then begin
+    _xml.Attributes.Clear();
+    //Выравнивание по горизонтали
+    case (ProcessedStyle.Alignment.Horizontal) of
+      //ZHAutomatic: s := 'start';//'right';
+      ZHLeft: s := 'start';//'left';
+      ZHCenter: s := 'center';
+      ZHRight: s := 'end';//'right';
+      ZHFill: s := 'start';
+      ZHJustify: s := 'justify';
+      ZHCenterAcrossSelection: s := 'center';
+      ZHDistributed: s := 'center';
+      ZHJustifyDistributed: s := 'justify';
+    end;
+    _xml.Attributes.Add('fo:text-align', s);
+    _xml.WriteEmptyTag('style:paragraph-properties', true, true);
   end;
-  _xml.Attributes.Add('fo:text-align', s);
-  _xml.WriteEmptyTag('style:paragraph-properties', true, true);
 
   //*************
   //Тэг style:text-properties
@@ -651,27 +666,28 @@ begin
   //??  fo:hyphenate - расстановка переносов
   //    text:display - показывать-ли текст (true - да, none - скрыть, condition - в зависимости от атрибута text:condition)
   _xml.Attributes.Clear();
+  ProcessedFont := ProcessedStyle.Font;
 
   //style:font-name
-  if ((XMLSS.Styles[StyleNum].Font.Name <> XMLSS.Styles.DefaultStyle.Font.Name) or (isDefaultStyle)) then
+  if ((ProcessedFont.Name <> XMLSS.Styles.DefaultStyle.Font.Name) or (isDefaultStyle)) then
   begin
-    s := XMLSS.Styles[StyleNum].Font.Name;
+    s := ProcessedFont.Name;
     _xml.Attributes.Add('style:font-name', s);
     _xml.Attributes.Add('style:font-name-asian', s, false);
     _xml.Attributes.Add('style:font-name-complex', s, false);
   end;
 
   //размер шрифта
-  if ((XMLSS.Styles[StyleNum].Font.Size <> XMLSS.Styles.DefaultStyle.Font.Size) or (isDefaultStyle)) then
+  if ((ProcessedFont.Size <> XMLSS.Styles.DefaultStyle.Font.Size) or (isDefaultStyle)) then
   begin
-    s := IntToStr(XMLSS.Styles[StyleNum].Font.Size) + 'pt';
+    s := IntToStr(ProcessedFont.Size) + 'pt';
     _xml.Attributes.Add('fo:font-size', s, false);
     _xml.Attributes.Add('style:font-size-asian', s, false);
     _xml.Attributes.Add('style:font-size-complex', s, false);
   end;
 
   //Жирность
-  if (fsBold in XMLSS.Styles[StyleNum].Font.Style) then
+  if (fsBold in ProcessedFont.Style) then
   begin
     s := 'bold';
     _xml.Attributes.Add('fo:font-weight', s, false);
@@ -680,18 +696,18 @@ begin
   end;
 
   //перечёркнутый текст
-  if (fsStrikeOut in XMLSS.Styles[StyleNum].Font.Style) then
+  if (fsStrikeOut in ProcessedFont.Style) then
     _xml.Attributes.Add('style:text-line-through-type', 'single', false); //(none | single | double)
 
   //Подчёркнутый текст
-  if (fsUnderline in XMLSS.Styles[StyleNum].Font.Style) then
+  if (fsUnderline in ProcessedFont.Style) then
     _xml.Attributes.Add('style:text-underline-type', 'single', false); //(none | single | double)
 
   //цвет шрифта
-  if ((XMLSS.Styles[StyleNum].Font.Color <> XMLSS.Styles.DefaultStyle.Font.Color) or (isDefaultStyle)) then
-    _xml.Attributes.Add('fo:color', ColorToHTMLHex(XMLSS.Styles[StyleNum].Font.Color), false);
+  if ((ProcessedFont.Color <> XMLSS.Styles.DefaultStyle.Font.Color) or (isDefaultStyle)) then
+    _xml.Attributes.Add('fo:color', ColorToHTMLHex(ProcessedFont.Color), false);
 
-  if (fsItalic in XMLSS.Styles[StyleNum].Font.Style) then
+  if (fsItalic in ProcessedFont.Style) then
   begin
     s := 'italic';
     _xml.Attributes.Add('fo:font-style', s, false);
@@ -1857,9 +1873,20 @@ var
     //Чтение стиля для ячейки
     procedure _ReadCellStyle();
     var
-      t: integer;
+      t: integer; HAutoForced: boolean;
       r: real;
-
+      s: string;
+     function ODF12AngleUnit(const un: string; const scale: double): boolean;
+     var err: integer; d: double;
+     begin
+       Result := AnsiEndsStr(un, s);
+       if Result then begin
+          Val( Trim(Copy( s, 1, length(s) - length(un))), d, err);
+          Result := err = 0;
+          if Result then
+             t := round(d * scale);
+       end;
+     end;
     begin
       if (StyleCount >= MaxStyleCount) then
       begin
@@ -1869,6 +1896,8 @@ var
       ODFStyles[StyleCount].index := -1;
       ODFStyles[StyleCount].name := _stylename;
       _style.Assign(XMLSS.Styles.DefaultStyle);
+      HAutoForced := false; // pre-clean: paragraph properties may come before cell properties
+
       while (not IfTag('style:style', 6)) do
       begin
         if (xml.Eof()) then
@@ -1894,11 +1923,30 @@ var
               _style.Alignment.Vertical := ZVCenter;
           end;
 
+          HAutoForced := 'value-type' = xml.Attributes['style:text-align-source'];
+          If HAutoForced then _style.Alignment.Horizontal := ZHAutomatic;
+
           //Угол поворота текста
           s := xml.Attributes.ItemsByName['style:rotation-angle'];
-          if (length(s) > 0) then
-            if (TryStrToInt(s, t)) then
-              _style.Alignment.Rotate := t;
+          if (length(s) > 0) then begin
+            if not TryStrToInt(s, t) // ODS 1.1 - pure integer - failed
+            then begin // ODF 1.2+ ? float with units ?
+              s := LowerCase(Trim(s));
+              if not ODF12AngleUnit('deg', 1) then
+                 if not ODF12AngleUnit('grad', 90 / 100) then
+                    if not ODF12AngleUnit('rad', 180 / Pi ) then
+                       if not ODF12AngleUnit('', 1) then // just unit-less float ?
+                          s := ''; // not parsed
+            end;
+            if s > '' then begin  // need reduce to -180 to +180
+               t := t mod 360;
+               if t > +180 then t := t - 360;
+               if t < -180 then t := t + 360;
+               _style.Alignment.Rotate := t;
+            end;
+          end;
+          _style.Alignment.VerticalText :=
+               'ttb' = xml.Attributes['style:direction'];
 
           //цвет фона
           s := xml.Attributes.ItemsByName['fo:background-color'];
@@ -1941,22 +1989,24 @@ var
 
         if ((xml.TagName = 'style:paragraph-properties') and (xml.TagType in [4, 5])) then
         begin
-          s := xml.Attributes.ItemsByName['fo:text-align'];
-          if (length(s) > 0) then
-          begin
-            if ((s = 'start') or (s = 'left')) then
-              _style.Alignment.Horizontal := ZHLeft
-            else
-            if (s = 'center') then
-              _style.Alignment.Horizontal := ZHCenter
-            else
-            if (s = 'justify') then
-              _style.Alignment.Horizontal := ZHJustify
-            else
-            if ((s = 'end') or (s = 'right')) then
-              _style.Alignment.Horizontal := ZHRight
-            else
-              _style.Alignment.Horizontal := ZHAutomatic;
+          if not HAutoForced then begin
+              s := xml.Attributes.ItemsByName['fo:text-align'];
+              if (length(s) > 0) then
+              begin
+                if ((s = 'start') or (s = 'left')) then
+                  _style.Alignment.Horizontal := ZHLeft
+                else
+                if (s = 'center') then
+                  _style.Alignment.Horizontal := ZHCenter
+                else
+                if (s = 'justify') then
+                  _style.Alignment.Horizontal := ZHJustify
+                else
+                if ((s = 'end') or (s = 'right')) then
+                  _style.Alignment.Horizontal := ZHRight
+                else
+                  _style.Alignment.Horizontal := ZHAutomatic;
+              end;
           end;
         end else //if
 

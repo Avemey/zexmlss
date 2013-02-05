@@ -144,13 +144,47 @@ type
     property DiagonalRight: TZBorderStyle index 5 read GetBorder write SetBorder;
   end;
 
+  /// Угол поворота текста в ячейке. Целое со знаком.
+  ///    Базовый диапазон -90 .. +90, расширенный -180 .. +180 (градусов)
+  ///    Значения из расширенного диапазона НЕ МОГУТ работать в Microsoft Excel!
+  /// Определение по XML SS совпадает с базовым
+  /// Определение по OpenDocument 1.2 позволяет любое дробное число
+  ///    в разных еденицах измерения (градусы, грады, радианы).
+  ///    практически используется целое от 0 до 359
+  /// Определение по OfficeXML наиболее запутанное:
+  ///    254 и 255 - специальные значения,
+  ///        255 работает в Excel хотя в стандарте не описано
+  ///        254 принимается, но после открытия файла не работает
+  ///    от 0 до +90 соответствует обоим вышеописанным стандартам
+  ///    от +91 до +180 соответствует значениям -1 .. -90 [ = 90 - value]
+  ///
+  /// 1. MSDN aa140066.aspx: XML Spreadsheet Reference => ss:Rotate
+  /// 2. OASIS OpenDocument 1.2 (Sep.2011) Part 1 => 18.3 Other Datatypes => 18.3.1 angle
+  /// 3. ECMA-376 4th Edition (Dec.2012) Part 1 => 18.8 Styles => 18.8.1 alignment
+  ///
+  ///  An angle of the rotation (direction) for a text within a cell. Signed Integer;
+  ///    Nominative range is -90 .. +90, extended is -180 .. +180 (in degrees)
+  ///       Extended range values can not be loaded by Microsoft Excel!
+  /// XML SS specifications matches the nominative range.
+  /// OpenDocument 1.2 specification, atchign mathematics and SVG, permits FP
+  ///    numbers in different unit (deg, grad, rad) with degrees by default;
+  ///    practical implementations use non-negative integer numbers in 0..359 range.
+  /// OfficeXML specification is the most perplexed
+  ///    254 and 255 are special values, and:
+  ///        255 works within MS Excel despite being not defined in the specs;
+  ///        254 can be opened by excel, but such a cell can not be rendered.
+  ///    The 0 to +90 range matches both standards aforementioned
+  ///    The +91 to +180 range matches -1 to -90 range. [ = 90 - value]
+  ///
+  TZCellTextRotate = -180 .. +359;
+
   //выравнивание
         //ReadingOrder - имхо, не нужно ^_^
   TZAlignment = class (TPersistent)
   private
     FHorizontal: TZHorizontalAlignment; //горизонтальное выравнивание
     FIndent: integer;                   //отступ
-    FRotate: integer;                      //угол поворота
+    FRotate: TZCellTextRotate;          //угол поворота
     FShrinkToFit: boolean;              //true - уменьшает размер шрифта, чтобы текст
                                         //   поместился в ячейку,
                                         // false - текст не уменьшается
@@ -160,7 +194,7 @@ type
     FWrapText: boolean;                 //перенос текста
     procedure SetHorizontal(const Value: TZHorizontalAlignment);
     procedure SetIndent(const Value: integer);
-    procedure SetRotate(const Value: integer);
+    procedure SetRotate(const Value: TZCellTextRotate);
     procedure SetShrinkToFit(const Value: boolean);
     procedure SetVertical(const Value: TZVerticalAlignment);
     procedure SetVerticalText(const Value:boolean);
@@ -172,7 +206,7 @@ type
   published
     property Horizontal: TZHorizontalAlignment read FHorizontal write SetHorizontal default ZHAutomatic;
     property Indent: integer read FIndent write SetIndent default 0;
-    property Rotate: integer read FRotate write SetRotate;
+    property Rotate: TZCellTextRotate read FRotate write SetRotate;
     property ShrinkToFit: boolean read FShrinkToFit write SetShrinkToFit default false;
     property Vertical: TZVerticalAlignment read FVertical write SetVertical default ZVAutomatic;
     property VerticalText: boolean read FVerticalText write SetVerticalText default false;
@@ -1381,7 +1415,7 @@ begin
   FIndent := Value;
 end;
 
-procedure TZAlignment.SetRotate(const Value: integer);
+procedure TZAlignment.SetRotate(const Value: TZCellTextRotate);
 begin
   FRotate := Value;
 end;

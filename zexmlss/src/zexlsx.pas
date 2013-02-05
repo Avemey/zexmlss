@@ -2148,9 +2148,16 @@ var
       XMLSSStyle.Alignment.Horizontal := XLSXStyle.alignment.horizontal;
       XMLSSStyle.Alignment.Vertical := XLSXStyle.alignment.vertical;
       XMLSSStyle.Alignment.Indent := XLSXStyle.alignment.indent;
-      XMLSSStyle.Alignment.Rotate := XLSXStyle.alignment.textRotation;
       XMLSSStyle.Alignment.ShrinkToFit := XLSXStyle.alignment.shrinkToFit;
       XMLSSStyle.Alignment.WrapText := XLSXStyle.alignment.wrapText;
+
+      XMLSSStyle.Alignment.Rotate := 0;
+      i := XLSXStyle.alignment.textRotation;
+      XMLSSStyle.Alignment.VerticalText := (i = 255);
+      if (i >= 0) and (i <= 180) then begin
+         if i > 90 then i := 90 - i;
+         XMLSSStyle.Alignment.Rotate := i
+      end;
     end;
 
     if (XLSXStyle.applyBorder) then
@@ -4081,12 +4088,13 @@ var
   var
     _addalignment: boolean;
     _style: TZStyle;
-    s: string;
+    s: string; i: integer;
 
   begin
     _xml.Attributes.Clear();
     _style := XMLSS.Styles[NumStyle];
     _addalignment := _style.Alignment.WrapText or
+                     _style.Alignment.VerticalText or
                     (_style.Alignment.Rotate <> 0) or
                     (_style.Alignment.Indent <> 0) or
                     _style.Alignment.ShrinkToFit or
@@ -4120,11 +4128,19 @@ var
         ZHAutomatic:   s := 'general';
         else
           s := 'general';
+(*  The standard does not specify a default value for the horizontal attribute.
+        Excel uses a default value of general for this attribute.
+    MS-OI29500: Microsoft Office Implementation Information for ISO/IEC-29500, 18.8.1.d *)
       end; //case
       _xml.Attributes.Add('horizontal', s);
       _xml.Attributes.Add('indent', IntToStr(_style.Alignment.Indent), false);
       _xml.Attributes.Add('shrinkToFit', XLSXBoolToStr(_style.Alignment.ShrinkToFit), false);
-      _xml.Attributes.Add('textRotation', IntToStr(_style.Alignment.Rotate), false);
+
+
+      if _style.Alignment.VerticalText then i := 255
+         else i := ZENormalizeAngle180(_style.Alignment.Rotate);
+      _xml.Attributes.Add('textRotation', IntToStr(i), false);
+
       case (_style.Alignment.Vertical) of
         ZVCenter: s := 'center';
         ZVTop: s := 'top';
@@ -4132,7 +4148,10 @@ var
         ZVJustify: s := 'justify';
         ZVDistributed: s := 'distributed';
         else
-          s := 'center';
+          s := 'bottom';
+(*  The standard does not specify a default value for the vertical attribute.
+        Excel uses a default value of bottom for this attribute.
+    MS-OI29500: Microsoft Office Implementation Information for ISO/IEC-29500, 18.8.1.e *)
       end; //case
       _xml.Attributes.Add('vertical', s, false);
       _xml.Attributes.Add('wrapText', XLSXBoolToStr(_style.Alignment.WrapText), false);
