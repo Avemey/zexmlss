@@ -3652,42 +3652,26 @@ var
   //явл€ютс€ ли шрифты одинаковыми
   function _isFontsEqual(const fnt1, fnt2: TFont): boolean;
   begin
-    result := true;
+    result := False;
     if (fnt1.Color <> fnt2.Color) then
-    begin
-      result := false;
       exit;
-    end;
 
     if (fnt1.Height <> fnt2.Height) then
-    begin
-      result := false;
       exit;
-    end;
 
     if (fnt1.Name <> fnt2.Name) then
-    begin
-      result := false;
       exit;
-    end;
 
     if (fnt1.Pitch <> fnt2.Pitch) then
-    begin
-      result := false;
       exit;
-    end;
 
     if (fnt1.Size <> fnt2.Size) then
-    begin
-      result := false;
       exit;
-    end;
 
     if (fnt1.Style <> fnt2.Style) then
-    begin
-      result := false;
       exit;
-    end;
+
+    Result := true; // если уж до сюда добрались
   end; //_isFontsEqual
 
   //ќбновл€ет индексы в массиве
