@@ -1,5 +1,5 @@
 unit zeZippyXE2;
-(* Simplistic interface to creating simplistic Zip files.
+(* Simplistic interface for creating simplistic Zip files.
    Bridge object for avemey.com components.
    This one bridges to Embarcadero Delphi XE2 and above
 

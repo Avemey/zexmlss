@@ -1,5 +1,5 @@
 unit zeZippy;
-(* Simplistic interface to creating simplistic Zip files.
+(* Simplistic interface for creating simplistic Zip files.
    Bridge object template for avemey.com components.
 
    (c) the Arioch, licensed under zLib license *)

@@ -1,5 +1,5 @@
 unit zeZippyZipMaster;
-(* Simplistic interface to creating simplistic Zip files.
+(* Simplistic interface for creating simplistic Zip files.
    Bridge object for avemey.com components.
    This one bridges to TZipMaster by www.delphizip.org
 
