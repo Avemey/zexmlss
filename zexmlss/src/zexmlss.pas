@@ -45,7 +45,7 @@ const
 type
 
   //тип данных €чейки
-  TZCellType = (ZENumber, ZEDateTime, ZEBoolean, ZEansistring, ZEError);
+  TZCellType = (ZENumber, ZEDateTime, ZEBoolean, ZEAnsiString, ZEError);
 
   //—тиль начертани€ линий рамки €чейки
   TZBorderType = (ZENone, ZEContinuous, ZEDot, ZEDash, ZEDashDot, ZEDashDotDot,ZESlantDashDot, ZEDouble);
@@ -78,7 +78,6 @@ type
     procedure SetDataAsDouble(const Value: double);
     procedure SetDataAsInteger(const Value: integer);
     function GetDataAsInteger: integer;
-  protected
   public
     constructor Create();virtual;
     procedure Assign(Source: TPersistent); override;

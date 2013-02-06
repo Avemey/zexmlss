@@ -3678,23 +3678,28 @@ var
   //INPUT
   //  var arr: TIntegerDynArray  - массив
   //      cnt: integer          - номер последнего элемента в массиве (начинает с 0)
-  procedure _UpdateArrayIndex(var arr: TIntegerDynArray; cnt: integer);
+  procedure _UpdateArrayIndex(var arr: TIntegerDynArray; cnt: integer); deprecated 'remove CNT parameter!';
   var
-    i, j, n: integer;
+    res: TIntegerDynArray;
+    i, j: integer;
     num: integer;
-
   begin
+    Assert( Length(arr) - cnt = 2, 'Wow! We really may need this parameter!');
+    cnt := Length(arr) - 2;   // get ready to strip it
+    SetLength(res, Length(arr));
+
     num := 0;
     for i := -1 to cnt do
     if (arr[i + 1] = -2) then
     begin
-      n := i + 1;
-      for j := n to cnt do
+      res[i + 1] := num;
+      for j := i + 1 to cnt do
       if (arr[j + 1] = i) then
-        arr[j + 1] := num;
-      arr[i + 1] := num;
+        res[j + 1] := num;
       inc(num);
     end; //if
+
+    arr := res;
   end; //_UpdateArrayIndex
 
   //<fonts>...</fonts>
