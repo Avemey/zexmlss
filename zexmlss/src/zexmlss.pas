@@ -1210,29 +1210,21 @@ end;
 function TZBorderStyle.IsEqual(Source: TPersistent): boolean;
 var
   zSource: TZBorderStyle;
-
 begin
-  result := true;
-  if (Source is TZBorderStyle) then
-  begin
-    zSource := Source as TZBorderStyle;
-    if LineStyle <> zSource.LineStyle then
-    begin
-      result := false;
-      exit;
-    end;
-    if Color <> zSource.Color then
-    begin
-      result := false;
-      exit;
-    end;
-    if Weight <> zSource.Weight then
-    begin
-      result := false;
-      exit;
-    end;
-  end else
-    result := false;
+  Result := false;
+  if not (Source is TZBorderStyle) then exit;
+  zSource := Source as TZBorderStyle;
+
+  if Self.LineStyle <> zSource.LineStyle then
+    exit;
+
+  if Self.Color <> zSource.Color then
+    exit;
+
+  if Self.Weight <> zSource.Weight then
+    exit;
+
+  Result := true;
 end;
 
 procedure TZBorderStyle.SetLineStyle(const Value: TZBorderType);
@@ -1292,20 +1284,16 @@ function TZBorder.IsEqual(Source: TPersistent): boolean;
 var
   zSource: TZBorder;
   i: integer;
-
 begin
-  result := true;
-  if (Source is TZBorder) then
-  begin
-    zSource := Source as TZBorder;
-    for i := 0 to 5 do
-    if not FBorder[i].IsEqual(zSource.Border[i]) then
-    begin
-      result := false;
-      exit;
-    end;
-  end else
-    result := false;
+  Result := false;
+  if not (Source is TZBorder) then exit;
+  zSource := Source as TZBorder;
+
+  for i := 0 to 5 do
+  if not FBorder[i].IsEqual(zSource.Border[i]) then
+    exit;
+
+  Result := True;
 end;
 
 //установить стиль границы
@@ -1489,99 +1477,56 @@ end;
 function TZStyle.IsEqual(Source: TPersistent): boolean;
 var
   zSource: TZStyle;
-
 begin
-  result := true;
-  if (Source is TZStyle) then
-  begin
-    zSource := Source as TZStyle;
-    if not Border.IsEqual(zSource.Border) then
-    begin
-      result := false;
-      exit;
-    end;
+  Result := False;
+  if not (Source is TZStyle) then exit;
+  zSource := Source as TZStyle;
 
-    if not self.Alignment.IsEqual(zSource.Alignment) then
-    begin
-      result := false;
-      exit;
-    end;
+  if not Border.IsEqual(zSource.Border) then
+    exit;
 
-    if BGColor <> zSource.BGColor then
-    begin
-      result := false;
-      exit;
-    end;
+  if not self.Alignment.IsEqual(zSource.Alignment) then
+    exit;
 
-    if PatternColor <> zSource.PatternColor then
-    begin
-      result := false;
-      exit;
-    end;
+  if BGColor <> zSource.BGColor then
+    exit;
 
-    if CellPattern <> zSource.CellPattern then
-    begin
-      result := false;
-      exit;
-    end;
+  if PatternColor <> zSource.PatternColor then
+    exit;
 
-    if NumberFormat <> zSource.NumberFormat then
-    begin
-      result := false;
-      exit;
-    end;
+  if CellPattern <> zSource.CellPattern then
+    exit;
 
-    if Protect <> zSource.Protect then
-    begin
-      result := false;
-      exit;
-    end;
+  if NumberFormat <> zSource.NumberFormat then
+    exit;
 
-    if HideFormula <> zSource.HideFormula then
-    begin
-      result := false;
-      exit;
-    end;
+  if Protect <> zSource.Protect then
+    exit;
 
-    //font
-    if Font.Color <> zSource.Font.Color then
-    begin
-      result := false;
-      exit;
-    end;
+  if HideFormula <> zSource.HideFormula then
+    exit;
 
-    if Font.Height <> zSource.Font.Height then
-    begin
-      result := false;
-      exit;
-    end;
+  //font
+  if Font.Color <> zSource.Font.Color then
+    exit;
 
-    if Font.Name <> zSource.Font.Name then
-    begin
-      result := false;
-      exit;
-    end;
+  if Font.Height <> zSource.Font.Height then
+    exit;
 
-    if Font.Pitch <> zSource.Font.Pitch then
-    begin
-      result := false;
-      exit;
-    end;
+  if Font.Name <> zSource.Font.Name then
+    exit;
 
-    if Font.Size <> zSource.Font.Size then
-    begin
-      result := false;
-      exit;
-    end;
+  if Font.Pitch <> zSource.Font.Pitch then
+    exit;
 
-    if Font.Style <> zSource.Font.Style then
-    begin
-      result := false;
-      exit;
-    end;
+  if Font.Size <> zSource.Font.Size then
+    exit;
+
+  if Font.Style <> zSource.Font.Style then
+    exit;
     {tut} //Ќичего не забыл?
-  end else
-    result := false;
+
+  Result := true;
 end;
 
 procedure TZStyle.SetFont(const Value: TFont);
@@ -1673,7 +1618,7 @@ function TZStyles.Add(const Style: TZStyle; CheckMatch: boolean = false): intege
 begin
   result := -2;
   if CheckMatch then
-    result := Find(Style);
+     result := Find(Style);
   if result = -2 then
   begin
     Count := Count + 1;
