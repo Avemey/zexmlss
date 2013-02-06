@@ -4092,7 +4092,10 @@ var
     _xml.Attributes.Add('borderId', IntToStr(_BorderIndex[NumStyle + 1]), false);
     _xml.Attributes.Add('fillId', IntToStr(_FillIndex[NumStyle + 1] + 2), false); //+2 т.к. первыми всегда идут 2 левых стиля заливки
     _xml.Attributes.Add('fontId', IntToStr(_FontIndex[NumStyle + 1]), false);
-    _xml.Attributes.Add('numFmtId', '164', false); //??
+
+    // ECMA 376 Ed.4:  12.3.20 Styles Part; 17.9.17 numFmt (Numbering Format); 18.8.30 numFmt (Number Format)
+    // http://social.msdn.microsoft.com/Forums/sa/oxmlsdk/thread/3919af8c-644b-4d56-be65-c5e1402bfcb6
+    _xml.Attributes.Add('numFmtId', '0' {'164'}, false); // TODO: support formats
 
     if (isxfId) then
       _xml.Attributes.Add('xfId', IntToStr(xfId), false);
@@ -4196,8 +4199,12 @@ begin
     WriteXLSXFonts();
     WriteXLSXFills();
     WriteXLSXBorders();
-    WriteCellStyleXfs('cellStyleXfs', false);
-    WriteCellStyleXfs('cellXfs', true);
+//    WriteCellStyleXfs('cellStyleXfs', false);
+//    WriteCellStyleXfs('cellXfs', true);
+
+    // experiment: do not need styles, ergo do not need fake xfId
+    WriteCellStyleXfs('cellXfs', false);
+
     WriteCellStyles(); //??
 
     _xml.WriteEndTagNode(); //styleSheet
