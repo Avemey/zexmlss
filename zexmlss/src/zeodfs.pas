@@ -705,7 +705,7 @@ begin
 
   //цвет шрифта
   if ((ProcessedFont.Color <> XMLSS.Styles.DefaultStyle.Font.Color) or (isDefaultStyle)) then
-    _xml.Attributes.Add('fo:color', ColorToHTMLHex(ProcessedFont.Color), false);
+    _xml.Attributes.Add('fo:color', '#' + ColorToHTMLHex(ProcessedFont.Color), false);
 
   if (fsItalic in ProcessedFont.Style) then
   begin
@@ -815,10 +815,12 @@ begin
     _xml.Attributes.Add('office:version', '1.2', false);
     _xml.WriteTagNode('office:document-settings', true, true, true);
     _xml.Attributes.Clear();
-    _xml.WriteTagNode('office:settings', true, true, true);
-    //
-    //
-    _xml.WriteEndTagNode(); //office:settings
+//    _xml.WriteTagNode('office:settings', true, true, true);
+//    _xml.WriteTagNode('config:config-item-set', true, true, true);
+//    //
+//    //
+//    _xml.WriteEndTagNode(); //config:config-item-set
+//    _xml.WriteEndTagNode(); //office:settings
     _xml.WriteEndTagNode(); //office:document-settings
   finally
     if (Assigned(_xml)) then
@@ -1063,6 +1065,7 @@ var
       begin
         xml.Attributes.Clear();
         xml.WriteTagNode('text:p', true, false, true);
+        xml.Attributes.Add('xlink:type', 'simple'); // mandatory for ODF 1.2 validator
         xml.Attributes.Add('xlink:href', href);
         //office:target-frame-name='_blank' - открывать в новом фрейме
         xml.WriteTag('text:a', CellData, false, false, true);
@@ -1424,12 +1427,13 @@ begin
     }
     //Генератор - какое приложение создало или редактировало документ
     //Потом надо добавить такое поле в хранилище
-    {$IFDEF FPC}
-    s := 'FPC';
-    {$ELSE}
-    s := 'DELPHI_or_CBUILDER';
-    {$ENDIF}
-    _xml.WriteTag('meta:generator', 'ZEXMLSSlib/0.0.5$' + s, true, false, true);
+//    {$IFDEF FPC}
+//    s := 'FPC';
+//    {$ELSE}
+//    s := 'DELPHI_or_CBUILDER';
+//    {$ENDIF}
+//    _xml.WriteTag('meta:generator', 'ZEXMLSSlib/0.0.5$' + s, true, false, true);
+    _xml.WriteTag('meta:generator', ZELibraryName, true, false, true);
 
     _xml.WriteEndTagNode(); // office:meta
     _xml.WriteEndTagNode(); // office:document-meta
@@ -1495,9 +1499,9 @@ begin
     _writetag(s, 'meta.xml');
     _writetag(s, 'settings.xml');
     _writetag(s, 'content.xml');
-    _writetag('image/png', 'Thumbnails/thumbnail.png');
-    _writetag('', 'Configurations2/accelerator/current.xml');
-    _writetag('application/vnd.sun.xml.ui.configuration', 'Configurations2/');
+//    _writetag('image/png', 'Thumbnails/thumbnail.png'); - not implemented
+//    _writetag('', 'Configurations2/accelerator/current.xml'); - not implemented
+//    _writetag('application/vnd.sun.xml.ui.configuration', 'Configurations2/'); - no such folder
     _writetag(s, 'styles.xml');
 
     _xml.WriteEndTagNode(); //manifest:manifest
@@ -1676,6 +1680,7 @@ var
   kol: integer;
   Stream: TStream;
   azg: TZxZipGen; // Actual Zip Generator
+  mime: AnsiString;
 
 begin
   azg := nil;
@@ -1698,6 +1703,12 @@ begin
     end;
     azg := ZipGenerator.Create(FileName);
 
+// этот файл долен быть первым
+// а еще он не должен был сжат! http://odf-validator.rhcloud.com/
+    Stream := azg.NewStream('mimetype');
+    mime := 'application/vnd.oasis.opendocument.spreadsheet';
+    Stream.WriteBuffer(mime[1], Length(mime));
+    azg.SealStream(Stream);
 
     Stream := azg.NewStream('content.xml');
     ODFCreateContent(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM);

@@ -75,7 +75,24 @@ function ZENormalizeAngle90(const value: TZCellTextRotate): integer;
 // This fn brings it back into 0 .. +179 range
 function ZENormalizeAngle180(const value: TZCellTextRotate): integer;
 
+// single place to update version et all
+function ZELibraryName: string;
+const ZELibraryVersion = '0.0.5';
+      ZELibraryFork = 'Arioch';  // or empty str   // URL ?
 implementation
+
+function ZELibraryName: string;
+begin   // todo: compiler version and date ?
+  Result := 'ZEXMLSSlib/' + ZELibraryVersion;
+  if ZELibraryFork <> '' then Result := Result + '@' + ZELibraryFork;
+
+  Result := Result + '$' +
+    {$IFDEF FPC}
+     'FPC';
+    {$ELSE}
+    'DELPHI_or_CBUILDER';
+    {$ENDIF}
+end;
 
 // despite formal angle datatype declaration in default "range check off" mode
 //    it can be anywhere -32K to +32K
