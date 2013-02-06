@@ -94,7 +94,7 @@ begin
 
       //6 - разные границы в одной таблице
       tz.Styles[6].Assign(tz.Styles[1]);
-      for i := 1 to 3 do tz.Styles[6].Border[i].Weight := 2;
+      for i := 0 to 3 do tz.Styles[6].Border[i].Weight := 2;
 
       //2 - стиль для заголовка таблицы (жирный по центру)
       tz.Styles[2].Assign(tz.Styles[1]);
@@ -148,6 +148,7 @@ begin
         Cell[0, 6].Data := 'Объединённая'#13#10'ячейка!';
         Cell[0, 6].CellStyle := 0;
         MergeCells.AddRectXY(0, 6, 3, 14);
+
 
         Cell[5, 5].CellStyle := 2;
         for i := 1 to 10 do
@@ -230,6 +231,10 @@ begin
           end;
       end;
 
+    // Для OfficeXML мы все равно формулы не умеем задавать
+    // Да и для ODS наверное то же, но он всё равно в Йокселе не работает
+     if not AnsiEndsText(sd.FileName, '.xlsx') then begin
+
       //копируем данные с 0 на 1-ую страницу
       tz.Sheets[1].Assign(tz.Sheets[0]);
       tz.Sheets[1].Title := 'Таблица Пифагора (формулы)';
@@ -240,11 +245,14 @@ begin
       for i := 1 to 10 do
       for j := 1 to 10 do
         Cell[5 + i, 5 + j].Formula := '=R6C*RC6'; // координаты в табличке на 1 больше
-
+     end;
       //сохраняем 0-ую и 1-ую страницу в файл
       //кодировка - utf8, имя кодировки='utf8' (для utf8 можно ''), BOM=''
 //      SaveXmlssToEXML(tz, sd.FileName, [0, 1], [], @TextConverter, 'utf8');
-      TZXMLSSave.From(tz).Pages([0,1]).Charset('utf-8', TextConverter).Save(sd.FileName);
+
+      TZXMLSSave.From(tz).Charset('utf-8', TextConverter).Save(sd.FileName);
+      // Page 1 - formulae - only XML SS format
+
       // formulae would fail in XLSX format and Excel would complain on "corrupt worksheet"
       // may be worked around byt only saving 0th page: .Pages([0])
 
