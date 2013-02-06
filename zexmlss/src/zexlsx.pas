@@ -4399,12 +4399,13 @@ begin
     _xml.Attributes.Clear();
     _xml.WriteTag('TotalTime', '0', true, false, false);
 
-    {$IFDEF FPC}
-    s := 'FPC';
-    {$ELSE}
-    s := 'DELPHI_or_CBUILDER';
-    {$ENDIF}
-    _xml.WriteTag('Application', 'ZEXMLSSlib/0.0.5$' + s, true, false, true);
+//    {$IFDEF FPC}
+//    s := 'FPC';
+//    {$ELSE}
+//    s := 'DELPHI_or_CBUILDER';
+//    {$ENDIF}
+//    _xml.WriteTag('Application', 'ZEXMLSSlib/0.0.5$' + s, true, false, true);
+    _xml.WriteTag('Application', ZELibraryName, true, false, true);
 
     _xml.WriteEndTagNode(); //Properties
 

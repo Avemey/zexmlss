@@ -510,13 +510,13 @@ type
   end;
 
   //Свойства документа
-  TZEXMLDocumentProperties = class(Tpersistent)
+  TZEXMLDocumentProperties = class(TPersistent)
   private
     FAuthor      : string;
     FLastAuthor  : string;
     FCreated     : TdateTime;
     FCompany     : string;
-    FVersion     : string;
+    FVersion     : string; // - should be integer by Spec but hardcoded float in real MS Office apps
     FWindowHeight: word;
     FWindowWidth : word;
     FWindowTopX  : integer;

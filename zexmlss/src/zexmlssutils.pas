@@ -1083,7 +1083,11 @@ var
       WriteTag('LastAuthor', XMLSS.DocumentProperties.LastAuthor);
       WriteTag('Created', ZEDateToStr(XMLSS.DocumentProperties.Created) + 'Z'{s});
       WriteTag('Company', XMLSS.DocumentProperties.Company);
-      WriteTag('Version', XMLSS.DocumentProperties.Version);
+
+      WriteTag('Version', XMLSS.DocumentProperties.Version); // зачем ???
+//      WriteTag('Version', ZELibraryVersion); // Excel 2010 writes "14.00" here despite specifications say Integer
+      WriteTag('NameOfApplication', ZELibraryName);
+
       WriteEndTagNode();
       WriteTagNode('ExcelWorkbook',[ToAttribute('xmlns','urn:schemas-microsoft-com:office:excel')], true, true, false);
       WriteTag('WindowHeight', inttostr(XMLSS.DocumentProperties.WindowHeight), true, false, false);
