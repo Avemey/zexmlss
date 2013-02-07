@@ -523,12 +523,13 @@ begin
   end;
 
   //¬ыравнивание по вертикали
+// при загрузке XML в Excel 2010  ZVJustify почти везде (кроме ZHFill) рисуетс€ вверху,
+// a ZV[Justified]Distributed рисуютс€ в по центру - но это дл€ одного "слова"
   case (ProcessedStyle.Alignment.Vertical) of
     ZVAutomatic: s := 'automatic';
-    ZVTop: s := 'top';
+    ZVTop, ZVJustify: s := 'top';
     ZVBottom: s := 'bottom';
-    ZVCenter: s := 'middle';
-    ZVJustify, ZVDistributed, ZVJustifyDistributed: s := 'automatic'; //потом подумать
+    ZVCenter, ZVDistributed, ZVJustifyDistributed: s := 'middle';
     //(top | middle | bottom | automatic)
   end;
   _xml.Attributes.Add('style:vertical-align', s);
@@ -537,6 +538,9 @@ begin
   _xml.Attributes.Add('style:text-align-source',
       IfThen( ZHAutomatic = ProcessedStyle.Alignment.Horizontal,
               'value-type', 'fix') );
+
+   if ZHFill = ProcessedStyle.Alignment.Horizontal then
+     _xml.Attributes.Add('style:repeat-content', ODFBoolToStr(true), false);
 
   //ѕоворот текста
   _xml.Attributes.Add('style:direction',
@@ -572,8 +576,8 @@ begin
   //??  style:tab-stop-distance - int > 0
   //??  fo:hyphenation-keep
   //??  fo:hyphenation-ladder-count
-  //
 
+  // ZHFill -> style:repeat-content  ?
   if ZHAutomatic <> ProcessedStyle.Alignment.Horizontal then begin
     _xml.Attributes.Clear();
     //¬ыравнивание по горизонтали

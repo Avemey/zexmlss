@@ -4,7 +4,7 @@ unit unit_main;
 
 {$IFDEF FPC}
   {$MODE Delphi}
-{$ENDIF}  
+{$ENDIF}
 
 interface
 
@@ -15,7 +15,7 @@ uses
   Windows, Messages, Variants,
   {$ENDIF}
   StdCtrls,  SysUtils, Dialogs, Classes, Graphics, Controls, Forms,
-  zexmlss, zexmlssutils, zsspxml;
+  zexmlss, zexmlssutils, zsspxml, zeformula;
 
 type
 
@@ -36,11 +36,13 @@ implementation
 
 uses
  {$IfDef Unicode} AnsiStrings, {$EndIf} TypInfo,
-{$IFNDEF FPC}zeZippyXE2, {$Else} zeZippyLaz{$EndIf}
+ {$IFNDEF FPC}
+ {$IF CompilerVersion > 22}zeZippyXE2, {$ELSE} zeZippyAB,{у кого чего стоит} {$IFEND} //<XE2 have not zip!
+ {$Else} zeZippyLaz,{$EndIf}
 zeSave, zeSaveODS, zeSaveXLSX, zeSaveEXML;
 {$IFNDEF FPC}
   {$R *.dfm}
-{$ENDIF}  
+{$ENDIF}
 
 //Функция перевода из локальной кодировки в нужную (для примера - в utf8)
 function my_local_to_some_encoding(value: ansistring): ansistring;
@@ -57,6 +59,8 @@ var
   TextConverter: TAnsiToCPConverter;
   va: TZVerticalAlignment;
   ha: TZHorizontalAlignment;
+  s: string;
+  _ConvertParams: integer;
 
 begin
   TextConverter := nil;
@@ -231,21 +235,31 @@ begin
           end;
       end;
 
-    // Для OfficeXML мы все равно формулы не умеем задавать
-    // Да и для ODS наверное то же, но он всё равно в Йокселе не работает
-     if not AnsiEndsText(sd.FileName, '.xlsx') then begin
+     //копируем данные с 0 на 1-ую страницу
+     tz.Sheets[1].Assign(tz.Sheets[0]);
+     tz.Sheets[1].Title := 'Таблица Пифагора (формулы)';
 
-      //копируем данные с 0 на 1-ую страницу
-      tz.Sheets[1].Assign(tz.Sheets[0]);
-      tz.Sheets[1].Title := 'Таблица Пифагора (формулы)';
+     //На второй странице будем использовать формулы.
+     //Используем формулы вида R1C1 (они проще всего переводятся в другие)
+     s := '=R6C*RC6'; // координаты в табличке на 1 больше
 
-      //На второй странице будем использовать формулы.
-      //Используем формулы вида R1C1
+     if (AnsiEndsText('.xml', sd.FileName)) then
       with tz.Sheets[1] do
-      for i := 1 to 10 do
-      for j := 1 to 10 do
-        Cell[5 + i, 5 + j].Formula := '=R6C*RC6'; // координаты в табличке на 1 больше
+       for i := 1 to 10 do
+       for j := 1 to 10 do
+        Cell[5 + i, 5 + j].Formula := s
+     else
+     begin
+       _ConvertParams := 0;
+       if (AnsiEndsText('.ods', sd.FileName)) then
+         _ConvertParams := ZE_RTA_ODF or ZE_RTA_ODF_PREFIX;
+
+        with tz.Sheets[1] do
+         for i := 1 to 10 do
+         for j := 1 to 10 do
+          Cell[5 + i, 5 + j].Formula := ZER1C1ToA1(s, 5 + i, 5 + j, _ConvertParams);
      end;
+
       //сохраняем 0-ую и 1-ую страницу в файл
       //кодировка - utf8, имя кодировки='utf8' (для utf8 можно ''), BOM=''
 //      SaveXmlssToEXML(tz, sd.FileName, [0, 1], [], @TextConverter, 'utf8');
