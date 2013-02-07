@@ -61,6 +61,9 @@ type
                   ZPReverseDiagStripe, ZPDiagStripe, ZPDiagCross, ZPThickDiagCross, ZPThinHorzStripe, ZPThinVertStripe,
                   ZPThinReverseDiagStripe, ZPThinDiagStripe, ZPThinHorzCross, ZPThinDiagCross);
 
+  //Çàêğåïëåíèå ñòğîê/ñòîëáöîâ
+  TZSplitMode = (ZSplitNone, ZSplitFrozen, ZSplitSplit);
+
   //ÿ÷åéêà
   TZCell = class(TPersistent)
   private
@@ -403,6 +406,10 @@ type
     FHeaderData: string;
     FFooterData: string;
     FPaperSize: byte;
+    FSplitVerticalMode: TZSplitMode;
+    FSplitHorizontalMode: TZSplitMode;
+    FSplitVertiñalValue: integer;       //Âğîäå ìîæíî ââîäèòü îòğèöàòåëüíûå
+    FSplitHorizontalValue: integer;
   public
     constructor Create(); virtual;
     procedure Assign(Source: TPersistent); override;
@@ -422,6 +429,10 @@ type
     property FooterMargin: word read FFooterMargin write FFooterMargin default 13;
     property HeaderData: string read FHeaderData write FHeaderData;
     property FooterData: string read FFooterData write FFooterData;
+    property SplitVerticalMode: TZSplitMode read FSplitVerticalMode write FSplitVerticalMode default ZSplitNone;
+    property SplitHorizontalMode: TZSplitMode read FSplitHorizontalMode write FSplitHorizontalMode default ZSplitNone;
+    property SplitVertiñalValue: integer read FSplitVertiñalValue write FSplitVertiñalValue;
+    property SplitHorizontalValue: integer read FSplitHorizontalValue write FSplitHorizontalValue;
   end;
 
   //ëèñò äîêóìåíòà
@@ -2130,8 +2141,12 @@ begin
   FHeaderMargin := 13;
   FFooterMargin := 13;
   FPaperSize := 9;
-  FHeaderData :='';
-  FFooterData :='';
+  FHeaderData := '';
+  FFooterData := '';
+  FSplitVerticalMode := ZSplitNone;
+  FSplitHorizontalMode := ZSplitNone;
+  FSplitVertiñalValue := 0;
+  FSplitHorizontalValue := 0;
 end;
 
 procedure TZSheetOptions.Assign(Source: TPersistent);
@@ -2157,6 +2172,10 @@ begin
     HeaderData := t.HeaderData;
     FooterData := t.FooterData;
     PaperSize := t.PaperSize;
+    SplitVerticalMode := t.SplitVerticalMode;
+    SplitHorizontalMode := t.SplitHorizontalMode;
+    SplitVertiñalValue := t.SplitVertiñalValue;
+    SplitHorizontalValue := t.SplitHorizontalValue;
   end else
     inherited Assign(Source);
 end;

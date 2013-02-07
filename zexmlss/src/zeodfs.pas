@@ -784,7 +784,7 @@ end; //ODFCreateStyles
 //INPUT
 //  var XMLSS: TZEXMLSS                 - хранилище
 //    Stream: TStream                   - поток для записи
-//  const _pages: TIntegerDynArray       - массив страниц
+//  const _pages: TIntegerDynArray      - массив страниц
 //  const _names: TStringDynArray       - массив имён страниц
 //    PageCount: integer                - кол-во страниц
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
