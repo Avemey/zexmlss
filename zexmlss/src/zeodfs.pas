@@ -598,6 +598,7 @@ begin
   //??  fo:font-variant - отображение текста прописныим буквами (normal | small-caps). Взаимоисключается с fo:text-transform
   //??  fo:text-transform - преобразование текста (none | lowercase | uppercase | capitalize)
   //    fo:color - цвет переднего плана текста
+  //    fo:text-indent - первая строка параграфа, с единицами изм.
   //??  style:use-window-font-color - должен ли цвет переднего плана окна быть цветом фона для светлого фона и белый для тёмного фона (bool)
   //??  style:text-outline - показывать ли структуру текста или текст (bool)
   //    style:text-line-through-type - тип линии зачёркивания текста (none | single | double)
