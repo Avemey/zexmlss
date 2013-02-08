@@ -44,7 +44,7 @@ interface
 {$ENDIF}
 
 uses
-  SysUtils, Classes, Types, graphics,
+  SysUtils, Classes, Types, Graphics,
   zeformula, zsspxml, zexmlss, zesavecommon, zeZippy
   {$IFNDEF FPC}
   ,windows
@@ -124,10 +124,11 @@ function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; TextCon
 function ZEXLSXCreateDocPropsApp(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateDocPropsCore(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 
-implementation
+implementation uses
 {$IfDef DELPHI_UNICODE}
-uses AnsiStrings;  // AnsiString targeted overloaded versions of Pos, Trim, etc
+  AnsiStrings,  // AnsiString targeted overloaded versions of Pos, Trim, etc
 {$EndIf}
+  StrUtils;
 
 type
   //רנטפע
@@ -3474,11 +3475,17 @@ var
     _xml.Attributes.Add('fitToHeight', '1', false);
     _xml.Attributes.Add('fitToWidth', '1', false);
     _xml.Attributes.Add('horizontalDpi', '300', false);
-    if (_sheet.SheetOptions.PortraitOrientation) then
-      s := 'portrait'
-    else
-      s := 'album';
-    _xml.Attributes.Add('orientation', s, false);
+//    if (_sheet.SheetOptions.PortraitOrientation) then
+//      s := 'portrait'
+//    else
+//      s := 'album';
+//    _xml.Attributes.Add('orientation', s, false);
+
+    // ECMA 376 ed.4 part1 18.18.50: default|portrait|landscape
+    _xml.Attributes.Add('orientation',
+        IfThen(_sheet.SheetOptions.PortraitOrientation, 'portrait','landscape'),
+        false);
+
     _xml.Attributes.Add('pageOrder', 'downThenOver', false);
     _xml.Attributes.Add('paperSize', intToStr(_sheet.SheetOptions.PaperSize), false);
     _xml.Attributes.Add('scale', '100', false);
