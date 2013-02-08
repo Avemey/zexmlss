@@ -408,8 +408,11 @@ type
     FPaperSize: byte;
     FSplitVerticalMode: TZSplitMode;
     FSplitHorizontalMode: TZSplitMode;
-    FSplitVertiсalValue: integer;       //Вроде можно вводить отрицательные
-    FSplitHorizontalValue: integer;
+    FSplitVerticalValue: integer;       //Вроде можно вводить отрицательные
+    FSplitHorizontalValue: integer;     //Измеряться будут:
+                                        //    в пикселях, если SplitMode = ZSplitSplit
+                                        //    в кол-ве строк/столбцов, если SplitMode = ZSplitFrozen
+                                        // Если SplitMode = ZSplitNone, то фиксация столбцов/ячеек не работает
   public
     constructor Create(); virtual;
     procedure Assign(Source: TPersistent); override;
@@ -431,7 +434,7 @@ type
     property FooterData: string read FFooterData write FFooterData;
     property SplitVerticalMode: TZSplitMode read FSplitVerticalMode write FSplitVerticalMode default ZSplitNone;
     property SplitHorizontalMode: TZSplitMode read FSplitHorizontalMode write FSplitHorizontalMode default ZSplitNone;
-    property SplitVertiсalValue: integer read FSplitVertiсalValue write FSplitVertiсalValue;
+    property SplitVerticalValue: integer read FSplitVerticalValue write FSplitVerticalValue;
     property SplitHorizontalValue: integer read FSplitHorizontalValue write FSplitHorizontalValue;
   end;
 
@@ -2145,7 +2148,7 @@ begin
   FFooterData := '';
   FSplitVerticalMode := ZSplitNone;
   FSplitHorizontalMode := ZSplitNone;
-  FSplitVertiсalValue := 0;
+  FSplitVerticalValue := 0;
   FSplitHorizontalValue := 0;
 end;
 
@@ -2174,7 +2177,7 @@ begin
     PaperSize := t.PaperSize;
     SplitVerticalMode := t.SplitVerticalMode;
     SplitHorizontalMode := t.SplitHorizontalMode;
-    SplitVertiсalValue := t.SplitVertiсalValue;
+    SplitVerticalValue := t.SplitVerticalValue;
     SplitHorizontalValue := t.SplitHorizontalValue;
   end else
     inherited Assign(Source);
