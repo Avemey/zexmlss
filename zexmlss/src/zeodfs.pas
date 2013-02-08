@@ -796,7 +796,42 @@ end; //ODFCreateStyles
 function ODFCreateSettings(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
                           const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
 var
-  _xml: TZsspXMLWriterH; 
+  _xml: TZsspXMLWriterH;
+  i: integer;
+
+  //<config:config-item config:name="ConfigName" config:type="ConfigType">ConfigValue</config:config-item>
+  procedure _AddConfigItem(const ConfigName, ConfigType, ConfigValue: string);
+  begin
+    _xml.Attributes.Clear();
+    _xml.Attributes.Add('config:name', ConfigName);
+    _xml.Attributes.Add('config:type', ConfigType);
+    _xml.WriteTag('config:config-item', ConfigValue, true, false, true);
+  end; //_AddConfigItem
+
+  procedure _WritePageSettings(const num: integer);
+  var
+    _PageNum: integer;
+    _SheetOptions: TZSheetOptions;
+
+  begin
+    _PageNum := _pages[num];
+    _xml.Attributes.Clear();
+    _xml.Attributes.Add('config:name', _names[num]);
+    _xml.WriteTagNode('config:config-item-map-entry', true, true, true);
+    _SheetOptions := XMLSS.Sheets[_PageNum].SheetOptions;
+
+    _AddConfigItem('CursorPositionX', 'int', IntToStr(_SheetOptions.ActiveCol));
+    _AddConfigItem('CursorPositionY', 'int', IntToStr(_SheetOptions.ActiveRow));
+
+    {
+       <config:config-item config:name="HorizontalSplitMode" config:type="short">2</config:config-item>
+       <config:config-item config:name="VerticalSplitMode" config:type="short">2</config:config-item>
+       <config:config-item config:name="HorizontalSplitPosition" config:type="int">1</config:config-item>
+       <config:config-item config:name="VerticalSplitPosition" config:type="int">1</config:config-item>
+    }
+
+    _xml.WriteEndTagNode(); //config:config-item-map-entry
+  end; //_WritePageSettings
 
 begin
   result := 0;
@@ -820,12 +855,28 @@ begin
     _xml.Attributes.Add('office:version', '1.2', false);
     _xml.WriteTagNode('office:document-settings', true, true, true);
     _xml.Attributes.Clear();
-//    _xml.WriteTagNode('office:settings', true, true, true);
-//    _xml.WriteTagNode('config:config-item-set', true, true, true);
-//    //
-//    //
-//    _xml.WriteEndTagNode(); //config:config-item-set
-//    _xml.WriteEndTagNode(); //office:settings
+    _xml.WriteTagNode('office:settings', true, true, true);
+
+    _xml.Attributes.Add('config:name', 'ooo:view-settings');
+    _xml.WriteTagNode('config:config-item-set', true, true, false);
+
+    _xml.Attributes.Clear();
+    _xml.Attributes.Add('config:name', 'Views');
+    _xml.WriteTagNode('config:config-item-map-indexed', true, true, false);
+
+    _xml.Attributes.Clear();
+    _xml.WriteTagNode('config:config-item-map-entry', true, true, false);
+
+    _xml.WriteTagNode('config:config-item-map-named', true, true, false);
+
+    for i := 0 to PageCount - 1 do
+      _WritePageSettings(i);
+
+    _xml.WriteEndTagNode(); //config:config-item-map-named
+    _xml.WriteEndTagNode(); //config:config-item-map-entry
+    _xml.WriteEndTagNode(); //config:config-item-map-indexed
+    _xml.WriteEndTagNode(); //config:config-item-set
+    _xml.WriteEndTagNode(); //office:settings
     _xml.WriteEndTagNode(); //office:document-settings
   finally
     if (Assigned(_xml)) then
