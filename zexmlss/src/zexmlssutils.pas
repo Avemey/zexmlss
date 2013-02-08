@@ -1461,6 +1461,23 @@ var
       end;
     end; //WritePageBreaks (Разрывы страницы)
 
+    procedure _WriteSplitFrozen(_xml: TZsspXMLWriterH; SplitMode: TZSplitMode; const SplitValue: integer; const SplitName, SplitPane: string);
+    var
+      s: string;
+
+    begin
+      if ((SplitValue <> 0) and (SplitMode <> ZSplitNone)) then
+      begin
+        if (SplitMode = ZSplitSplit) then
+          s := IntToStr(round(PixelToPoint(SplitValue) * 20))
+        else
+          s := IntToStr(SplitValue);
+        _xml.WriteTag(SplitName, s, true, false, false);
+        if (SplitMode = ZSplitFrozen) then
+          _xml.WriteTag(SplitPane, s, true, false, false);
+      end;
+    end; //_WriteSplitFrozen
+
   begin
     ProcessedSheet := XMLSS.Sheets[PageNum];
 
@@ -1692,7 +1709,7 @@ var
         begin
           WriteEndTagNode(); //Row
         end;
-      end;
+      end; //for i
 
       WriteEndTagNode(); //Table
 
@@ -1759,6 +1776,36 @@ var
 
       if ProcessedSheet.Selected then
         WriteEmptyTag('Selected', true, false);
+
+      //Фиксирование столбцов/строк
+      b := (ProcessedSheet.SheetOptions.SplitVerticalMode <> ZSplitNone) or
+           (ProcessedSheet.SheetOptions.SplitHorizontalMode <> ZSplitNone);
+      if (b) then
+        b := (ProcessedSheet.SheetOptions.SplitVerticalValue <> 0) or
+             (ProcessedSheet.SheetOptions.SplitHorizontalValue <> 0);
+
+      if (b) then
+      begin
+        b := (ProcessedSheet.SheetOptions.SplitVerticalMode = ZSplitFrozen) or
+             (ProcessedSheet.SheetOptions.SplitHorizontalMode = ZSplitFrozen);
+        if (b) then
+        begin
+          WriteEmptyTag('FreezePanes', true, false);
+          WriteEmptyTag('FrozenNoSplit', true, false);
+        end;
+
+        _WriteSplitFrozen(_xml, ProcessedSheet.SheetOptions.SplitHorizontalMode,
+                                ProcessedSheet.SheetOptions.SplitHorizontalValue,
+                                'SplitHorizontal',
+                                'TopRowBottomPane');
+
+        _WriteSplitFrozen(_xml, ProcessedSheet.SheetOptions.SplitVerticalMode,
+                                ProcessedSheet.SheetOptions.SplitVerticalValue,
+                                'SplitVertical',
+                                'LeftColumnRightPane');
+
+        WriteTag('ActivePane', '0', true, false, false);
+      end; //fix or split
 
       if not((ProcessedSheet.SheetOptions.ActiveCol = 0) and
          (ProcessedSheet.SheetOptions.ActiveRow = 0)) then
