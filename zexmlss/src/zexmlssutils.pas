@@ -1400,6 +1400,7 @@ var
     s: string;
     isFormula, isRepeatablePrint: boolean;
     ProcessedSheet: TZSheet; ProcessedCell: TZCell;
+    _hMode, _vMode: TZSplitMode;
 
     procedure AddCellInRow(var CountCells: integer; var CellIndex: boolean);
     begin
@@ -1778,33 +1779,47 @@ var
         WriteEmptyTag('Selected', true, false);
 
       //Фиксирование столбцов/строк
-      b := (ProcessedSheet.SheetOptions.SplitVerticalMode <> ZSplitNone) or
-           (ProcessedSheet.SheetOptions.SplitHorizontalMode <> ZSplitNone);
+      _hMode := ProcessedSheet.SheetOptions.SplitHorizontalMode;
+      _vMode := ProcessedSheet.SheetOptions.SplitVerticalMode;
+      b := (_vMode <> ZSplitNone) or
+           (_hMode <> ZSplitNone);
       if (b) then
         b := (ProcessedSheet.SheetOptions.SplitVerticalValue <> 0) or
              (ProcessedSheet.SheetOptions.SplitHorizontalValue <> 0);
 
       if (b) then
       begin
-        b := (ProcessedSheet.SheetOptions.SplitVerticalMode = ZSplitFrozen) or
-             (ProcessedSheet.SheetOptions.SplitHorizontalMode = ZSplitFrozen);
+        b := (_vMode = ZSplitFrozen) or
+             (_hMode = ZSplitFrozen);
         if (b) then
         begin
+//          WriteEmptyTag('Selected', true, false);
           WriteEmptyTag('FreezePanes', true, false);
           WriteEmptyTag('FrozenNoSplit', true, false);
         end;
 
-        _WriteSplitFrozen(_xml, ProcessedSheet.SheetOptions.SplitHorizontalMode,
+        _WriteSplitFrozen(_xml, _hMode,
                                 ProcessedSheet.SheetOptions.SplitHorizontalValue,
                                 'SplitHorizontal',
                                 'TopRowBottomPane');
 
-        _WriteSplitFrozen(_xml, ProcessedSheet.SheetOptions.SplitVerticalMode,
+        _WriteSplitFrozen(_xml, _vMode,
                                 ProcessedSheet.SheetOptions.SplitVerticalValue,
                                 'SplitVertical',
                                 'LeftColumnRightPane');
 
-        WriteTag('ActivePane', '0', true, false, false);
+        s := '';
+        if ((_hMode = ZSplitFrozen) and (_vMode = ZSplitFrozen)) then
+          s := '0'
+        else
+        if (_hMode = ZSplitFrozen) then
+          s := '2'
+        else
+        if (_vMode = ZSplitFrozen) then
+          s := '1';
+
+        if (length(s) > 0) then
+          WriteTag('ActivePane', s, true, false, false);
       end; //fix or split
 
       if not((ProcessedSheet.SheetOptions.ActiveCol = 0) and

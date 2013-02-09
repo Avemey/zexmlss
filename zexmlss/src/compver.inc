@@ -2,6 +2,9 @@
 
 {$IFDEF FPC} //KO: FPC
   {$UNDEF UNKNOWN_COMPILER}
+  //Directive deprecated with string msg (deprecated 'Use "some else"';)
+  //  works in FPC and D>=2009.
+  {$DEFINE USE_DEPRECATED_STRING}
 {$ENDIF}
 
 /// ******DELPHI*********
@@ -93,6 +96,10 @@
 {$IFDEF UNKNOWN_COMPILER} // > XE2 
   {$DEFINE DELPHI_UNICODE}
   {$UNDEF UNKNOWN_COMPILER}
+{$ENDIF}
+
+{$IFDEF DELPHI_UNICODE}
+  {$DEFINE USE_DEPRECATED_STRING}
 {$ENDIF}
 
 { $DEFINE DELPHI_UNICODE}

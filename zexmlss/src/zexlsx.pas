@@ -3685,7 +3685,7 @@ var
   //INPUT
   //  var arr: TIntegerDynArray  - массив
   //      cnt: integer          - номер последнего элемента в массиве (начинает с 0)
-  procedure _UpdateArrayIndex(var arr: TIntegerDynArray; cnt: integer); deprecated 'remove CNT parameter!';
+  procedure _UpdateArrayIndex(var arr: TIntegerDynArray; cnt: integer); deprecated {$IFDEF USE_DEPRECATED_STRING}'remove CNT parameter!'{$ENDIF};
   var
     res: TIntegerDynArray;
     i, j: integer;

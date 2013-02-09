@@ -808,6 +808,21 @@ var
     _xml.WriteTag('config:config-item', ConfigValue, true, false, true);
   end; //_AddConfigItem
 
+  procedure _WriteSplitValue(const SPlitMode: TZSplitMode; const SplitValue: integer; const SplitModeName, SplitValueName: string);
+  var
+    s: string;
+
+  begin
+    if ((SplitMode <> ZSplitNone) and (SplitValue <> 0)) then
+    begin
+      s := '1';
+      if (SPlitMode = ZSplitFrozen) then
+        s := '2';
+      _AddConfigItem(SplitModeName, 'short', s);
+      _AddConfigItem(SplitValueName, 'int', IntToStr(SplitValue));
+    end;
+  end; //_WriteSplitValue
+
   procedure _WritePageSettings(const num: integer);
   var
     _PageNum: integer;
@@ -822,6 +837,8 @@ var
 
     _AddConfigItem('CursorPositionX', 'int', IntToStr(_SheetOptions.ActiveCol));
     _AddConfigItem('CursorPositionY', 'int', IntToStr(_SheetOptions.ActiveRow));
+    _WriteSplitValue(_SheetOptions.SplitHorizontalMode, _SheetOptions.SplitHorizontalValue, 'HorizontalSplitMode', 'HorizontalSplitPosition');
+    _WriteSplitValue(_SheetOptions.SplitVerticalMode, _SheetOptions.SplitVerticalValue, 'VerticalSplitMode', 'VerticalSplitPosition');
 
     {
        <config:config-item config:name="HorizontalSplitMode" config:type="short">2</config:config-item>
