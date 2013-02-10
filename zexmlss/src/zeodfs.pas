@@ -95,6 +95,9 @@ function ODFCreateMeta(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAns
 //Чтение содержимого документа ODS (content.xml)
 function ReadODFContent(var XMLSS: TZEXMLSS; stream: TStream): boolean;
 
+//Чтение настроек документа ODS (settings.xml)
+function ReadODFSettings(var XMLSS: TZEXMLSS; stream: TStream): boolean;
+
 implementation
 uses StrUtils;
 
@@ -2235,7 +2238,7 @@ var
             begin
               MaxTableStyleCount := TableStyleCount + 20;
               SetLength(ODFTableStyles, MaxTableStyleCount);
-            end;  
+            end;
             ODFTableStyles[TableStyleCount].name := _stylename;
             ODFTableStyles[TableStyleCount].isColor := false;
             while (not ifTag('style:style', 6)) do
@@ -2673,6 +2676,103 @@ begin
     ODFTableStyles := nil;
   end;
 end; //ReadODFContent
+
+//Чтение настроек документа ODS (settings.xml)
+//INPUT
+//  var XMLSS: TZEXMLSS - хранилище
+//      stream: TStream - поток для чтения
+//RETURN
+//      boolean - true - всё ок
+function ReadODFSettings(var XMLSS: TZEXMLSS; stream: TStream): boolean;
+var
+  xml: TZsspXMLReaderH;
+
+  {
+<?xml version="1.0" encoding="UTF-8"?>
+<office:document-settings xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0" xmlns:ooo="http://openoffice.org/2004/office" office:version="1.2">
+ <office:settings>
+  <config:config-item-set config:name="ooo:view-settings">
+   <config:config-item-map-indexed config:name="Views">
+    <config:config-item-map-entry>
+     <config:config-item-map-named config:name="Tables">
+      <config:config-item-map-entry config:name="Frozen hor">
+       <config:config-item config:name="CursorPositionX" config:type="int">0</config:config-item>
+       <config:config-item config:name="CursorPositionY" config:type="int">0</config:config-item>
+       <config:config-item config:name="HorizontalSplitMode" config:type="short">2</config:config-item>
+       <config:config-item config:name="HorizontalSplitPosition" config:type="int">1</config:config-item>
+      </config:config-item-map-entry>
+  }
+  procedure _ReadSettings();
+  var
+    _ConfigName: string;
+    _ConfigType: string;
+    _ConfigValue: string;
+    _Sheet: TZSheet;
+    s: string;
+    i: integer;
+    b: boolean;
+
+  begin
+    b := true;
+    s := xml.Attributes.ItemsByName['config:name'];
+    if (length(s) = 0) then
+      exit;
+
+    for i := 0 to XMLSS.Sheets.Count - 1 do
+      if (XMLSS.Sheets[i].Title = s) then
+      begin
+        _Sheet := XMLSS.Sheets[i];
+        break;
+        b := false;
+      end;
+    if (b) then
+      exit;
+
+    while not ((xml.TagName = 'config:config-item-map-entry') and (xml.TagType = 6)) do
+    begin
+      if (xml.Eof()) then
+        break;
+
+      if (xml.TagName = 'config:config-item') then
+      begin
+        if (xml.TagType = 4) then
+        begin
+
+        end else
+        begin
+
+        end;
+      end; //if
+
+    end; //while
+  end; //_ReadSettings
+
+begin
+  result := false;
+  xml := nil;
+  try
+    xml := TZsspXMLReaderH.Create();
+    xml.AttributesMatch := false;
+    if (xml.BeginReadStream(stream) <> 0) then
+      exit;
+
+    while (not xml.Eof()) do
+    begin
+      xml.ReadTag();
+      if ((xml.TagName = 'config:config-item-map-named') and (xml.TagType = 4)) then
+        if (xml.Attributes.ItemsByName['config:name'] = 'Tables') then
+        begin
+          xml.ReadTag();
+          _ReadSettings();
+        end;
+    end; //while
+
+    result := true;
+  finally
+    if (Assigned(xml)) then
+      FreeAndNil(xml);
+  end;
+end; //ReadODFSettings
 
 //Читает распакованный ODS
 //INPUT
