@@ -813,11 +813,13 @@ var
     s: string;
 
   begin
-    if ((SplitMode <> ZSplitNone) and (SplitValue <> 0)) then
+    if ({(SplitMode <> ZSplitNone) and} (SplitValue <> 0)) then
     begin
-      s := '1';
-      if (SPlitMode = ZSplitFrozen) then
-        s := '2';
+      s := '0';
+      case (SPlitMode) of
+        ZSplitFrozen: s := '2';
+        ZSplitSplit: s := '1';
+      end;
       _AddConfigItem(SplitModeName, 'short', s);
       _AddConfigItem(SplitValueName, 'int', IntToStr(SplitValue));
     end;
@@ -837,15 +839,16 @@ var
 
     _AddConfigItem('CursorPositionX', 'int', IntToStr(_SheetOptions.ActiveCol));
     _AddConfigItem('CursorPositionY', 'int', IntToStr(_SheetOptions.ActiveRow));
-    _WriteSplitValue(_SheetOptions.SplitHorizontalMode, _SheetOptions.SplitHorizontalValue, 'HorizontalSplitMode', 'HorizontalSplitPosition');
-    _WriteSplitValue(_SheetOptions.SplitVerticalMode, _SheetOptions.SplitVerticalValue, 'VerticalSplitMode', 'VerticalSplitPosition');
 
-    {
-       <config:config-item config:name="HorizontalSplitMode" config:type="short">2</config:config-item>
-       <config:config-item config:name="VerticalSplitMode" config:type="short">2</config:config-item>
-       <config:config-item config:name="HorizontalSplitPosition" config:type="int">1</config:config-item>
-       <config:config-item config:name="VerticalSplitPosition" config:type="int">1</config:config-item>
-    }
+    //это не ошибка (_SheetOptions.SplitHorizontalMode = VerticalSplitMode)
+    _WriteSplitValue(_SheetOptions.SplitHorizontalMode, _SheetOptions.SplitHorizontalValue, 'VerticalSplitMode', 'VerticalSplitPosition');
+    _WriteSplitValue(_SheetOptions.SplitVerticalMode, _SheetOptions.SplitVerticalValue, 'HorizontalSplitMode', 'HorizontalSplitPosition');
+
+    _AddConfigItem('ActiveSplitRange', 'short', '2');
+    _AddConfigItem('PositionLeft', 'int', '0');
+    _AddConfigItem('PositionRight', 'int', '1');
+    _AddConfigItem('PositionTop', 'int', '0');
+    _AddConfigItem('PositionBottom', 'int', '1');
 
     _xml.WriteEndTagNode(); //config:config-item-map-entry
   end; //_WritePageSettings
@@ -877,6 +880,11 @@ begin
     _xml.Attributes.Add('config:name', 'ooo:view-settings');
     _xml.WriteTagNode('config:config-item-set', true, true, false);
 
+    _AddConfigItem('VisibleAreaTop', 'int', '0');
+    _AddConfigItem('VisibleAreaLeft', 'int', '0');
+    _AddConfigItem('VisibleAreaWidth', 'int', '6773');
+    _AddConfigItem('VisibleAreaHeight', 'int', '1813');
+
     _xml.Attributes.Clear();
     _xml.Attributes.Add('config:name', 'Views');
     _xml.WriteTagNode('config:config-item-map-indexed', true, true, false);
@@ -884,6 +892,7 @@ begin
     _xml.Attributes.Clear();
     _xml.WriteTagNode('config:config-item-map-entry', true, true, false);
 
+    _xml.Attributes.Add('config:name', 'Tables');
     _xml.WriteTagNode('config:config-item-map-named', true, true, false);
 
     for i := 0 to PageCount - 1 do
