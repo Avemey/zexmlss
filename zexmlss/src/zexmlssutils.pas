@@ -2363,8 +2363,28 @@ var
   procedure ReadXMLWorkSheetOptions(const PageNum: integer);
   var
     s: string;
+    _isFreezePanes: boolean;
+    _isFrozeNoSplit: boolean;
+    _SheetOptions: TZSheetOptions;
+    _SplitMode: TZSplitMode;
+    _isH, _isV: boolean;
+
+    function _GetSplitValue(const SplitMode: TZSplitMode; const SplitValue: integer): integer;
+    begin
+      result := SplitValue;
+      if (SplitMode = ZSplitSplit) then
+        result := round(PointToPixel(SplitValue/20));
+    end; //_GetSplitValue
 
   begin
+    _isFreezePanes := false;
+    _isFrozeNoSplit := false;
+    _isH := false;
+    _isV := false;
+    _SheetOptions := XMLSS.Sheets[PageNum].SheetOptions;
+    _SheetOptions.SplitHorizontalMode := ZSplitNone;
+    _SheetOptions.SplitVerticalMode := ZSplitNone;
+
     while not IfTag('WorksheetOptions', 6) do
     begin
       if _xml.Eof() then break;
@@ -2378,47 +2398,47 @@ var
         if IfTag('Layout', 5) then
         begin
           if _xml.Attributes.ItemsByName['x:Orientation'] = 'Landscape' then
-            XMLSS.Sheets[PageNum].SheetOptions.PortraitOrientation := false
+            _SheetOptions.PortraitOrientation := false
           else
-            XMLSS.Sheets[PageNum].SheetOptions.PortraitOrientation := true;
+            _SheetOptions.PortraitOrientation := true;
           if _xml.Attributes.ItemsByName['x:CenterHorizontal'] = '1' then
-            XMLSS.Sheets[PageNum].SheetOptions.CenterHorizontal := true else
+            _SheetOptions.CenterHorizontal := true else
           if _xml.Attributes.ItemsByName['x:CenterVertical'] = '1' then
-            XMLSS.Sheets[PageNum].SheetOptions.CenterVertical := true else
+            _SheetOptions.CenterVertical := true else
           begin
             s := _xml.Attributes.ItemsByName['x:StartPageNumber'];
             if length(s) > 0 then
-              XMLSS.Sheets[PageNum].SheetOptions.StartPageNumber := _StrToInt(s);
+              _SheetOptions.StartPageNumber := _StrToInt(s);
           end;
         end else
         if IfTag('PageMargins', 5) then
         begin
           s := _xml.Attributes.ItemsByName['x:Bottom'];
           if length(s) > 0 then
-            XMLSS.Sheets[PageNum].SheetOptions.MarginBottom := round(ZETryStrToFloat(s)*25.4);
+            _SheetOptions.MarginBottom := round(ZETryStrToFloat(s)*25.4);
           s := _xml.Attributes.ItemsByName['x:Left'];
           if length(s) > 0 then
-            XMLSS.Sheets[PageNum].SheetOptions.MarginLeft := round(ZETryStrToFloat(s)*25.4);
+            _SheetOptions.MarginLeft := round(ZETryStrToFloat(s)*25.4);
           s := _xml.Attributes.ItemsByName['x:Right'];
           if length(s) > 0 then
-            XMLSS.Sheets[PageNum].SheetOptions.MarginRight := round(ZETryStrToFloat(s)*25.4);
+            _SheetOptions.MarginRight := round(ZETryStrToFloat(s)*25.4);
           s := _xml.Attributes.ItemsByName['x:Top'];
           if length(s) > 0 then
-            XMLSS.Sheets[PageNum].SheetOptions.MarginTop := round(ZETryStrToFloat(s)*25.4);
+            _SheetOptions.MarginTop := round(ZETryStrToFloat(s)*25.4);
         end else
         if IfTag('Header', 5) then
         begin
           s := _xml.Attributes.ItemsByName['x:Margin'];
           if length(s) > 0 then
-            XMLSS.Sheets[PageNum].SheetOptions.HeaderMargin := round(ZETryStrToFloat(s)*25.4);
-          XMLSS.Sheets[PageNum].SheetOptions.HeaderData := _xml.Attributes.ItemsByName['x:Data'];
+            _SheetOptions.HeaderMargin := round(ZETryStrToFloat(s)*25.4);
+          _SheetOptions.HeaderData := _xml.Attributes.ItemsByName['x:Data'];
         end else
         if IfTag('Footer', 5) then
         begin
           s := _xml.Attributes.ItemsByName['x:Margin'];
           if length(s) > 0 then
-            XMLSS.Sheets[PageNum].SheetOptions.FooterMargin := round(ZETryStrToFloat(s)*25.4);
-          XMLSS.Sheets[PageNum].SheetOptions.FooterData := _xml.Attributes.ItemsByName['x:Data'];
+            _SheetOptions.FooterMargin := round(ZETryStrToFloat(s)*25.4);
+          _SheetOptions.FooterData := _xml.Attributes.ItemsByName['x:Data'];
         end;
       end else
       //Print
@@ -2428,7 +2448,7 @@ var
         _xml.ReadTag();
         if _xml.Eof() then break;
         if IfTag('PaperSizeIndex', 6) then
-          XMLSS.Sheets[PageNum].SheetOptions.PaperSize := _StrToInt(trim(_xml.TextBeforeTag));
+          _SheetOptions.PaperSize := _StrToInt(trim(_xml.TextBeforeTag));
       end else
       if IfTag('Selected', 5) then
         XMLSS.Sheets[PageNum].Selected := true else
@@ -2444,15 +2464,57 @@ var
           _xml.ReadTag();
           if _xml.Eof() then break;
           if IfTag('ActiveRow', 6) then
-            XMLSS.Sheets[PageNum].SheetOptions.ActiveRow := _StrToInt(trim(_xml.TextBeforeTag)) else
+            _SheetOptions.ActiveRow := _StrToInt(trim(_xml.TextBeforeTag)) else
           if IfTag('ActiveCol', 6) then
-            XMLSS.Sheets[PageNum].SheetOptions.ActiveCol := _StrToInt(trim(_xml.TextBeforeTag));
+            _SheetOptions.ActiveCol := _StrToInt(trim(_xml.TextBeforeTag));
         end;
       end else
       if IfTag('TabColorIndex', 6) then
-        XMLSS.Sheets[PageNum].TabColor := _StrToInt(trim(_xml.TextBeforeTag));
+        XMLSS.Sheets[PageNum].TabColor := _StrToInt(trim(_xml.TextBeforeTag))
+      else
+      //Spli/Frozen
+      if (IfTag('FreezePanes', 5)) then
+        _isFreezePanes := true
+      else
+      if (IfTag('FrozenNoSplit', 5)) then
+        _isFrozeNoSplit := true
+      else
+      if (IfTag('SplitHorizontal', 6)) then
+      begin
+        _isH := true;
+        s := _xml.TextBeforeTag;
+        _SheetOptions.SplitHorizontalMode := ZSplitSplit;
+        _SheetOptions.SplitHorizontalValue := round(ZETryStrToFloat(s));
+      end else
+      if (IfTag('SplitVertical', 6)) then
+      begin
+        _isV := true;
+        s := _xml.TextBeforeTag;
+        _SheetOptions.SplitVerticalMode := ZSplitSplit;
+        _SheetOptions.SplitVerticalValue := round(ZETryStrToFloat(s));
+      end;
+    end; //while
+
+    if (_isH or _isV) then
+    begin
+      _SplitMode := ZSplitSplit;
+      if (_isFreezePanes or _isFrozeNoSplit) then
+        _SplitMode := ZSplitFrozen;
     end;
-  end;
+
+    if (_isH) then
+    begin
+      _SheetOptions.SplitHorizontalMode := _SplitMode;
+      _SheetOptions.SplitHorizontalValue := _GetSplitValue(_SplitMode, _SheetOptions.SplitHorizontalValue);
+    end;
+
+    if (_isV) then
+    begin
+      _SheetOptions.SplitVerticalMode := _SplitMode;
+      _SheetOptions.SplitVerticalValue := _GetSplitValue(_SplitMode, _SheetOptions.SplitVerticalValue);
+    end;
+
+  end; //ReadXMLWorkSheetOptions
 
   // <PageBreaks> ... </PageBreaks>
   procedure ReadPageBreaks(const PageNum: integer);
@@ -2477,7 +2539,7 @@ var
           XMLSS.Sheets[PageNum].Rows[t].Breaked := true;
       end
     end;
-  end;
+  end; //ReadPageBreaks
 
   //Читает секцию <Worksheet> ... </Worksheet>
   procedure ReadEXMLWorkSheet();

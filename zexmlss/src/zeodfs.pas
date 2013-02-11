@@ -144,6 +144,7 @@ type
   private
     FXMLSS: TZEXMLSS;
     FRetCode: integer;
+    FFileType: integer;
   protected
   public
     constructor Create(); virtual;
@@ -151,6 +152,7 @@ type
     procedure DoDoneOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
     property XMLSS: TZEXMLSS read FXMLSS write FXMLSS;
     property RetCode: integer read FRetCode;
+    property FileType: integer read FFileType write FFileType;
   end;
 
 constructor TODFZipHelper.Create();
@@ -162,19 +164,29 @@ end;
 
 procedure TODFZipHelper.DoCreateOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
 begin
-  AStream := TMemorystream.Create;
+  AStream := TMemoryStream.Create();
 end;
 
 procedure TODFZipHelper.DoDoneOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
 begin
   if (Assigned(AStream)) then
-  begin
+  try
     AStream.Position := 0;
-    if (not ReadODFContent(FXMLSS, AStream)) then
-      FRetCode := FRetCode or 2;
+
+    if (FileType = 0) then
+    begin
+      if (not ReadODFContent(FXMLSS, AStream)) then
+        FRetCode := FRetCode or 2;
+    end else
+    if (FileType = 1) then
+    begin
+      if (not ReadODFSettings(FXMLSS, AStream)) then
+        FRetCode := FRetCode or 2;
+    end;
+  finally
     FreeAndNil(AStream)
   end;
-end;
+end; //DoDoneOutZipStream
 
 {$ENDIF}
 
@@ -2903,20 +2915,26 @@ begin
     lst := TStringList.Create();
     lst.Clear();
     lst.Add('content.xml'); //содержимое
-    lst.Add('settings.xml'); //настройки
     ZH := TODFZipHelper.Create();
     ZH.XMLSS := XMLSS;
     u_zip := TUnZipper.Create();
     u_zip.FileName := FileName;
     u_zip.OnCreateStream := @ZH.DoCreateOutZipStream;
     u_zip.OnDoneStream := @ZH.DoDoneOutZipStream;
+    u_zip.FileType := 0;
     u_zip.UnZipFiles(lst);
-
     result := result or ZH.RetCode;
 
     //метаинформация (meta.xml)
 
     //настройки (settings.xml)
+    lst.Clear();
+    lst.Add('settings.xml'); //настройки
+    u_zip.FileType := 1;
+    u_zip.UnZipFiles(lst);
+
+    result := result or ZH.RetCode;
+
   finally
     if (Assigned(u_zip)) then
       FreeAndNil(u_zip);
