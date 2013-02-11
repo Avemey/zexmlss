@@ -811,12 +811,12 @@ var
     _xml.WriteTag('config:config-item', ConfigValue, true, false, true);
   end; //_AddConfigItem
 
-  procedure _WriteSplitValue(const SPlitMode: TZSplitMode; const SplitValue: integer; const SplitModeName, SplitValueName: string);
+  procedure _WriteSplitValue(const SPlitMode: TZSplitMode; const SplitValue: integer; const SplitModeName, SplitValueName: string; NeedAdd: boolean = false);
   var
     s: string;
 
   begin
-    if ({(SplitMode <> ZSplitNone) and} (SplitValue <> 0)) then
+    if ({(SplitMode <> ZSplitNone) and} (SplitValue <> 0) or (NeedAdd)) then
     begin
       s := '0';
       case (SPlitMode) of
@@ -832,6 +832,7 @@ var
   var
     _PageNum: integer;
     _SheetOptions: TZSheetOptions;
+    b: boolean;
 
   begin
     _PageNum := _pages[num];
@@ -843,9 +844,11 @@ var
     _AddConfigItem('CursorPositionX', 'int', IntToStr(_SheetOptions.ActiveCol));
     _AddConfigItem('CursorPositionY', 'int', IntToStr(_SheetOptions.ActiveRow));
 
+    b := (_SheetOptions.SplitHorizontalMode = ZSplitSplit) or
+         (_SheetOptions.SplitHorizontalMode = ZSplitSplit);
     //это не ошибка (_SheetOptions.SplitHorizontalMode = VerticalSplitMode)
-    _WriteSplitValue(_SheetOptions.SplitHorizontalMode, _SheetOptions.SplitHorizontalValue, 'VerticalSplitMode', 'VerticalSplitPosition');
-    _WriteSplitValue(_SheetOptions.SplitVerticalMode, _SheetOptions.SplitVerticalValue, 'HorizontalSplitMode', 'HorizontalSplitPosition');
+    _WriteSplitValue(_SheetOptions.SplitHorizontalMode, _SheetOptions.SplitHorizontalValue, 'VerticalSplitMode', 'VerticalSplitPosition', b);
+    _WriteSplitValue(_SheetOptions.SplitVerticalMode, _SheetOptions.SplitVerticalValue, 'HorizontalSplitMode', 'HorizontalSplitPosition', b);
 
     _AddConfigItem('ActiveSplitRange', 'short', '2');
     _AddConfigItem('PositionLeft', 'int', '0');
@@ -2687,22 +2690,16 @@ function ReadODFSettings(var XMLSS: TZEXMLSS; stream: TStream): boolean;
 var
   xml: TZsspXMLReaderH;
 
-  {
-<?xml version="1.0" encoding="UTF-8"?>
-<office:document-settings xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0" xmlns:ooo="http://openoffice.org/2004/office" office:version="1.2">
- <office:settings>
-  <config:config-item-set config:name="ooo:view-settings">
-   <config:config-item-map-indexed config:name="Views">
-    <config:config-item-map-entry>
-     <config:config-item-map-named config:name="Tables">
-      <config:config-item-map-entry config:name="Frozen hor">
-       <config:config-item config:name="CursorPositionX" config:type="int">0</config:config-item>
-       <config:config-item config:name="CursorPositionY" config:type="int">0</config:config-item>
-       <config:config-item config:name="HorizontalSplitMode" config:type="short">2</config:config-item>
-       <config:config-item config:name="HorizontalSplitPosition" config:type="int">1</config:config-item>
-      </config:config-item-map-entry>
-  }
-  procedure _ReadSettings();
+  function _GetSplitModeByNum(const num: integer): TZSplitMode;
+  begin
+    result := ZSplitNone;
+    case (num) of
+      1: result := ZSplitSplit;
+      2: result := ZSplitFrozen
+    end;
+  end; //_GetSplitModeByNum
+
+  procedure _ReadSettingsPage();
   var
     _ConfigName: string;
     _ConfigType: string;
@@ -2711,6 +2708,38 @@ var
     s: string;
     i: integer;
     b: boolean;
+    _intValue: integer;
+
+    procedure _FindParam();
+    begin
+      if (length(_ConfigValue) > 0) then
+      begin
+        if (_ConfigName = 'CursorPositionX') then
+        begin
+          _Sheet.SheetOptions.ActiveCol := _intValue;
+        end else
+        if (_ConfigName = 'CursorPositionY') then
+        begin
+          _Sheet.SheetOptions.ActiveRow := _intValue;
+        end else
+        if (_ConfigName = 'HorizontalSplitMode') then
+        begin
+          _Sheet.SheetOptions.SplitVerticalMode := _GetSplitModeByNum(_intValue);
+        end else
+        if (_ConfigName = 'HorizontalSplitPosition') then
+        begin
+          _Sheet.SheetOptions.SplitVerticalValue := _intValue;
+        end else
+        if (_ConfigName = 'VerticalSplitMode') then
+        begin
+          _Sheet.SheetOptions.SplitHorizontalMode := _GetSplitModeByNum(_intValue);
+        end else
+        if (_ConfigName = 'VerticalSplitPosition') then
+        begin
+          _Sheet.SheetOptions.SplitHorizontalValue := _intValue;
+        end;
+      end; //if
+    end; //_FindParam
 
   begin
     b := true;
@@ -2722,8 +2751,8 @@ var
       if (XMLSS.Sheets[i].Title = s) then
       begin
         _Sheet := XMLSS.Sheets[i];
-        break;
         b := false;
+        break;
       end;
     if (b) then
       exit;
@@ -2737,13 +2766,28 @@ var
       begin
         if (xml.TagType = 4) then
         begin
-
+          _ConfigName := xml.Attributes.ItemsByName['config:name'];
+          _ConfigType := xml.Attributes.ItemsByName['config:type'];
         end else
         begin
-
-        end;
+          _ConfigValue := xml.TextBeforeTag;
+          if (TryStrToInt(_ConfigValue, _intValue)) then
+            _FindParam();
+        end; //if
       end; //if
+      xml.ReadTag();
+    end; //while
+  end; //_ReadSettingsPage
 
+  procedure _ReadSettings();
+  begin
+    while not ((xml.TagName = 'config:config-item-map-named') and (xml.TagType = 6)) do
+    begin
+      if (xml.Eof) then
+        break;
+
+      xml.ReadTag();
+      _ReadSettingsPage();
     end; //while
   end; //_ReadSettings
 
@@ -2761,10 +2805,7 @@ begin
       xml.ReadTag();
       if ((xml.TagName = 'config:config-item-map-named') and (xml.TagType = 4)) then
         if (xml.Attributes.ItemsByName['config:name'] = 'Tables') then
-        begin
-          xml.ReadTag();
           _ReadSettings();
-        end;
     end; //while
 
     result := true;
@@ -2815,6 +2856,16 @@ begin
     //метаинформация (meta.xml)
 
     //настройки (settings.xml)
+    try
+      stream := TFileStream.Create(DirName + 'settings.xml', fmOpenRead or fmShareDenyNone);
+    except
+      result := 2;
+      exit;
+    end;
+    if (not ReadODFSettings(XMLSS, stream)) then
+      result := result or 2;
+    FreeAndNil(stream);
+
   finally
     if (Assigned(stream)) then
       FreeAndNil(stream);
@@ -2851,7 +2902,8 @@ begin
   try
     lst := TStringList.Create();
     lst.Clear();
-    lst.Add('content.xml'); //пока только содержимое без стилей
+    lst.Add('content.xml'); //содержимое
+    lst.Add('settings.xml'); //настройки
     ZH := TODFZipHelper.Create();
     ZH.XMLSS := XMLSS;
     u_zip := TUnZipper.Create();
