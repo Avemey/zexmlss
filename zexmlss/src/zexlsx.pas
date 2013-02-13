@@ -3328,11 +3328,16 @@ var
       _xml.Attributes.Clear();
       _AddSplitValue(_SOptions.SplitVerticalMode,
                      _SOptions.SplitVerticalValue,
-                     'ySplit');
+                     'xSplit');
       _AddSplitValue(_SOptions.SplitHorizontalMode,
                      _SOptions.SplitHorizontalValue,
-                     'xSplit');
+                     'ySplit');
 
+      s := ZEGetA1byCol(XMLSS.Sheets[SheetNum].SheetOptions.ActiveCol) + IntToSTr(XMLSS.Sheets[SheetNum].SheetOptions.ActiveRow + 1);
+
+      _xml.Attributes.Add('topLeftCell', s);
+
+      _xml.Attributes.Add('activePane', 'topLeft');
 
       s := 'Split';
       if ((_SOptions.SplitVerticalMode = ZSplitFrozen) or (_SOptions.SplitHorizontalMode = ZSplitFrozen)) then

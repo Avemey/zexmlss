@@ -92,6 +92,7 @@ begin   // todo: compiler version and date ?
     {$ELSE}
     'DELPHI_or_CBUILDER';
     {$ENDIF}
+  Result := Result + ' ZEXMLSS/' + {$I git_hash.inc};
 end;
 
 // despite formal angle datatype declaration in default "range check off" mode
