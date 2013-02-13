@@ -3259,6 +3259,29 @@ var
   procedure WriteXLSXSheetHeader();
   var
     s: string;
+    b: boolean;
+    _SOptions: TZSheetOptions;
+
+    procedure _AddSplitValue(const SplitMode: TZSplitMode; const SplitValue: integer; const AttrName: string);
+    var
+      s: string;
+      b: boolean;
+
+    begin
+      s := '0';
+      b := true;
+      case SplitMode of
+        ZSplitFrozen:
+          begin
+            s := IntToStr(SplitValue);
+            if (SplitValue = 0) then
+              b := false;
+          end;
+        ZSplitSplit: s := IntToStr(round(PixelToPoint(SplitValue) * 20));
+      end;
+      if (b) then
+        _xml.Attributes.Add(AttrName, s);
+    end; //_AddSplitValue
 
   begin
     _xml.Attributes.Clear();
@@ -3296,6 +3319,63 @@ var
     _xml.Attributes.Add('zoomScalePageLayoutView', '100', false);
     _xml.WriteTagNode('sheetView', true, true, false);
 
+    _SOptions := XMLSS.Sheets[SheetNum].SheetOptions;
+
+    b := (_SOptions.SplitVerticalMode <> ZSplitNone) or
+         (_SOptions.SplitHorizontalMode <> ZSplitNone);
+    if (b) then
+    begin
+      _xml.Attributes.Clear();
+      _AddSplitValue(_SOptions.SplitVerticalMode,
+                     _SOptions.SplitVerticalValue,
+                     'ySplit');
+      _AddSplitValue(_SOptions.SplitHorizontalMode,
+                     _SOptions.SplitHorizontalValue,
+                     'xSplit');
+
+
+      s := 'Split';
+      if ((_SOptions.SplitVerticalMode = ZSplitFrozen) or (_SOptions.SplitHorizontalMode = ZSplitFrozen)) then
+        s := 'Frozen';
+      _xml.Attributes.Add('state', s);
+
+      _xml.WriteEmptyTag('pane', true, false);
+    end; //if
+    {
+    <pane xSplit="1" ySplit="1" topLeftCell="B2" activePane="bottomRight" state="frozen"/>
+    activePane (Active Pane) The pane that is active.
+                The possible values for this attribute are
+                defined by the ST_Pane simple type (§18.18.52).
+                  bottomRight	Bottom Right Pane
+                  topRight	Top Right Pane
+                  bottomLeft	Bottom Left Pane
+                  topLeft	Top Left Pane
+
+    state (Split State) Indicates whether the pane has horizontal / vertical
+                splits, and whether those splits are frozen.
+                The possible values for this attribute are defined by the ST_PaneState simple type (§18.18.53).
+                   Split
+                   Frozen
+                   FrozenSplit
+
+    topLeftCell (Top Left Visible Cell) Location of the top left visible
+                cell in the bottom right pane (when in Left-To-Right mode).
+                The possible values for this attribute are defined by the
+                ST_CellRef simple type (§18.18.7).
+
+    xSplit (Horizontal Split Position) Horizontal position of the split,
+                in 1/20th of a point; 0 (zero) if none. If the pane is frozen,
+                this value indicates the number of columns visible in the
+                top pane. The possible values for this attribute are defined
+                by the W3C XML Schema double datatype.
+
+    ySplit (Vertical Split Position) Vertical position of the split, in 1/20th
+                of a point; 0 (zero) if none. If the pane is frozen, this
+                value indicates the number of rows visible in the left pane.
+                The possible values for this attribute are defined by the
+                W3C XML Schema double datatype.
+    }
+
     {
     _xml.Attributes.Clear();
     _xml.Attributes.Add('activePane', 'topLeft');
@@ -3304,6 +3384,8 @@ var
     _xml.Attributes.Add('ySplit', '-1', false);
     _xml.WriteEmptyTag('pane', true, false);
     }
+
+
 
     {
     _AddSelection('A1', 'bottomLeft');
@@ -4393,7 +4475,7 @@ end; //ZEXLSXCreateSharedStrings
 function ZEXLSXCreateDocPropsApp(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 var
   _xml: TZsspXMLWriterH;
-  s: string;
+//  s: string;
 
 begin
   result := 0;
@@ -4424,7 +4506,7 @@ begin
 //    s := 'DELPHI_or_CBUILDER';
 //    {$ENDIF}
 //    _xml.WriteTag('Application', 'ZEXMLSSlib/0.0.5$' + s, true, false, true);
-    _xml.WriteTag('Application', ZELibraryName, true, false, true);
+    _xml.WriteTag('Application', ZELibraryName(), true, false, true);
 
     _xml.WriteEndTagNode(); //Properties
 
