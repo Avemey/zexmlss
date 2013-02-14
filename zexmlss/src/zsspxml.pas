@@ -60,8 +60,8 @@ type
     FCount: integer;
     FMaxCount: integer;           //реальное кол-во элементов
     FItems: array of TZAttrArray;
-    function GetAttrS(Att: ansistring): ansistring;
-    procedure SetAttrS(Att: ansistring; const Value: ansistring);
+    function GetAttrS(const Att: ansistring): ansistring;
+    procedure SetAttrS(const Att: ansistring; const Value: ansistring);
     function GetAttrI(num: integer): ansistring;
     procedure SetAttrI(num: integer; const Value: ansistring);
     function GetAttr(num: integer): TZAttrArray;
@@ -86,7 +86,7 @@ type
     function ToString(): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
     property Count: integer read FCount;
     property Items[num: integer]: TZAttrArray read GetAttr write SetAttr;
-    property ItemsByName[Att: ansistring]: ansistring read GetAttrS write SetAttrS; default;
+    property ItemsByName[const Att: ansistring]: ansistring read GetAttrS write SetAttrS; default;
     property ItemsByNum[num: integer]: ansistring read GetAttrI write SetAttrI;
   end;
 
@@ -1379,7 +1379,7 @@ begin
   ResizeItemsArray(0);
 end;
 
-function TZAttributes.GetAttrS(Att: ansistring): ansistring;
+function TZAttributes.GetAttrS(const Att: ansistring): ansistring;
 var
   i: integer;
 
@@ -1393,7 +1393,7 @@ begin
   end;
 end;
 
-procedure TZAttributes.SetAttrS(Att: ansistring; const Value: ansistring);
+procedure TZAttributes.SetAttrS(const Att: ansistring; const Value: ansistring);
 begin
   Add(Att, Value, true);
 end;
