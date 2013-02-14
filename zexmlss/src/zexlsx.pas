@@ -1190,6 +1190,54 @@ var
     end; //while
   end; //_ReadHyperLinks();
 
+  //<sheetViews> ... </sheetViews>
+  procedure _ReadSheetViews();
+  var
+    vValue, hValue: integer;
+    SplitMode: TZSplitMode;
+    s: string;
+
+  begin
+    while (not ((xml.TagName = 'sheetViews') and (xml.TagType = 6))) do
+    begin
+      xml.ReadTag();
+      if (xml.Eof()) then
+        break;
+
+      if ((xml.TagName = 'pane') and (xml.TagType = 5)) then
+      begin
+        SplitMode := ZSplitSplit;
+        s := xml.Attributes.ItemsByName['state'];
+        if (s = 'frozen') then
+          SplitMode := ZSplitFrozen;
+
+        s := xml.Attributes.ItemsByName['xSplit'];
+        if (not TryStrToInt(s, vValue)) then
+          vValue := 0;
+
+        s := xml.Attributes.ItemsByName['ySplit'];
+        if (not TryStrToInt(s, hValue)) then
+          hValue := 0;
+
+        _currSheet.SheetOptions.SplitVerticalValue := vValue;
+        _currSheet.SheetOptions.SplitHorizontalValue := hValue;
+
+        _currSheet.SheetOptions.SplitHorizontalMode := ZSplitNone;
+        _currSheet.SheetOptions.SplitVerticalMode := ZSplitNone;
+        if (hValue <> 0) then
+          _currSheet.SheetOptions.SplitHorizontalMode := SplitMode;
+        if (vValue <> 0) then
+          _currSheet.SheetOptions.SplitVerticalMode := SplitMode;
+
+        if (_currSheet.SheetOptions.SplitHorizontalMode = ZSplitSplit) then
+          _currSheet.SheetOptions.SplitHorizontalValue := PointToPixel(hValue/20);
+        if (_currSheet.SheetOptions.SplitVerticalMode = ZSplitSplit) then
+          _currSheet.SheetOptions.SplitVerticalValue := PointToPixel(vValue/20);
+
+      end; //if
+    end; //while
+  end; //_ReadSheetViews()
+
 begin
   xml := nil;
   result := false;
@@ -1297,7 +1345,11 @@ begin
         _GetDimension()
       else
       if ((xml.TagName = 'hyperlinks') and (xml.TagType = 4)) then
-        _ReadHyperLinks();
+        _ReadHyperLinks()
+      else
+      if ((xml.TagName = 'sheetViews') and (xml.TagType = 4)) then
+        _ReadSheetViews();
+
     end; //while
     
     result := true;
@@ -3278,10 +3330,26 @@ var
               b := false;
           end;
         ZSplitSplit: s := IntToStr(round(PixelToPoint(SplitValue) * 20));
+        ZSplitNone: b := false;
       end;
       if (b) then
         _xml.Attributes.Add(AttrName, s);
     end; //_AddSplitValue
+
+    procedure _AddTopLeftCell(const VMode: TZSplitMode; const VValue: integer; const HMode: TZSplitMode; const HValue: integer);
+    var
+      _isProblem: boolean;
+
+    begin
+      _isProblem := (VMode = ZSplitSplit) or (HMode = ZSplitSplit);
+      _isProblem := _isProblem or (VValue > 1000) or (HValue > 100);
+
+      if (not _isProblem) then
+      begin
+        s := ZEGetA1byCol(VValue) + IntToSTr(HValue + 1);
+        _xml.Attributes.Add('topLeftCell', s);
+      end;
+    end; //_AddTopLeftCell
 
   begin
     _xml.Attributes.Clear();
@@ -3333,15 +3401,14 @@ var
                      _SOptions.SplitHorizontalValue,
                      'ySplit');
 
-      s := ZEGetA1byCol(XMLSS.Sheets[SheetNum].SheetOptions.ActiveCol) + IntToSTr(XMLSS.Sheets[SheetNum].SheetOptions.ActiveRow + 1);
-
-      _xml.Attributes.Add('topLeftCell', s);
+      _AddTopLeftCell(_SOptions.SplitVerticalMode, _SOptions.SplitVerticalValue,
+                      _SOptions.SplitHorizontalMode, _SOptions.SplitHorizontalValue);
 
       _xml.Attributes.Add('activePane', 'topLeft');
 
-      s := 'Split';
+      s := 'split';
       if ((_SOptions.SplitVerticalMode = ZSplitFrozen) or (_SOptions.SplitHorizontalMode = ZSplitFrozen)) then
-        s := 'Frozen';
+        s := 'frozen';
       _xml.Attributes.Add('state', s);
 
       _xml.WriteEmptyTag('pane', true, false);
@@ -3389,8 +3456,6 @@ var
     _xml.Attributes.Add('ySplit', '-1', false);
     _xml.WriteEmptyTag('pane', true, false);
     }
-
-
 
     {
     _AddSelection('A1', 'bottomLeft');
