@@ -524,7 +524,6 @@ var
 begin
   _eof := false;
   text := '';
-  kol := 0;
   s := '';
   if Assigned(ReadCPChar) then
   begin
@@ -535,23 +534,26 @@ begin
     begin
       t := ord(s[1]);
       if t > 127 then
-      {
-      //вроде как возможны 5-ти байтные, но в стандарте нету
-      if t and 248 = 248 then
-        kol := 4 else} {tut}
-      if t and 240 = 240 then
-        kol := 3 else
-      if t and 224 = 224 then
-        kol := 2 else
-      if t and 192 = 192 then
-        kol := 1;
-      for i := 1 to kol do
       begin
-        //все последующие симовлы должны быть вида 10xxxxxx {tut}
-        ReadCPChar(s, _eof);
-        text := text + s;
-        if _eof then exit;
-      end;
+        {
+        //вроде как возможны 5-ти байтные, но в стандарте нету
+        if t and 248 = 248 then
+          kol := 4 else} {tut}
+        kol := 0;
+        if t and 240 = 240 then
+          kol := 3 else
+        if t and 224 = 224 then
+          kol := 2 else
+        if t and 192 = 192 then
+          kol := 1;
+        for i := 1 to kol do
+        begin
+          //все последующие симовлы должны быть вида 10xxxxxx {tut}
+          ReadCPChar(s, _eof);
+          text := text + s;
+          if _eof then exit;
+        end;
+      end; //if
     end;
   end else
     _eof := true;
