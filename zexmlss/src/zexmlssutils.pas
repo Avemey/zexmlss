@@ -2500,7 +2500,8 @@ var
       _SplitMode := ZSplitSplit;
       if (_isFreezePanes or _isFrozeNoSplit) then
         _SplitMode := ZSplitFrozen;
-    end;
+    end else
+      _SplitMode := ZSplitNone;
 
     if (_isH) then
     begin

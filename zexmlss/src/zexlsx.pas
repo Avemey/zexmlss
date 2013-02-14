@@ -898,7 +898,7 @@ var
         //inlineStr - inline string ??
         if (_type = 's') then
         begin
-          _currCell.CellType := ZEansistring;
+          _currCell.CellType := ZEString;
           if (TryStrToInt(v, t)) then
             if ((t >= 0) and (t < StrCount)) then
               v := StrArray[t];
@@ -3549,7 +3549,7 @@ var
           ZENumber: s := 'n';
           ZEDateTime: s := 'str'; //??
           ZEBoolean: s := 'b';
-          ZEansistring: s := 'str';
+          ZEString: s := 'str';
           ZEError: s := 'e';
         end;
         

@@ -225,9 +225,9 @@ begin
     result := ZEBoolean
   else
   if (s = 'STRING') then
-    result := ZEansistring
+    result := ZEString
   else
-    result := ZEansistring;
+    result := ZEString;
 end; //ODFTypeToZCellType
 
 

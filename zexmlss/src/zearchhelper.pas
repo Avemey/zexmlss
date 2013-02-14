@@ -66,7 +66,6 @@ var
   _y, _m, _d: word;
   _h, _min, _s, _ms: word;
   kol: integer;
-  b: boolean;
 
 begin
   result := false;

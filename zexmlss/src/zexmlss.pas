@@ -89,7 +89,7 @@ type
     property Comment: string read FComment write FComment;      //примечание
     property CommentAuthor: string read FCommentAuthor write FCommentAuthor;// автор примечани€
     property CellStyle: integer read FCellStyle write FCellStyle default -1;
-    property CellType: TZCellType read FCellType write FCellType default ZEansistring; //тип данных €чейки
+    property CellType: TZCellType read FCellType write FCellType default ZEString; //тип данных €чейки
     property Data: string read FData write FData;              //отображаемое содержимое €чейки
     property Formula: string read FFormula write FFormula;     //формула в стиле R1C1
     property HRef: string read FHref write FHref;              //гиперссылка
@@ -1073,7 +1073,7 @@ begin
     ZENumber:         result := 'Number';
     ZEDateTime:       result := 'DateTime';
     ZEBoolean:        result := 'Boolean';
-    ZEansistring:     result := 'String';
+    ZEString:         result := 'String';
     ZEError:          result := 'Error';
   end;
 end;
@@ -1198,7 +1198,7 @@ begin
   else if Value = 'ERROR' then
     result := ZEError
   else
-    result := ZEansistring;
+    result := ZEString;
 end;
 
 ////::::::::::::: TZBorderStyle :::::::::::::::::////
@@ -1745,7 +1745,7 @@ begin
   FComment := '';
   FCommentAuthor := '';
   FHRefScreenTip := '';
-  FCellType := ZEansistring;
+  FCellType := ZEString;
   FCellStyle := -1; //по дефолту
   FAlwaysShowComment := false;
   FShowComment := false;
@@ -1823,7 +1823,7 @@ begin
   FComment := '';
   FCommentAuthor := '';
   FHRefScreenTip := '';
-  FCellType := ZEansistring;
+  FCellType := ZEString;
   FCellStyle := -1;
   FAlwaysShowComment := false;
   FShowComment := false;
