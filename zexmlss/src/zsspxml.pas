@@ -1577,9 +1577,12 @@ begin
   if Source is TZAttributes then
   begin
     t := Source as TZAttributes;
-    Clear();
+    //Clear();
+    FCount := t.Count;
+    ResizeItemsArray(FCount + 1);
     for i := 0 to t.Count - 1 do
-      Add(t.items[i][0], t.items[i][1], false);
+      FItems[i] := t.Items[i];
+      //Add(t.items[i][0], t.items[i][1], false);
   end else
     inherited Assign(Source);
 end;
