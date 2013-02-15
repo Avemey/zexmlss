@@ -1352,7 +1352,7 @@ var
   delta: integer;
   
 begin
-  delta := 0;
+//  delta := 0;
   if (NewSize >= FMaxCount) then
   begin
     delta := NewSize;
@@ -1362,15 +1362,19 @@ begin
     if (NewSize < 100) then
       delta := delta * 2
     else
-      delta := delta + 20;  
+      delta := delta + 20;
+    SetLength(FItems, delta);
   end else
   if (NewSize > 50) then
   begin
     if (FMaxCount - NewSize > 200) then
+    begin
       delta := NewSize + 100;
+      SetLength(FItems, delta);
+    end;
   end;
-  if (delta > 0) then
-    SetLength(FItems, delta);
+//  if (delta > 0) then
+//    SetLength(FItems, delta);
 end; //ResizeItemsArray
 
 procedure TZAttributes.Clear();

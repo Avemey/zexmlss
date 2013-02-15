@@ -1249,7 +1249,7 @@ var
   begin
     _xml.Attributes.Clear();
     //FontName
-    _xml.Attributes.Add('ss:FontName', _font.Name);
+    _xml.Attributes.Add('ss:FontName', _font.Name, false);
     //AddAttribute('ss:FontName', _font.Name, 'Arial', Styles.DefaultStyle.Font.Name, _def);
     //x:CharSet
     _xml.Attributes.Add('x:CharSet', inttostr(_font.Charset), false);
@@ -1556,7 +1556,7 @@ var
       for i := 0 to ProcessedSheet.RowCount - 1 do
       begin
         Attributes.Clear();
-        Attributes.Add('ss:Index', inttostr(i+1));
+        Attributes.Add('ss:Index', inttostr(i+1), false);
         if round(ProcessedSheet.DefaultRowHeight*100) <> round(ProcessedSheet.Rows[i].Height*100) then
           Attributes.Add('ss:Height', ZEFloatSeparator(FormatFloat('0.#####',ProcessedSheet.Rows[i].Height)), false);
         if (ProcessedSheet.Rows[i].StyleID <> -1) and (ProcessedSheet.Rows[i].StyleID < XMLSS.Styles.Count) then
@@ -1575,7 +1575,7 @@ var
           ProcessedCell := ProcessedSheet.Cell[j, i];
           AttrCell.Clear();
           if CellIndex then
-            AttrCell.Add('ss:Index', IntToStr(j+1));
+            AttrCell.Add('ss:Index', IntToStr(j+1), false);
 
           NumTopLeft := ProcessedSheet.MergeCells.InLeftTopCorner(j, i);
           NumArea := ProcessedSheet.MergeCells.InMergeRange(j, i);
@@ -1650,7 +1650,7 @@ var
             if ProcessedCell.ShowComment then
             begin
               if length(ProcessedCell.CommentAuthor) > 0 then
-                AttrComment.Add('ss:Author', ProcessedCell.CommentAuthor);
+                AttrComment.Add('ss:Author', ProcessedCell.CommentAuthor, false);
               if ProcessedCell.AlwaysShowComment then
                 AttrComment.Add('ss:ShowAlways','1', false);
               inc(kol);
@@ -1668,14 +1668,14 @@ var
               WriteTagNode('Cell', AttrCell,true, true, false);
 
               if isRepeatablePrint then
-                  WriteEmptyTag('NamedCell', AttrPrintTitles );
+                  WriteEmptyTag('NamedCell', AttrPrintTitles);
               //Data
               if (length(ProcessedCell.Data) > 0) or
                  (isFormula) then
               begin
                 CorrectStrForXML(ProcessedCell.Data, s, b);
                 if b then
-                  AttrData.Add('xmlns','http://www.w3.org/TR/REC-html40');
+                  AttrData.Add('xmlns','http://www.w3.org/TR/REC-html40', false);
                 WriteTag('ss:Data', s, AttrData, true, false, false);
               end;
               //Comment
@@ -1723,7 +1723,7 @@ var
 
       //Layout
       if not ProcessedSheet.SheetOptions.PortraitOrientation then
-        Attributes.Add('x:Orientation', 'Landscape');
+        Attributes.Add('x:Orientation', 'Landscape', false);
       if ProcessedSheet.SheetOptions.CenterHorizontal then
         Attributes.Add('x:CenterHorizontal', '1', false);
       if ProcessedSheet.SheetOptions.CenterVertical then
