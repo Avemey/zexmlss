@@ -42,6 +42,7 @@ contains
   zesavecommon in '..\..\src\zesavecommon.pas',
   zeformula in '..\..\src\zeformula.pas',
   zexmlssutils in '..\..\src\zexmlssutils.pas',
+  zearchhelper in '..\..\src\zearchhelper.pas',
   zexlsx in '..\..\src\zexlsx.pas',
   zeSave in '..\..\src\zeSave.pas',
   zeSaveEXML in '..\..\src\zeSaveEXML.pas',
