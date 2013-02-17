@@ -37,5 +37,5 @@ contains
   zesavecommon in '..\..\src\zesavecommon.pas',
   zexmlssutils in '..\..\src\zexmlssutils.pas',
   zearchhelper in '..\..\src\zearchhelper.pas',
-  zexlsx in '..\..\src\zexlx.pas';
+  zexlsx in '..\..\src\zexlsx.pas';
 end.
