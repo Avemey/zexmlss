@@ -75,10 +75,10 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
         constructor Create (const zxsaver: TZXMLSSave); overload; virtual;
 
         function ExportFormat(const fmt: string): iZXMLSSave;
-        function As_(const fmt: string): iZXMLSSave; inline;
+        function As_(const fmt: string): iZXMLSSave; //inline;
 
         function ExportTo(const fname: TFileName): iZXMLSSave;
-        function To_(const fname: TFileName): iZXMLSSave; inline;
+        function To_(const fname: TFileName): iZXMLSSave; //inline;
 
         function Pages(const APages: array of TZxPageInfo): iZXMLSSave; overload;
         function Pages(const numbers: array of integer): iZXMLSSave; overload;
