@@ -2921,7 +2921,7 @@ begin
     u_zip.FileName := FileName;
     u_zip.OnCreateStream := @ZH.DoCreateOutZipStream;
     u_zip.OnDoneStream := @ZH.DoDoneOutZipStream;
-    u_zip.FileType := 0;
+    ZH.FileType := 0;
     u_zip.UnZipFiles(lst);
     result := result or ZH.RetCode;
 
@@ -2930,7 +2930,7 @@ begin
     //настройки (settings.xml)
     lst.Clear();
     lst.Add('settings.xml'); //настройки
-    u_zip.FileType := 1;
+    ZH.FileType := 1;
     u_zip.UnZipFiles(lst);
 
     result := result or ZH.RetCode;
