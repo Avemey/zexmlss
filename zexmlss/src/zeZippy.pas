@@ -15,9 +15,19 @@ type
 
    TZxZipGen = class;
    CZxZipGens = class of TZxZipGen;
+
+{$IFDEF FPC}
+    {$IF FPC_FULlVERSION < 20501} //FPC 2.5.1
+      {$DEFINE USE_INTERNAL_SL}
+    {$ENDIF}
+{$ENDIF}
 {$IfNDef FPC} {$IfNDef Unicode }
-   TStringList = class;
+  {$DEFINE USE_INTERNAL_SL}
 {$EndIf} {$EndIf}
+
+{$IFDEF USE_INTERNAL_SL}
+TStringList = class;
+{$ENDIF}
 
    TZxZipGen = class  // abstract   D7 does not support the word, and it actually does not mean much
      public
@@ -83,18 +93,18 @@ type
         class function QueryDummyZipGen: CZxZipGens;
    end;
 
-{$IfNDef FPC} {$IfNDef Unicode }
+{$IFDEF USE_INTERNAL_SL}
    TStringList = class(Classes.TStringList)
      public
        OwnsObjects: boolean;
 
        constructor Create; overload;
-       constructor Create(OwnsObjects: Boolean); overload;
+       constructor Create(AOwnsObjects: Boolean); overload;
        destructor Destroy; override;
        procedure Delete(Index: Integer); override;
        procedure Clear; override;
    end;
-{$EndIf} {$EndIf}
+{$ENDIF}
 
 implementation uses TypInfo, Contnrs;
 
@@ -386,15 +396,15 @@ end;
 
 
 (*********************)
-{$IfNDef FPC} {$IfNDef Unicode }
+{$IFDEF USE_INTERNAL_SL}
 constructor TStringList.Create; //overload;
 begin
   inherited Create; // introduced overload - need explicit routing
 end;
-constructor TStringList.Create(OwnsObjects: Boolean); //overload;
+constructor TStringList.Create(AOwnsObjects: Boolean); //overload;
 begin
   inherited Create;
-  Self.OwnsObjects := OwnsObjects;
+  Self.OwnsObjects := AOwnsObjects;
 end;
 
 destructor TStringList.Destroy;
@@ -435,8 +445,7 @@ begin
   if OwnsObjects then
      for i := Low(o) to High(o) do o[i].Free;
 end;
-{$EndIf} {$EndIf}
-
+{$ENDIF}
 
 
 initialization

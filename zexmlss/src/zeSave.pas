@@ -170,8 +170,25 @@ end;
 {$Else}
 function ZxCharSetByOops(const cp: Word): AnsiString;
 begin
-  Raise EZXSaveException.Create('Cannot get charset by numeric codepage on this platform.'#13#10
-          'Make wrapper for something like http://sf.net/projects/natspec/');
+  Raise EZXSaveException.Create('Cannot get charset by numeric codepage on this platform.'#13#10 + 'Make wrapper for something like http://sf.net/projects/natspec/');
+end;
+
+//Recomendation: DO NOT USE zeSave on FPC at all!!!
+function ZxCharSetByCodePageSimple(const cp: Word): AnsiString;
+begin
+  case cp of
+    852: result := 'ibm852';
+    866: result := 'cp866';
+    1250: result := 'windows-1250';
+    1251: result := 'windows-1251';
+    1252: result := 'iso-8859-1';
+    20866: result := 'koi8-r';
+    21866: result := 'koi8-ru';
+    65000: result := 'utf-7';
+    65001: result := 'UTF-8';
+    else
+      result := 'UTF-8';
+  end;
 end;
 {$EndIf}
 
@@ -468,7 +485,7 @@ initialization
 //  if '' = ZxCharSetByCodePage(20866) then ;
 
 {$IfNDef MSWindows}
-  ZxCharSetByCodePage := ZxCharSetByOops;
+  ZxCharSetByCodePage := @ZxCharSetByCodePageSimple;//ZxCharSetByOops;
 {$EndIf}
 finalization
   SaveClasses.Free;
