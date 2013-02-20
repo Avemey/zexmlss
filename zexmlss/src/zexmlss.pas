@@ -438,6 +438,58 @@ type
     property SplitHorizontalValue: integer read FSplitHorizontalValue write FSplitHorizontalValue;
   end;
 
+  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+
+  //Условие
+  TZCondition = (ZCFIsTrueFormula,
+                 ZCFCellContentIsBetween,
+                 ZCFCellContentIsNotBetween,
+                 ZCFCellContentOperator,
+                 ZCFNumberValue,
+                 ZCFString,
+                 ZCFBoolTrue,
+                 ZCFBoolFalse,
+                 ZCFFormula
+                );
+
+  //Оператор для условного форматирования
+  TZConditionalOperator = (ZCFOpGT,       //  > (Greater Than)
+                           ZCFOpLT,       //  < (Less Than)
+                           ZCFOpGTE,      //  >= (Greater or Equal)
+                           ZCFOpLTE,      //  <= (Less or Equal)
+                           ZCFOpEqual,    //  = (Equal)
+                           ZCFOpNotEqual  //  <> (Not Equal)
+                          );
+
+  //Условное форматирование (conditional formatting)
+  TZConditionStyle = class (TPersistent)
+  private
+    FCondition: TZCondition;                    //условие
+    FConditionOperator: TZConditionalOperator;  //Оператор
+    FValue1: String;
+    FValue2: String;
+    FApplyStyleID: integer;                     //номер применяемого стиля
+
+                                                //Базовая ячейка (только для формул):
+    FBaseCellPageIndex: integer;                //  Номер страницы для адреса базовой ячейки
+                                                //    -1 - текущая страница
+    FBaseCellRowIndex: integer;                 //  Номер строки
+    FBaseCellColumnIndex: integer;              //  Номер столбца
+  protected
+  public
+    constructor Create(); virtual;
+    property ApplyStyleID: integer read FApplyStyleID write FApplyStyleID;
+    property BaseCellColumnIndex: integer read FBaseCellColumnIndex write FBaseCellColumnIndex;
+    property BaseCellPageIndex: integer read FBaseCellPageIndex write FBaseCellPageIndex;
+    property BaseCellRowIndex: integer read FBaseCellRowIndex write FBaseCellRowIndex;
+    property Condition: TZCondition read FCondition write FCondition;
+    property ConditionOperator: TZConditionalOperator read FConditionOperator write FConditionOperator;
+    property Value1: String read FValue1 write FValue1;
+    property Value2: String read FValue2 write FValue2;
+  end;
+
+  {$ENDIF}
+
   //лист документа
   TZSheet = class (TPersistent)
   private
@@ -2837,6 +2889,25 @@ begin
 
   Result := True;
 end;
+
+//Условное форматирование
+{$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+
+////::::::::::::: TZConditionStyle :::::::::::::::::////
+
+constructor TZConditionStyle.Create();
+begin
+  FCondition := ZCFCellContentIsBetween;
+  FConditionOperator := ZCFOpEqual;
+  FApplyStyleID := -1;
+  FValue1 := '';
+  FValue2 := '';
+  FBaseCellPageIndex := -1;
+  FBaseCellRowIndex := 0;
+  FBaseCellColumnIndex := 0;
+end;
+
+{$ENDIF}
 
 {$IFDEF FPC}
 initialization
