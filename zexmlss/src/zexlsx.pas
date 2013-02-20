@@ -3837,14 +3837,16 @@ var
   //INPUT
   //  var arr: TIntegerDynArray  - массив
   //      cnt: integer          - номер последнего элемента в массиве (начинает с 0)
-  procedure _UpdateArrayIndex(var arr: TIntegerDynArray; cnt: integer); deprecated {$IFDEF USE_DEPRECATED_STRING}'remove CNT parameter!'{$ENDIF};
+  //                              (предполагается, что возникнет ситуация, когда нужно будет использовать только часть массива)
+  procedure _UpdateArrayIndex(var arr: TIntegerDynArray; cnt: integer); // deprecated {$IFDEF USE_DEPRECATED_STRING}'remove CNT parameter!'{$ENDIF};
   var
     res: TIntegerDynArray;
     i, j: integer;
     num: integer;
+
   begin
-    Assert( Length(arr) - cnt = 2, 'Wow! We really may need this parameter!');
-    cnt := Length(arr) - 2;   // get ready to strip it
+    //Assert( Length(arr) - cnt = 2, 'Wow! We really may need this parameter!');
+    //cnt := Length(arr) - 2;   // get ready to strip it
     SetLength(res, Length(arr));
 
     num := 0;
@@ -4363,11 +4365,16 @@ begin
     WriteXLSXFonts();
     WriteXLSXFills();
     WriteXLSXBorders();
-//    WriteCellStyleXfs('cellStyleXfs', false);
-//    WriteCellStyleXfs('cellXfs', true);
+    //DO NOT remove cellStyleXfs!!!
+    WriteCellStyleXfs('cellStyleXfs', false);
+    WriteCellStyleXfs('cellXfs', true);
 
     // experiment: do not need styles, ergo do not need fake xfId
-    WriteCellStyleXfs('cellXfs', false);
+    //Result: experiment failed!
+    //Libre/Open Office needs cellStyleXfs for reading background colors!
+    // (Libre/Open Office have highest priority)
+    //WriteCellStyleXfs('cellXfs', false);
+    // experiment end
 
     WriteCellStyles(); //??
 
