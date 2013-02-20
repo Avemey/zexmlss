@@ -59,7 +59,7 @@ function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumb
 {$ENDIF}
 
 function ExportXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
-                           const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString;
+                           const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: String;
                            BOM: ansistring = '';
                            AllowUnzippedFolder: boolean = false; ZipGenerator: CZxZipGens = nil): integer; overload;
 
@@ -781,7 +781,7 @@ begin
 
     //Стиль по-умолчанию
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('style:name', 'Default');
+    _xml.Attributes.Add(ZETag_Attr_StyleName, 'Default');
     _xml.Attributes.Add('style:family', 'table-cell', false);
     _xml.WriteTagNode('style:style', true, true, true);
     ODFWriteTableStyle(XMLSS, _xml, -1, true);
@@ -967,7 +967,7 @@ var
       if (ColumnStyle[now_i][now_j] > -1) then
         exit;
       _xml.Attributes.Clear();
-      _xml.Attributes.Add('style:name', 'co' + IntToStr(now_StyleNumber));
+      _xml.Attributes.Add(ZETag_Attr_StyleName, 'co' + IntToStr(now_StyleNumber));
       _xml.Attributes.Add('style:family', 'table-column', false);
       _xml.WriteTagNode('style:style', true, true, false);
 
@@ -1017,7 +1017,7 @@ var
       if (RowStyle[now_i][now_j] > -1) then
         exit;
       _xml.Attributes.Clear();
-      _xml.Attributes.Add('style:name', 'ro' + IntToStr(now_StyleNumber));
+      _xml.Attributes.Add(ZETag_Attr_StyleName, 'ro' + IntToStr(now_StyleNumber));
       _xml.Attributes.Add('style:family', 'table-row', false);
       _xml.WriteTagNode('style:style', true, true, false);
 
@@ -1122,7 +1122,7 @@ var
     for i := 0 to XMLSS.Styles.Count - 1 do
     begin
       _xml.Attributes.Clear();
-      _xml.Attributes.Add('style:name', 'ce' + IntToStr(i));
+      _xml.Attributes.Add(ZETag_Attr_StyleName, 'ce' + IntToStr(i));
       _xml.Attributes.Add('style:family', 'table-cell', false);
         //??style:parent-style-name = Default
       _xml.WriteTagNode('style:style', true, true, false);
@@ -1771,7 +1771,7 @@ end; //SaveXmlssToODFS
 {$ENDIF}
 
 function ExportXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
-                           const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: AnsiString;
+                           const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: String;
                            BOM: ansistring = '';
                            AllowUnzippedFolder: boolean = false; ZipGenerator: CZxZipGens = nil): integer; overload;
 var
@@ -2180,7 +2180,7 @@ var
         if (IfTag('style:style', 4)) then
         begin
           _stylefamily := xml.Attributes.ItemsByName['style:family'];
-          _stylename := xml.Attributes.ItemsByName['style:name'];
+          _stylename := xml.Attributes.ItemsByName[ZETag_Attr_StyleName];
 
           if (_stylefamily = 'table-column') then //столбец
           begin

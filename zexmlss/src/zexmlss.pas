@@ -2827,7 +2827,7 @@ var UpperLimit: word;
 begin
   Result := False;
   if AFrom > ATill then exit;
-  if AFrom < 0 then exit; // if datatype would be changed to traditional integer
+  //  if AFrom < 0 then exit; // if datatype would be changed to traditional integer, then unremark
 
   if FColumns
      then UpperLimit := FOwner.ColCount
