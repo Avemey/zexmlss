@@ -17,9 +17,11 @@ type
    CZxZipGens = class of TZxZipGen;
 
 {$IFDEF FPC}
-    {$IF FPC_FULlVERSION < 20501} //FPC 2.5.1
-      {$DEFINE USE_INTERNAL_SL}
-    {$ENDIF}
+    { $IF FPC_FULLVERSION < 20501} //FPC 2.5.1
+      { $DEFINE USE_INTERNAL_SL}
+    { $IFEND}
+    //дельфе не понравилось FPC_FULLVERSION =_="
+    {$I zezippyfpc.inc}
 {$ENDIF}
 {$IfNDef FPC} {$IfNDef Unicode }
   {$DEFINE USE_INTERNAL_SL}
