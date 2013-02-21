@@ -461,8 +461,8 @@ type
                            ZCFOpNotEqual  //  <> (Not Equal)
                           );
 
-  //”словное форматирование (conditional formatting)
-  TZConditionStyle = class (TPersistent)
+  //”словное форматирование: стиль на условие (conditional formatting)
+  TZConditionalStyleItem = class (TPersistent)
   private
     FCondition: TZCondition;                    //условие
     FConditionOperator: TZConditionalOperator;  //ќператор
@@ -478,6 +478,9 @@ type
   protected
   public
     constructor Create(); virtual;
+    procedure Clear();
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(Source: TPersistent): boolean; virtual;
     property ApplyStyleID: integer read FApplyStyleID write FApplyStyleID;
     property BaseCellColumnIndex: integer read FBaseCellColumnIndex write FBaseCellColumnIndex;
     property BaseCellPageIndex: integer read FBaseCellPageIndex write FBaseCellPageIndex;
@@ -488,7 +491,25 @@ type
     property Value2: String read FValue2 write FValue2;
   end;
 
-  {$ENDIF}
+  //”словное форматирование: список условий
+  TZConditionalStyle = class (TPersistent)
+  private
+    FCount: integer;                    //кол-во условий
+    FMaxCount: integer;
+    FConditions: array of TZConditionalStyleItem;
+    function GetItem(num: integer): TZConditionalStyleItem;
+    procedure SetItem(num: integer; Value: TZConditionalStyleItem);
+  protected
+  public
+    constructor Create(); virtual;
+    destructor Destroy(); override;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(Source: TPersistent): boolean; virtual;
+    property Count: integer read FCount;
+    property Items[num: integer]: TZConditionalStyleItem read GetItem write SetItem;
+  end;
+
+  {$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
 
   //лист документа
   TZSheet = class (TPersistent)
@@ -2893,9 +2914,14 @@ end;
 //”словное форматирование
 {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
 
-////::::::::::::: TZConditionStyle :::::::::::::::::////
+////::::::::::::: TZConditionalStyleItem :::::::::::::::::////
 
-constructor TZConditionStyle.Create();
+constructor TZConditionalStyleItem.Create();
+begin
+  Clear();
+end;
+
+procedure TZConditionalStyleItem.Clear();
 begin
   FCondition := ZCFCellContentIsBetween;
   FConditionOperator := ZCFOpEqual;
@@ -2905,16 +2931,135 @@ begin
   FBaseCellPageIndex := -1;
   FBaseCellRowIndex := 0;
   FBaseCellColumnIndex := 0;
-end;
+end; //Clear
 
-{$ENDIF}
+procedure TZConditionalStyleItem.Assign(Source: TPersistent);
+var
+  t: TZConditionalStyleItem;
+
+begin
+  if (Source is TZConditionalStyleItem) then
+  begin
+    t := (Source as TZConditionalStyleItem);
+    Condition := t.Condition;
+    ConditionOperator := t.ConditionOperator;
+    Value1 := t.Value1;
+    Value2 := t.Value2;
+    ApplyStyleID := t.ApplyStyleID;
+    BaseCellColumnIndex := t.BaseCellColumnIndex;
+    BaseCellPageIndex := t.BaseCellPageIndex;
+    BaseCellRowIndex := t.BaseCellRowIndex;
+  end else
+    inherited Assign(Source);
+end; //Assign
+
+function TZConditionalStyleItem.IsEqual(Source: TPersistent): boolean;
+var
+  t: TZConditionalStyleItem;
+
+begin
+  result := false;
+  if (Source is TZConditionalStyleItem) then
+  begin
+    t := (Source as TZConditionalStyleItem);
+    if (Condition  <> t.Condition) then
+      exit;
+    if (ConditionOperator <> t.ConditionOperator) then
+      exit;
+    if (ApplyStyleID <> t.ApplyStyleID) then
+      exit;
+    if (BaseCellColumnIndex <> t.BaseCellColumnIndex) then
+      exit;
+    if (BaseCellPageIndex <> t.BaseCellPageIndex) then
+      exit;
+    if (BaseCellRowIndex <> t.BaseCellRowIndex) then
+      exit;
+    if (Value1 <> t.Value1) then
+      exit;
+    if (Value2 <> t.Value2) then
+      exit;
+    result := true;
+  end;
+end; //IsEqual
+
+////::::::::::::: TZConditionalStyle :::::::::::::::::////
+
+constructor TZConditionalStyle.Create();
+var
+  i: integer;
+
+begin
+  FCount := 0;
+  FMaxCount := 3;
+  SetLength(FConditions, FMaxCount);
+  for i := 0 to FMaxCount - 1 do
+    FConditions[i] := TZConditionalStyleItem.Create();
+end; //Create
+
+destructor TZConditionalStyle.Destroy();
+var
+  i: integer;
+
+begin
+  for i := 0 to FMaxCount - 1 do
+    if (Assigned(FConditions[i])) then
+      FreeAndNil(FConditions[i]);
+  SetLength(FConditions, 0);
+  FConditions := nil;
+  inherited;
+end; //Destroy
+
+procedure TZConditionalStyle.Assign(Source: TPersistent);
+var
+  t: TZConditionalStyle;
+
+begin
+  if (Source is TZConditionalStyle) then
+  begin
+    t := Source as TZConditionalStyle;
+    FCount := t.Count;
+  end else
+    inherited Assign(Source);
+end; //Assign
+
+function TZConditionalStyle.IsEqual(Source: TPersistent): boolean;
+var
+  t: TZConditionalStyle;
+  i: integer;
+
+begin
+  result := false;
+  if (Source is TZConditionalStyle) then
+  begin
+    t := Source as TZConditionalStyle;
+    if (Count <> t.Count) then
+      exit;
+    for i := 0 to Count - 1 do
+      if (not FConditions[i].Equals(t.Items[i])) then
+        exit;
+    result := true;
+  end;
+end; //IsEqual
+
+function TZConditionalStyle.GetItem(num: integer): TZConditionalStyleItem;
+begin
+  result := nil;
+  if (num >= 0) and (num < Count) then
+    result := FConditions[num];
+end; //GetItem
+
+procedure TZConditionalStyle.SetItem(num: integer; Value: TZConditionalStyleItem);
+begin
+  if (num >= 0) and (num < Count) then
+    FConditions[num].Assign(Value);
+end; //SetItem
+
+{$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
 
 {$IFDEF FPC}
 initialization
   {$I zexmlss.lrs}
 {$ENDIF}
-
-end.
 
 {
 GetDeviceCaps(hdc, HORZSIZE) / GetDeviceCaps(hdc, HORZRES); //горизонтальный размер пиксел€ в миллиметрах
@@ -2922,50 +3067,53 @@ GetDeviceCaps(hdc, VERTSIZE) / GetDeviceCaps(hdc, VERTRES); //вертикальный разме
 }
 
 {
-  Paper Size Table                                    
+  Paper Size Table
  Index    Paper type               Paper size
  ----------------------------------------------------
- 0        Undefined                                  
+ 0        Undefined
  1        Letter                   8 1/2" x 11"
- 2        Letter small             8 1/2" x 11"      
- 3        Tabloid                     11" x 17"      
- 4        Ledger                      17" x 11"      
- 5        Legal                    8 1/2" x 14"      
- 6        Statement                5 1/2" x 8 1/2"   
- 7        Executive                7 1/4" x 10 1/2"  
- 8        A3                        297mm x 420mm    
+ 2        Letter small             8 1/2" x 11"
+ 3        Tabloid                     11" x 17"
+ 4        Ledger                      17" x 11"
+ 5        Legal                    8 1/2" x 14"
+ 6        Statement                5 1/2" x 8 1/2"
+ 7        Executive                7 1/4" x 10 1/2"
+ 8        A3                        297mm x 420mm
  9        A4                        210mm x 297mm
- 10       A4 small                  210mm x 297mm    
- 11       A5                        148mm x 210mm    
- 12       B4                        250mm x 354mm    
- 13       B5                        182mm x 257mm    
- 14       Folio                    8 1/2" x 13"      
- 15       Quarto                    215mm x 275mm    
- 16                                   10" x 14"      
- 17                                   11" x 17"      
- 18       Note                     8 1/2" x 11"      
- 19       #9 Envelope              3 7/8" x 8 7/8"   
- 20       #10 Envelope             4 1/8" x 9 1/2"   
- 21       #11 Envelope             4 1/2" x 10 3/8"  
- 22       #12 Envelope             4 3/4" x 11"      
- 23       #14 Envelope                 5" x 11 1/2"  
- 24       C Sheet                     17" x 22"      
- 25       D Sheet                     22" x 34"      
- 26       E Sheet                     34" x 44"      
- 27       DL Envelope               110mm x 220mm    
- 28       C5 Envelope               162mm x 229mm    
- 29       C3 Envelope               324mm x 458mm    
- 30       C4 Envelope               229mm x 324mm    
- 31       C6 Envelope               114mm x 162mm    
- 32       C65 Envelope              114mm x 229mm    
- 33       B4 Envelope               250mm x 353mm    
- 34       B5 Envelope               176mm x 250mm    
- 35       B6 Envelope               125mm x 176mm    
- 36       Italy Envelope            110mm x 230mm    
- 37       Monarch Envelope         3 7/8" x 7 1/2"   
- 38       6 3/4 Envelope           3 5/8" x 6 1/2"   
- 39       US Standard Fanfold     14 7/8" x 11"      
- 40       German Std. Fanfold      8 1/2" x 12"      
+ 10       A4 small                  210mm x 297mm
+ 11       A5                        148mm x 210mm
+ 12       B4                        250mm x 354mm
+ 13       B5                        182mm x 257mm
+ 14       Folio                    8 1/2" x 13"
+ 15       Quarto                    215mm x 275mm
+ 16                                   10" x 14"
+ 17                                   11" x 17"
+ 18       Note                     8 1/2" x 11"
+ 19       #9 Envelope              3 7/8" x 8 7/8"
+ 20       #10 Envelope             4 1/8" x 9 1/2"
+ 21       #11 Envelope             4 1/2" x 10 3/8"
+ 22       #12 Envelope             4 3/4" x 11"
+ 23       #14 Envelope                 5" x 11 1/2"
+ 24       C Sheet                     17" x 22"
+ 25       D Sheet                     22" x 34"
+ 26       E Sheet                     34" x 44"
+ 27       DL Envelope               110mm x 220mm
+ 28       C5 Envelope               162mm x 229mm
+ 29       C3 Envelope               324mm x 458mm
+ 30       C4 Envelope               229mm x 324mm
+ 31       C6 Envelope               114mm x 162mm
+ 32       C65 Envelope              114mm x 229mm
+ 33       B4 Envelope               250mm x 353mm
+ 34       B5 Envelope               176mm x 250mm
+ 35       B6 Envelope               125mm x 176mm
+ 36       Italy Envelope            110mm x 230mm
+ 37       Monarch Envelope         3 7/8" x 7 1/2"
+ 38       6 3/4 Envelope           3 5/8" x 6 1/2"
+ 39       US Standard Fanfold     14 7/8" x 11"
+ 40       German Std. Fanfold      8 1/2" x 12"
  41       German Legal Fanfold     8 1/2" x 13"
 }
+
+end.
+
 
