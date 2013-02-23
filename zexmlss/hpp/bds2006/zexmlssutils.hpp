@@ -16,6 +16,7 @@
 #include <Sysinit.hpp>	// Pascal unit
 #include <Windows.hpp>	// Pascal unit
 #include <Sysutils.hpp>	// Pascal unit
+#include <Types.hpp>	// Pascal unit
 #include <Classes.hpp>	// Pascal unit
 #include <Grids.hpp>	// Pascal unit
 #include <Zexmlss.hpp>	// Pascal unit
@@ -29,7 +30,7 @@ namespace Zexmlssutils
 {
 //-- type declarations -------------------------------------------------------
 //-- var, const, procedure ---------------------------------------------------
-extern PACKAGE double _MMinInch;
+extern PACKAGE TStringDynArray __fastcall SplitString(const AnsiString buffer, const char delimeter);
 extern PACKAGE bool __fastcall GridToXmlSS(Zexmlss::TZEXMLSS* &XMLSS, const int PageNum, Grids::TStringGrid* &Grid, int ToCol, int ToRow, int BCol, int BRow, int ECol, int ERow, bool ignorebgcolor, Byte _border)/* overload */;
 extern PACKAGE bool __fastcall XmlSSToGrid(Grids::TStringGrid* &Grid, Zexmlss::TZEXMLSS* &XMLSS, const int PageNum, int ToCol, int ToRow, int BCol, int BRow, int ECol, int ERow, Byte InsertMode, int StyleCopy = 0x1ff)/* overload */;
 extern PACKAGE int __fastcall SaveXmlssToHtml(Zexmlss::TZEXMLSS* &XMLSS, const int PageNum, AnsiString Title, Classes::TStream* Stream, Zsspxml::TAnsiToCPConverter TextConverter, AnsiString CodePageName)/* overload */;
