@@ -1,6 +1,6 @@
 
 // Если не используется ZColorStringGrid 
-{$DEFINE NOZCOLORSTRINGGRID}
+{ $DEFINE NOZCOLORSTRINGGRID}
 
 // Условное форматирование
 {$DEFINE ZUSE_CONDITIONAL_FORMATTING}

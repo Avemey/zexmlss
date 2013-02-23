@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2013.01.30
+// Last update: 2013.02.23
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - uniform save API for creating
 //     XLSX files in Delphi/Windows
@@ -31,6 +31,7 @@
     distribution.
 }
 //HINT: File should have name 'zexlsx.pas', but my hands ... :)
+// ... and file renamed (thanks to Arioch)
 //****************************************************************
 unit zexlsx;
 

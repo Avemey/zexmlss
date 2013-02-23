@@ -1,10 +1,10 @@
-ZEXMLSSLIB 0.0.5 (beta)
+ZEXMLSSLIB 0.0.6 (beta)
 For Lazarus, Delphi 7, C++Builder 6.
 Borland Developer Studio 2005, BDS 2006, CodeGear Delphi 2007, 
 CodeGear RAD Studio 2009, 2010, Delphi XE and XE2.
 (Delphi 5 and 6 not tested. Delphi 5 work only with windows-1251 and CP866 code pages)
 
-Works with Excel XML Spreadsheet / OpenDocument Format (ODS) / OOXML (xlsx - read only) file format without installed Excel/OO Calc.
+Works with Excel XML Spreadsheet / OpenDocument Format (ODS) / OOXML (xlsx) file format without installed Excel/OO Calc.
 
 Install
 ---------
@@ -25,7 +25,11 @@ Install
      Environment Options->Library->Library Path (for BDS 2005 or 
      BDS 2006 in Tools->Options->Environment Options->Delphi Options->
      Library - Win32->Library Path) 
-  3. Open zexmlsslibe.dpk (or zexmlsslib.dpk if don't use ZColorStringGrid).
+  3. If you want to use functions ReadXLSX, SaveXmlssToXLSX, SaveXmlssToODFS 
+     and ReadODFS: read /delphizip/readme.txt and replace in directory src inc-files from /delphizip/need_zip_packer
+     (for now supported TurboPower Abbrevia (http://sourceforge.net/projects/tpabbrevia/) 
+     and Synzip (http://synopse.info)). Do not forget install needed packer before.
+  4. Open zexmlsslibe.dpk (or zexmlsslib.dpk if don't use ZColorStringGrid).
      Press "Compile". Press "Install".
 
  3. C++ Builder 6

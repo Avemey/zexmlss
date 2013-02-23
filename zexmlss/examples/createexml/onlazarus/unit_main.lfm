@@ -11,13 +11,13 @@ object frmMain: TfrmMain
   Font.Height = -11
   Font.Name = 'MS Sans Serif'
   Position = poDesktopCenter
-  LCLVersion = '0.9.28.2'
+  LCLVersion = '1.0.4.0'
   object btnCreate: TButton
     Left = 272
     Height = 73
     Top = 160
     Width = 241
-    Caption = 'Создать файл Excel XML'
+    Caption = 'Создать файл ODS, XLSX, Excel XML'
     OnClick = btnCreateClick
     TabOrder = 0
   end
