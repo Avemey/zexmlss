@@ -21,10 +21,11 @@
         <CompilerPath Value="$(CompPath)"/>
       </Other>
     </CompilerOptions>
-    <Description Value="Работа с документами Excel XML SpreadSheet (excel xml), ODS и XLSX (пока только на чтение)"/>
+    <Description Value="Работа с документами ODS, Excel XML SpreadSheet (excel xml) и XLSX
+(Write and read ODS, xlsx and excel xml spreadsheet formats). More info: http://avemey.com/zexmlss/index.php "/>
     <License Value="zlib"/>
-    <Version Release="5"/>
-    <Files Count="13">
+    <Version Release="6"/>
+    <Files Count="14">
       <Item1>
         <Filename Value="..\..\src\zexmlss.pas"/>
         <HasRegisterProc Value="True"/>
@@ -78,6 +79,10 @@
         <Filename Value="..\..\src\zexlsx.pas"/>
         <UnitName Value="zexlsx"/>
       </Item13>
+      <Item14>
+        <Filename Value="..\..\src\zearchhelper.pas"/>
+        <UnitName Value="zearchhelper"/>
+      </Item14>
     </Files>
     <Type Value="RunAndDesignTime"/>
     <RequiredPkgs Count="2">

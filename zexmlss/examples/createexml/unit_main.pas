@@ -15,7 +15,7 @@ uses
   Windows, Messages, Variants,
   {$ENDIF}
   StdCtrls,  SysUtils, Dialogs, Classes, Graphics, Controls, Forms,
-  zexmlss, zexmlssutils, zsspxml, zeformula;
+  zexmlss, zexmlssutils, zsspxml, zeformula, StrUtils;
 
 type
 

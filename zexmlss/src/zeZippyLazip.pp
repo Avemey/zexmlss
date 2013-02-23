@@ -1,7 +1,7 @@
 unit zeZippyLazip;
 (* Simplistic interface for creating simplistic Zip files.
    Bridge object for avemey.com components.
-   This one bridges to Lazaurs TZipper
+   This one bridges to Lazarus TZipper
 
    (c) the Arioch, licensed under zLib license
 
