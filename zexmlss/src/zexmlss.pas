@@ -499,14 +499,38 @@ type
     FConditions: array of TZConditionalStyleItem;
     function GetItem(num: integer): TZConditionalStyleItem;
     procedure SetItem(num: integer; Value: TZConditionalStyleItem);
+    procedure SetCount(value: integer);
   protected
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
+    procedure Add(); overload;
+    procedure Add(StyleItem: TZConditionalStyleItem); overload;
+    procedure Insert(num: integer); overload;
+    procedure Insert(num: integer; StyleItem: TZConditionalStyleItem); overload;
     procedure Assign(Source: TPersistent); override;
     function IsEqual(Source: TPersistent): boolean; virtual;
-    property Count: integer read FCount;
-    property Items[num: integer]: TZConditionalStyleItem read GetItem write SetItem;
+    property Count: integer read FCount write SetCount;
+    property Items[num: integer]: TZConditionalStyleItem read GetItem write SetItem; default;
+  end;
+
+  TConditionalFormatting = class (TPersistent)
+  private
+    FStyles: array of TZConditionalStyle;
+    FCount: integer;
+    procedure SetCount(Value: integer);
+    function GetItem(num: integer): TZConditionalStyle;
+    procedure SetItem(num: integer; Value: TZConditionalStyle);
+  protected
+  public
+    constructor Create(); virtual;
+    destructor Destroy(); override;
+    procedure Add(); overload;
+    procedure Add(Style: TZConditionalStyle); overload;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(Source: TPersistent): boolean; virtual;
+    property Count: integer read FCount write SetCount;
+    property Items[num: integer]: TZConditionalStyle read GetItem write SetItem; default;
   end;
 
   {$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
@@ -3053,6 +3077,169 @@ begin
   if (num >= 0) and (num < Count) then
     FConditions[num].Assign(Value);
 end; //SetItem
+
+procedure TZConditionalStyle.SetCount(value: integer);
+var
+  i: integer;
+
+begin
+  {tut}
+  //TODO: нужно ли ограничение на максимальное кол-во?
+  if (value >= 0) then
+  begin
+    if (value < FCount) then
+    begin
+      for i := value to FCount - 1 do
+        FConditions[i].Clear();
+    end else
+    if (value > FMaxCount) then
+    begin
+      SetLength(FConditions, value);
+      for i := FMaxCount to value - 1 do
+        FConditions[i] := TZConditionalStyleItem.Create();
+      FMaxCount := value;
+    end;
+    FCount := value;
+  end;
+end; //SetCount
+
+procedure TZConditionalStyle.Add();
+begin
+  Count := Count + 1;
+end; //Add
+
+procedure TZConditionalStyle.Add(StyleItem: TZConditionalStyleItem);
+begin
+  Count := Count + 1;
+  if (Assigned(StyleItem)) then
+    FConditions[Count - 1].Assign(StyleItem);
+end; //Add
+
+procedure TZConditionalStyle.Insert(num: integer);
+begin
+  Insert(num, nil);
+end; //Insert
+
+procedure TZConditionalStyle.Insert(num: integer; StyleItem: TZConditionalStyleItem);
+var
+  i: integer;
+  t: TZConditionalStyleItem;
+
+begin
+  if (num >= 0) and (num < Count) then
+  begin
+    Add();
+    t := FConditions[Count - 1];
+    for i := Count - 1 downto num + 1 do
+      FConditions[i] := FConditions[i - 1];
+    FConditions[num] := t;
+    if (Assigned(StyleItem)) then
+      FConditions[num].Assign(StyleItem);
+  end;
+end; //Insert
+
+////::::::::::::: TConditionalFormatting :::::::::::::::::////
+
+constructor TConditionalFormatting.Create();
+begin
+  FCount := 0;
+  SetLength(FStyles, 0);
+end; //Create
+
+destructor TConditionalFormatting.Destroy();
+var
+  i: integer;
+
+begin
+  for i := 0 to FCount - 1 do
+    if (Assigned(FStyles[i])) then
+      FreeAndNil(FStyles[i]);
+  SetLength(FStyles, 0);
+  FStyles := nil;
+  inherited;
+end; //Destroy
+
+procedure TConditionalFormatting.SetCount(Value: integer);
+var
+  i: integer;
+
+begin
+  if (Value >= 0) then
+  begin
+    if (Value < FCount) then
+    begin
+      for i := Value to FCount - 1 do
+         FreeAndNil(FStyles[i]);
+      SetLength(FStyles, Value);
+    end else
+    if (Value > FCount) then
+    begin
+      SetLength(FStyles, Value);
+      for i := FCount to Value - 1 do
+        FStyles[i] := TZConditionalStyle.Create();
+    end;
+    FCount := value;
+  end;
+end; //SetCount
+
+procedure TConditionalFormatting.Add();
+begin
+  Add(nil);
+end; //Add
+
+function TConditionalFormatting.GetItem(num: integer): TZConditionalStyle;
+begin
+  result := nil;
+  if ((num >= 0) and (num < Count - 1)) then
+    result := FStyles[num];
+end; //GetItem
+
+procedure TConditionalFormatting.SetItem(num: integer; Value: TZConditionalStyle);
+begin
+  if ((num >= 0) and (num < Count - 1)) then
+    if (Assigned(Value)) then
+      FStyles[num].Assign(Value);
+end; //SetItem
+
+procedure TConditionalFormatting.Add(Style: TZConditionalStyle);
+begin
+  Count := Count + 1;
+  if (Assigned(Style)) then
+    FStyles[Count - 1].Assign(Style);
+end; //Add
+
+procedure TConditionalFormatting.Assign(Source: TPersistent);
+var
+  t: TConditionalFormatting;
+  i: integer;
+
+begin
+  if (Source is TConditionalFormatting) then
+  begin
+    t := Source as TConditionalFormatting;
+    FCount := t.Count;
+    for i := 0 to FCount - 1 do
+      FStyles[i].Assign(t.Items[i]);
+  end else
+    inherited Assign(Source);
+end; //Assign
+
+function TConditionalFormatting.IsEqual(Source: TPersistent): boolean;
+var
+  t: TConditionalFormatting;
+  i: integer;
+
+begin
+  result := false;
+  if (Source is TConditionalFormatting) then
+  begin
+    t := Source as TConditionalFormatting;
+    if (Count <> t.Count) then
+      exit;
+
+    result := true;
+  end;
+end; //IsEqual
 
 {$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
 
