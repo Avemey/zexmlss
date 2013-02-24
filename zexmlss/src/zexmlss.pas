@@ -5,9 +5,9 @@
 // јвтор:  Ќеборак –услан ¬ладимирович (Ruslan V. Neborak)
 // e-mail: avemey(м€у)tut(точка)by
 // URL:    http://avemey.com
-// Ver:    0.0.5
+// Ver:    0.0.6
 // Ћицензи€: zlib
-// Last update: 2012.08.05
+// Last update: 2013.02.23
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -45,7 +45,7 @@ const
 type
   //тип данных €чейки
   TZCellType = (ZENumber, ZEDateTime, ZEBoolean, ZEString, ZEError);
-      const ZEAnsiString = ZEString deprecated 'use ZEString'; // backward compatibility
+      const ZEAnsiString = ZEString deprecated {$IFDEF USE_DEPRECATED_STRING}'use ZEString'{$ENDIF}; // backward compatibility
 type
   //—тиль начертани€ линий рамки €чейки
   TZBorderType = (ZENone, ZEContinuous, ZEDot, ZEDash, ZEDashDot, ZEDashDotDot,ZESlantDashDot, ZEDouble);
@@ -60,6 +60,9 @@ type
   TZCellPattern = (ZPNone, ZPSolid, ZPGray75, ZPGray50, ZPGray25, ZPGray125, ZPGray0625, ZPHorzStripe, ZPVertStripe,
                   ZPReverseDiagStripe, ZPDiagStripe, ZPDiagCross, ZPThickDiagCross, ZPThinHorzStripe, ZPThinVertStripe,
                   ZPThinReverseDiagStripe, ZPThinDiagStripe, ZPThinHorzCross, ZPThinDiagCross);
+
+  //«акрепление строк/столбцов
+  TZSplitMode = (ZSplitNone, ZSplitFrozen, ZSplitSplit);
 
   //€чейка
   TZCell = class(TPersistent)
@@ -86,7 +89,7 @@ type
     property Comment: string read FComment write FComment;      //примечание
     property CommentAuthor: string read FCommentAuthor write FCommentAuthor;// автор примечани€
     property CellStyle: integer read FCellStyle write FCellStyle default -1;
-    property CellType: TZCellType read FCellType write FCellType default ZEansistring; //тип данных €чейки
+    property CellType: TZCellType read FCellType write FCellType default ZEString; //тип данных €чейки
     property Data: string read FData write FData;              //отображаемое содержимое €чейки
     property Formula: string read FFormula write FFormula;     //формула в стиле R1C1
     property HRef: string read FHref write FHref;              //гиперссылка
@@ -403,6 +406,13 @@ type
     FHeaderData: string;
     FFooterData: string;
     FPaperSize: byte;
+    FSplitVerticalMode: TZSplitMode;
+    FSplitHorizontalMode: TZSplitMode;
+    FSplitVerticalValue: integer;       //¬роде можно вводить отрицательные
+    FSplitHorizontalValue: integer;     //»змер€тьс€ будут:
+                                        //    в пиксел€х, если SplitMode = ZSplitSplit
+                                        //    в кол-ве строк/столбцов, если SplitMode = ZSplitFrozen
+                                        // ≈сли SplitMode = ZSplitNone, то фиксаци€ столбцов/€чеек не работает
   public
     constructor Create(); virtual;
     procedure Assign(Source: TPersistent); override;
@@ -422,6 +432,10 @@ type
     property FooterMargin: word read FFooterMargin write FFooterMargin default 13;
     property HeaderData: string read FHeaderData write FHeaderData;
     property FooterData: string read FFooterData write FFooterData;
+    property SplitVerticalMode: TZSplitMode read FSplitVerticalMode write FSplitVerticalMode default ZSplitNone;
+    property SplitHorizontalMode: TZSplitMode read FSplitHorizontalMode write FSplitHorizontalMode default ZSplitNone;
+    property SplitVerticalValue: integer read FSplitVerticalValue write FSplitVerticalValue;
+    property SplitHorizontalValue: integer read FSplitHorizontalValue write FSplitHorizontalValue;
   end;
 
   //лист документа
@@ -1059,7 +1073,7 @@ begin
     ZENumber:         result := 'Number';
     ZEDateTime:       result := 'DateTime';
     ZEBoolean:        result := 'Boolean';
-    ZEansistring:     result := 'String';
+    ZEString:         result := 'String';
     ZEError:          result := 'Error';
   end;
 end;
@@ -1184,7 +1198,7 @@ begin
   else if Value = 'ERROR' then
     result := ZEError
   else
-    result := ZEansistring;
+    result := ZEString;
 end;
 
 ////::::::::::::: TZBorderStyle :::::::::::::::::////
@@ -1731,7 +1745,7 @@ begin
   FComment := '';
   FCommentAuthor := '';
   FHRefScreenTip := '';
-  FCellType := ZEansistring;
+  FCellType := ZEString;
   FCellStyle := -1; //по дефолту
   FAlwaysShowComment := false;
   FShowComment := false;
@@ -1809,7 +1823,7 @@ begin
   FComment := '';
   FCommentAuthor := '';
   FHRefScreenTip := '';
-  FCellType := ZEansistring;
+  FCellType := ZEString;
   FCellStyle := -1;
   FAlwaysShowComment := false;
   FShowComment := false;
@@ -2130,8 +2144,12 @@ begin
   FHeaderMargin := 13;
   FFooterMargin := 13;
   FPaperSize := 9;
-  FHeaderData :='';
-  FFooterData :='';
+  FHeaderData := '';
+  FFooterData := '';
+  FSplitVerticalMode := ZSplitNone;
+  FSplitHorizontalMode := ZSplitNone;
+  FSplitVerticalValue := 0;
+  FSplitHorizontalValue := 0;
 end;
 
 procedure TZSheetOptions.Assign(Source: TPersistent);
@@ -2157,6 +2175,10 @@ begin
     HeaderData := t.HeaderData;
     FooterData := t.FooterData;
     PaperSize := t.PaperSize;
+    SplitVerticalMode := t.SplitVerticalMode;
+    SplitHorizontalMode := t.SplitHorizontalMode;
+    SplitVerticalValue := t.SplitVerticalValue;
+    SplitHorizontalValue := t.SplitHorizontalValue;
   end else
     inherited Assign(Source);
 end;
@@ -2805,7 +2827,7 @@ var UpperLimit: word;
 begin
   Result := False;
   if AFrom > ATill then exit;
-  if AFrom < 0 then exit; // if datatype would be changed to traditional integer
+  //  if AFrom < 0 then exit; // if datatype would be changed to traditional integer, then unremark
 
   if FColumns
      then UpperLimit := FOwner.ColCount

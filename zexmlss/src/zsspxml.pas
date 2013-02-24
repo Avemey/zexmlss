@@ -60,8 +60,8 @@ type
     FCount: integer;
     FMaxCount: integer;           //реальное кол-во элементов
     FItems: array of TZAttrArray;
-    function GetAttrS(Att: ansistring): ansistring;
-    procedure SetAttrS(Att: ansistring; const Value: ansistring);
+    function GetAttrS(const Att: ansistring): ansistring;
+    procedure SetAttrS(const Att: ansistring; const Value: ansistring);
     function GetAttrI(num: integer): ansistring;
     procedure SetAttrI(num: integer; const Value: ansistring);
     function GetAttr(num: integer): TZAttrArray;
@@ -86,7 +86,7 @@ type
     function ToString(): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
     property Count: integer read FCount;
     property Items[num: integer]: TZAttrArray read GetAttr write SetAttr;
-    property ItemsByName[Att: ansistring]: ansistring read GetAttrS write SetAttrS; default;
+    property ItemsByName[const Att: ansistring]: ansistring read GetAttrS write SetAttrS; default;
     property ItemsByNum[num: integer]: ansistring read GetAttrI write SetAttrI;
   end;
 
@@ -524,7 +524,6 @@ var
 begin
   _eof := false;
   text := '';
-  kol := 0;
   s := '';
   if Assigned(ReadCPChar) then
   begin
@@ -535,23 +534,26 @@ begin
     begin
       t := ord(s[1]);
       if t > 127 then
-      {
-      //вроде как возможны 5-ти байтные, но в стандарте нету
-      if t and 248 = 248 then
-        kol := 4 else} {tut}
-      if t and 240 = 240 then
-        kol := 3 else
-      if t and 224 = 224 then
-        kol := 2 else
-      if t and 192 = 192 then
-        kol := 1;
-      for i := 1 to kol do
       begin
-        //все последующие симовлы должны быть вида 10xxxxxx {tut}
-        ReadCPChar(s, _eof);
-        text := text + s;
-        if _eof then exit;
-      end;
+        {
+        //вроде как возможны 5-ти байтные, но в стандарте нету
+        if t and 248 = 248 then
+          kol := 4 else} {tut}
+        kol := 0;
+        if t and 240 = 240 then
+          kol := 3 else
+        if t and 224 = 224 then
+          kol := 2 else
+        if t and 192 = 192 then
+          kol := 1;
+        for i := 1 to kol do
+        begin
+          //все последующие симовлы должны быть вида 10xxxxxx {tut}
+          ReadCPChar(s, _eof);
+          text := text + s;
+          if _eof then exit;
+        end;
+      end; //if
     end;
   end else
     _eof := true;
@@ -1350,7 +1352,7 @@ var
   delta: integer;
   
 begin
-  delta := 0;
+//  delta := 0;
   if (NewSize >= FMaxCount) then
   begin
     delta := NewSize;
@@ -1360,15 +1362,19 @@ begin
     if (NewSize < 100) then
       delta := delta * 2
     else
-      delta := delta + 20;  
+      delta := delta + 20;
+    SetLength(FItems, delta);
   end else
   if (NewSize > 50) then
   begin
     if (FMaxCount - NewSize > 200) then
+    begin
       delta := NewSize + 100;
+      SetLength(FItems, delta);
+    end;
   end;
-  if (delta > 0) then
-    SetLength(FItems, delta);
+//  if (delta > 0) then
+//    SetLength(FItems, delta);
 end; //ResizeItemsArray
 
 procedure TZAttributes.Clear();
@@ -1377,7 +1383,7 @@ begin
   ResizeItemsArray(0);
 end;
 
-function TZAttributes.GetAttrS(Att: ansistring): ansistring;
+function TZAttributes.GetAttrS(const Att: ansistring): ansistring;
 var
   i: integer;
 
@@ -1391,7 +1397,7 @@ begin
   end;
 end;
 
-procedure TZAttributes.SetAttrS(Att: ansistring; const Value: ansistring);
+procedure TZAttributes.SetAttrS(const Att: ansistring; const Value: ansistring);
 begin
   Add(Att, Value, true);
 end;
@@ -1571,9 +1577,12 @@ begin
   if Source is TZAttributes then
   begin
     t := Source as TZAttributes;
-    Clear();
+    //Clear();
+    FCount := t.Count;
+    ResizeItemsArray(FCount + 1);
     for i := 0 to t.Count - 1 do
-      Add(t.items[i][0], t.items[i][1], false);
+      FItems[i] := t.Items[i];
+      //Add(t.items[i][0], t.items[i][1], false);
   end else
     inherited Assign(Source);
 end;

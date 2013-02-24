@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2013.01.30
+// Last update: 2013.02.23
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - uniform save API for creating
 //     XLSX files in Delphi/Windows
@@ -31,6 +31,7 @@
     distribution.
 }
 //HINT: File should have name 'zexlsx.pas', but my hands ... :)
+// ... and file renamed (thanks to Arioch)
 //****************************************************************
 unit zexlsx;
 
@@ -898,7 +899,7 @@ var
         //inlineStr - inline string ??
         if (_type = 's') then
         begin
-          _currCell.CellType := ZEansistring;
+          _currCell.CellType := ZEString;
           if (TryStrToInt(v, t)) then
             if ((t >= 0) and (t < StrCount)) then
               v := StrArray[t];
@@ -1190,6 +1191,54 @@ var
     end; //while
   end; //_ReadHyperLinks();
 
+  //<sheetViews> ... </sheetViews>
+  procedure _ReadSheetViews();
+  var
+    vValue, hValue: integer;
+    SplitMode: TZSplitMode;
+    s: string;
+
+  begin
+    while (not ((xml.TagName = 'sheetViews') and (xml.TagType = 6))) do
+    begin
+      xml.ReadTag();
+      if (xml.Eof()) then
+        break;
+
+      if ((xml.TagName = 'pane') and (xml.TagType = 5)) then
+      begin
+        SplitMode := ZSplitSplit;
+        s := xml.Attributes.ItemsByName['state'];
+        if (s = 'frozen') then
+          SplitMode := ZSplitFrozen;
+
+        s := xml.Attributes.ItemsByName['xSplit'];
+        if (not TryStrToInt(s, vValue)) then
+          vValue := 0;
+
+        s := xml.Attributes.ItemsByName['ySplit'];
+        if (not TryStrToInt(s, hValue)) then
+          hValue := 0;
+
+        _currSheet.SheetOptions.SplitVerticalValue := vValue;
+        _currSheet.SheetOptions.SplitHorizontalValue := hValue;
+
+        _currSheet.SheetOptions.SplitHorizontalMode := ZSplitNone;
+        _currSheet.SheetOptions.SplitVerticalMode := ZSplitNone;
+        if (hValue <> 0) then
+          _currSheet.SheetOptions.SplitHorizontalMode := SplitMode;
+        if (vValue <> 0) then
+          _currSheet.SheetOptions.SplitVerticalMode := SplitMode;
+
+        if (_currSheet.SheetOptions.SplitHorizontalMode = ZSplitSplit) then
+          _currSheet.SheetOptions.SplitHorizontalValue := PointToPixel(hValue/20);
+        if (_currSheet.SheetOptions.SplitVerticalMode = ZSplitSplit) then
+          _currSheet.SheetOptions.SplitVerticalValue := PointToPixel(vValue/20);
+
+      end; //if
+    end; //while
+  end; //_ReadSheetViews()
+
 begin
   xml := nil;
   result := false;
@@ -1297,7 +1346,11 @@ begin
         _GetDimension()
       else
       if ((xml.TagName = 'hyperlinks') and (xml.TagType = 4)) then
-        _ReadHyperLinks();
+        _ReadHyperLinks()
+      else
+      if ((xml.TagName = 'sheetViews') and (xml.TagType = 4)) then
+        _ReadSheetViews();
+
     end; //while
     
     result := true;
@@ -3259,6 +3312,45 @@ var
   procedure WriteXLSXSheetHeader();
   var
     s: string;
+    b: boolean;
+    _SOptions: TZSheetOptions;
+
+    procedure _AddSplitValue(const SplitMode: TZSplitMode; const SplitValue: integer; const AttrName: string);
+    var
+      s: string;
+      b: boolean;
+
+    begin
+      s := '0';
+      b := true;
+      case SplitMode of
+        ZSplitFrozen:
+          begin
+            s := IntToStr(SplitValue);
+            if (SplitValue = 0) then
+              b := false;
+          end;
+        ZSplitSplit: s := IntToStr(round(PixelToPoint(SplitValue) * 20));
+        ZSplitNone: b := false;
+      end;
+      if (b) then
+        _xml.Attributes.Add(AttrName, s);
+    end; //_AddSplitValue
+
+    procedure _AddTopLeftCell(const VMode: TZSplitMode; const VValue: integer; const HMode: TZSplitMode; const HValue: integer);
+    var
+      _isProblem: boolean;
+
+    begin
+      _isProblem := (VMode = ZSplitSplit) or (HMode = ZSplitSplit);
+      _isProblem := _isProblem or (VValue > 1000) or (HValue > 100);
+
+      if (not _isProblem) then
+      begin
+        s := ZEGetA1byCol(VValue) + IntToSTr(HValue + 1);
+        _xml.Attributes.Add('topLeftCell', s);
+      end;
+    end; //_AddTopLeftCell
 
   begin
     _xml.Attributes.Clear();
@@ -3295,6 +3387,67 @@ var
     _xml.Attributes.Add('zoomScaleNormal', '100', false);
     _xml.Attributes.Add('zoomScalePageLayoutView', '100', false);
     _xml.WriteTagNode('sheetView', true, true, false);
+
+    _SOptions := XMLSS.Sheets[SheetNum].SheetOptions;
+
+    b := (_SOptions.SplitVerticalMode <> ZSplitNone) or
+         (_SOptions.SplitHorizontalMode <> ZSplitNone);
+    if (b) then
+    begin
+      _xml.Attributes.Clear();
+      _AddSplitValue(_SOptions.SplitVerticalMode,
+                     _SOptions.SplitVerticalValue,
+                     'xSplit');
+      _AddSplitValue(_SOptions.SplitHorizontalMode,
+                     _SOptions.SplitHorizontalValue,
+                     'ySplit');
+
+      _AddTopLeftCell(_SOptions.SplitVerticalMode, _SOptions.SplitVerticalValue,
+                      _SOptions.SplitHorizontalMode, _SOptions.SplitHorizontalValue);
+
+      _xml.Attributes.Add('activePane', 'topLeft');
+
+      s := 'split';
+      if ((_SOptions.SplitVerticalMode = ZSplitFrozen) or (_SOptions.SplitHorizontalMode = ZSplitFrozen)) then
+        s := 'frozen';
+      _xml.Attributes.Add('state', s);
+
+      _xml.WriteEmptyTag('pane', true, false);
+    end; //if
+    {
+    <pane xSplit="1" ySplit="1" topLeftCell="B2" activePane="bottomRight" state="frozen"/>
+    activePane (Active Pane) The pane that is active.
+                The possible values for this attribute are
+                defined by the ST_Pane simple type (§18.18.52).
+                  bottomRight	Bottom Right Pane
+                  topRight	Top Right Pane
+                  bottomLeft	Bottom Left Pane
+                  topLeft	Top Left Pane
+
+    state (Split State) Indicates whether the pane has horizontal / vertical
+                splits, and whether those splits are frozen.
+                The possible values for this attribute are defined by the ST_PaneState simple type (§18.18.53).
+                   Split
+                   Frozen
+                   FrozenSplit
+
+    topLeftCell (Top Left Visible Cell) Location of the top left visible
+                cell in the bottom right pane (when in Left-To-Right mode).
+                The possible values for this attribute are defined by the
+                ST_CellRef simple type (§18.18.7).
+
+    xSplit (Horizontal Split Position) Horizontal position of the split,
+                in 1/20th of a point; 0 (zero) if none. If the pane is frozen,
+                this value indicates the number of columns visible in the
+                top pane. The possible values for this attribute are defined
+                by the W3C XML Schema double datatype.
+
+    ySplit (Vertical Split Position) Vertical position of the split, in 1/20th
+                of a point; 0 (zero) if none. If the pane is frozen, this
+                value indicates the number of rows visible in the left pane.
+                The possible values for this attribute are defined by the
+                W3C XML Schema double datatype.
+    }
 
     {
     _xml.Attributes.Clear();
@@ -3397,7 +3550,7 @@ var
           ZENumber: s := 'n';
           ZEDateTime: s := 'str'; //??
           ZEBoolean: s := 'b';
-          ZEansistring: s := 'str';
+          ZEString: s := 'str';
           ZEError: s := 'e';
         end;
         
@@ -3685,14 +3838,16 @@ var
   //INPUT
   //  var arr: TIntegerDynArray  - массив
   //      cnt: integer          - номер последнего элемента в массиве (начинает с 0)
-  procedure _UpdateArrayIndex(var arr: TIntegerDynArray; cnt: integer); deprecated 'remove CNT parameter!';
+  //                              (предполагается, что возникнет ситуация, когда нужно будет использовать только часть массива)
+  procedure _UpdateArrayIndex(var arr: TIntegerDynArray; cnt: integer); // deprecated {$IFDEF USE_DEPRECATED_STRING}'remove CNT parameter!'{$ENDIF};
   var
     res: TIntegerDynArray;
     i, j: integer;
     num: integer;
+
   begin
-    Assert( Length(arr) - cnt = 2, 'Wow! We really may need this parameter!');
-    cnt := Length(arr) - 2;   // get ready to strip it
+    //Assert( Length(arr) - cnt = 2, 'Wow! We really may need this parameter!');
+    //cnt := Length(arr) - 2;   // get ready to strip it
     SetLength(res, Length(arr));
 
     num := 0;
@@ -4211,11 +4366,16 @@ begin
     WriteXLSXFonts();
     WriteXLSXFills();
     WriteXLSXBorders();
-//    WriteCellStyleXfs('cellStyleXfs', false);
-//    WriteCellStyleXfs('cellXfs', true);
+    //DO NOT remove cellStyleXfs!!!
+    WriteCellStyleXfs('cellStyleXfs', false);
+    WriteCellStyleXfs('cellXfs', true);
 
     // experiment: do not need styles, ergo do not need fake xfId
-    WriteCellStyleXfs('cellXfs', false);
+    //Result: experiment failed!
+    //Libre/Open Office needs cellStyleXfs for reading background colors!
+    // (Libre/Open Office have highest priority)
+    //WriteCellStyleXfs('cellXfs', false);
+    // experiment end
 
     WriteCellStyles(); //??
 
@@ -4393,7 +4553,7 @@ end; //ZEXLSXCreateSharedStrings
 function ZEXLSXCreateDocPropsApp(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 var
   _xml: TZsspXMLWriterH;
-  s: string;
+//  s: string;
 
 begin
   result := 0;
@@ -4424,7 +4584,7 @@ begin
 //    s := 'DELPHI_or_CBUILDER';
 //    {$ENDIF}
 //    _xml.WriteTag('Application', 'ZEXMLSSlib/0.0.5$' + s, true, false, true);
-    _xml.WriteTag('Application', ZELibraryName, true, false, true);
+    _xml.WriteTag('Application', ZELibraryName(), true, false, true);
 
     _xml.WriteEndTagNode(); //Properties
 

@@ -6,7 +6,9 @@
     <PROJECT value="zexmlsslibe.bpl"/>
     <OBJFILES value="zexmlsslibe.obj ..\..\src\zexmlss.obj ..\..\src\zexmlssutils.obj 
       ..\..\src\zsspxml.obj ..\..\src\duansistr.obj ..\..\src\zeformula.obj 
-      ..\..\src\zeodfs.obj ..\..\src\zesavecommon.obj ..\..\src\zexslx.obj"/>
+      ..\..\src\zeodfs.obj ..\..\src\zesavecommon.obj ..\..\src\zexlsx.obj 
+      ..\..\src\zeSaveXLSX.obj ..\..\src\zeZippy.obj ..\..\src\zeSave.obj 
+      ..\..\src\zeSaveEXML.obj ..\..\src\zeSaveODS.obj"/>
     <RESFILES value="zexmlsslibe.res ..\..\src\zexmlss.dcr"/>
     <IDLFILES value=""/>
     <IDLGENFILES value=""/>
@@ -25,7 +27,7 @@
       indy.lib bcb2kaxserver.lib bcbsmp.lib zcolor.lib"/>
     <PACKAGES value="rtl.bpi vcl.bpi zcolor.bpi bcbsmp.bpi"/>
     <PATHCPP value=".;"/>
-    <PATHPAS value=".;..\..\src;..\..\src;..\..\src;..\..\src;..\..\src;..\..\src;..\..\src;..\..\src"/>
+    <PATHPAS value=".;..\..\src;..\..\src;..\..\src;..\..\src;..\..\src;..\..\src;..\..\src;..\..\src;..\..\src;..\..\src;..\..\src;..\..\src;..\..\src"/>
     <PATHRC value=".;"/>
     <PATHASM value=".;"/>
     <DEBUGLIBPATH value="$(BCB)\lib\debug"/>
@@ -59,19 +61,24 @@
   <FILELIST>
       <FILE FILENAME="zexmlsslibe.res" FORMNAME="" UNITNAME="zexmlsslibe.res" CONTAINERID="ResTool" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="zexmlsslibe.cpp" FORMNAME="" UNITNAME="zexmlsslibe" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\..\rtl.bpi" FORMNAME="" UNITNAME="rtl" CONTAINERID="BPITool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\..\rtl.bpi" FORMNAME="" UNITNAME="rtl" CONTAINERID="BPITool" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\zexmlss.pas" FORMNAME="" UNITNAME="zexmlss" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\zexmlss.dcr" FORMNAME="" UNITNAME="" CONTAINERID="DcrTool" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\zexmlssutils.pas" FORMNAME="" UNITNAME="zexmlssutils" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\zsspxml.pas" FORMNAME="" UNITNAME="zsspxml" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\..\vcl.bpi" FORMNAME="" UNITNAME="vcl" CONTAINERID="BPITool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\..\vcl.bpi" FORMNAME="" UNITNAME="vcl" CONTAINERID="BPITool" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\duansistr.pas" FORMNAME="" UNITNAME="duansistr" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\zeformula.pas" FORMNAME="" UNITNAME="zeformula" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\zeodfs.pas" FORMNAME="" UNITNAME="zeodfs" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\zesavecommon.pas" FORMNAME="" UNITNAME="zesavecommon" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\..\zcolor.bpi" FORMNAME="" UNITNAME="zcolor" CONTAINERID="BPITool" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\..\..\..\Lib\bcbsmp.bpi" FORMNAME="" UNITNAME="bcbsmp" CONTAINERID="BPITool" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\src\zexslx.pas" FORMNAME="" UNITNAME="zexslx" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\..\zcolor.bpi" FORMNAME="" UNITNAME="zcolor" CONTAINERID="BPITool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\..\..\..\Lib\bcbsmp.bpi" FORMNAME="" UNITNAME="bcbsmp" CONTAINERID="BPITool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\zexlsx.pas" FORMNAME="" UNITNAME="zexlsx" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\zeSaveXLSX.pas" FORMNAME="" UNITNAME="zeSaveXLSX" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\zeZippy.pas" FORMNAME="" UNITNAME="zeZippy" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\zeSave.pas" FORMNAME="" UNITNAME="zeSave" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\zeSaveEXML.pas" FORMNAME="" UNITNAME="zeSaveEXML" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\zeSaveODS.pas" FORMNAME="" UNITNAME="zeSaveODS" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
   </FILELIST>
   <BUILDTOOLS>
   </BUILDTOOLS>

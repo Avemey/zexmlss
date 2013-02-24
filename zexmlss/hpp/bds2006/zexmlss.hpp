@@ -26,7 +26,7 @@ namespace Zexmlss
 {
 //-- type declarations -------------------------------------------------------
 #pragma option push -b-
-enum TZCellType { ZENumber, ZEDateTime, ZEBoolean, ZEansistring, ZEError };
+enum TZCellType { ZENumber, ZEDateTime, ZEBoolean, ZEString, ZEError };
 #pragma option pop
 
 #pragma option push -b-
@@ -45,6 +45,10 @@ enum TZVerticalAlignment { ZVAutomatic, ZVTop, ZVBottom, ZVCenter, ZVJustify, ZV
 enum TZCellPattern { ZPNone, ZPSolid, ZPGray75, ZPGray50, ZPGray25, ZPGray125, ZPGray0625, ZPHorzStripe, ZPVertStripe, ZPReverseDiagStripe, ZPDiagStripe, ZPDiagCross, ZPThickDiagCross, ZPThinHorzStripe, ZPThinVertStripe, ZPThinReverseDiagStripe, ZPThinDiagStripe, ZPThinHorzCross, ZPThinDiagCross };
 #pragma option pop
 
+#pragma option push -b-
+enum TZSplitMode { ZSplitNone, ZSplitFrozen, ZSplitSplit };
+#pragma option pop
+
 class DELPHICLASS TZCell;
 class PASCALIMPLEMENTATION TZCell : public Classes::TPersistent 
 {
@@ -61,6 +65,10 @@ private:
 	bool FShowComment;
 	TZCellType FCellType;
 	int FCellStyle;
+	double __fastcall GetDataAsDouble(void);
+	void __fastcall SetDataAsDouble(const double Value);
+	void __fastcall SetDataAsInteger(const int Value);
+	int __fastcall GetDataAsInteger(void);
 	
 public:
 	__fastcall virtual TZCell(void);
@@ -73,9 +81,11 @@ public:
 	__property TZCellType CellType = {read=FCellType, write=FCellType, default=3};
 	__property AnsiString Data = {read=FData, write=FData};
 	__property AnsiString Formula = {read=FFormula, write=FFormula};
-	__property AnsiString Href = {read=FHref, write=FHref};
+	__property AnsiString HRef = {read=FHref, write=FHref};
 	__property AnsiString HRefScreenTip = {read=FHRefScreenTip, write=FHRefScreenTip};
 	__property bool ShowComment = {read=FShowComment, write=FShowComment, default=0};
+	__property double AsDouble = {read=GetDataAsDouble, write=SetDataAsDouble};
+	__property int AsInteger = {read=GetDataAsInteger, write=SetDataAsInteger, nodefault};
 public:
 	#pragma option push -w-inl
 	/* TPersistent.Destroy */ inline __fastcall virtual ~TZCell(void) { }
@@ -144,6 +154,8 @@ __published:
 };
 
 
+typedef short TZCellTextRotate;
+
 class DELPHICLASS TZAlignment;
 class PASCALIMPLEMENTATION TZAlignment : public Classes::TPersistent 
 {
@@ -152,14 +164,14 @@ class PASCALIMPLEMENTATION TZAlignment : public Classes::TPersistent
 private:
 	TZHorizontalAlignment FHorizontal;
 	int FIndent;
-	int FRotate;
+	TZCellTextRotate FRotate;
 	bool FShrinkToFit;
 	TZVerticalAlignment FVertical;
 	bool FVerticalText;
 	bool FWrapText;
 	void __fastcall SetHorizontal(const TZHorizontalAlignment Value);
 	void __fastcall SetIndent(const int Value);
-	void __fastcall SetRotate(const int Value);
+	void __fastcall SetRotate(const TZCellTextRotate Value);
 	void __fastcall SetShrinkToFit(const bool Value);
 	void __fastcall SetVertical(const TZVerticalAlignment Value);
 	void __fastcall SetVerticalText(const bool Value);
@@ -173,7 +185,7 @@ public:
 __published:
 	__property TZHorizontalAlignment Horizontal = {read=FHorizontal, write=SetHorizontal, default=0};
 	__property int Indent = {read=FIndent, write=SetIndent, default=0};
-	__property int Rotate = {read=FRotate, write=SetRotate, nodefault};
+	__property TZCellTextRotate Rotate = {read=FRotate, write=SetRotate, nodefault};
 	__property bool ShrinkToFit = {read=FShrinkToFit, write=SetShrinkToFit, default=0};
 	__property TZVerticalAlignment Vertical = {read=FVertical, write=SetVertical, default=0};
 	__property bool VerticalText = {read=FVerticalText, write=SetVerticalText, default=0};
@@ -361,6 +373,10 @@ private:
 	AnsiString FHeaderData;
 	AnsiString FFooterData;
 	Byte FPaperSize;
+	TZSplitMode FSplitVerticalMode;
+	TZSplitMode FSplitHorizontalMode;
+	int FSplitVerticalValue;
+	int FSplitHorizontalValue;
 	
 public:
 	__fastcall virtual TZSheetOptions(void);
@@ -382,6 +398,10 @@ __published:
 	__property Word FooterMargin = {read=FFooterMargin, write=FFooterMargin, default=13};
 	__property AnsiString HeaderData = {read=FHeaderData, write=FHeaderData};
 	__property AnsiString FooterData = {read=FFooterData, write=FFooterData};
+	__property TZSplitMode SplitVerticalMode = {read=FSplitVerticalMode, write=FSplitVerticalMode, default=0};
+	__property TZSplitMode SplitHorizontalMode = {read=FSplitHorizontalMode, write=FSplitHorizontalMode, default=0};
+	__property int SplitVerticalValue = {read=FSplitVerticalValue, write=FSplitVerticalValue, nodefault};
+	__property int SplitHorizontalValue = {read=FSplitHorizontalValue, write=FSplitHorizontalValue, nodefault};
 public:
 	#pragma option push -w-inl
 	/* TPersistent.Destroy */ inline __fastcall virtual ~TZSheetOptions(void) { }
@@ -421,6 +441,40 @@ __published:
 };
 
 
+class DELPHICLASS TZSheetPrintTitles;
+class PASCALIMPLEMENTATION TZSheetPrintTitles : public Classes::TPersistent 
+{
+	typedef Classes::TPersistent inherited;
+	
+private:
+	TZSheet* FOwner;
+	bool FColumns;
+	bool FActive;
+	Word FTill;
+	Word FFrom;
+	void __fastcall SetActive(const bool Value);
+	void __fastcall SetFrom(const Word Value);
+	void __fastcall SetTill(const Word Value);
+	bool __fastcall Valid(const Word AFrom, const Word ATill);
+	void __fastcall RequireValid(const Word AFrom, const Word ATill);
+	
+public:
+	virtual void __fastcall Assign(Classes::TPersistent* Source);
+	__fastcall TZSheetPrintTitles(const TZSheet* owner, const bool ForColumns);
+	AnsiString __fastcall ToString();
+	
+__published:
+	__property Word From = {read=FFrom, write=SetFrom, nodefault};
+	__property Word Till = {read=FTill, write=SetTill, nodefault};
+	__property bool Active = {read=FActive, write=SetActive, nodefault};
+public:
+	#pragma option push -w-inl
+	/* TPersistent.Destroy */ inline __fastcall virtual ~TZSheetPrintTitles(void) { }
+	#pragma option pop
+	
+};
+
+
 class DELPHICLASS TZColOptions;
 class DELPHICLASS TZRowOptions;
 class PASCALIMPLEMENTATION TZSheet : public Classes::TPersistent 
@@ -443,12 +497,16 @@ private:
 	bool FRightToLeft;
 	TZSheetOptions* FSheetOptions;
 	bool FSelected;
+	TZSheetPrintTitles* FPrintRows;
+	TZSheetPrintTitles* FPrintCols;
 	void __fastcall SetColumn(int num, const TZColOptions* Value);
 	TZColOptions* __fastcall GetColumn(int num);
 	void __fastcall SetRow(int num, const TZRowOptions* Value);
 	TZRowOptions* __fastcall GetRow(int num);
 	TZSheetOptions* __fastcall GetSheetOptions(void);
 	void __fastcall SetSheetOptions(TZSheetOptions* Value);
+	void __fastcall SetPrintCols(const TZSheetPrintTitles* Value);
+	void __fastcall SetPrintRows(const TZSheetPrintTitles* Value);
 	
 protected:
 	virtual void __fastcall SetColWidth(int num, const double Value);
@@ -485,6 +543,8 @@ public:
 	__property TZMergeCells* MergeCells = {read=FMergeCells, write=FMergeCells};
 	__property TZSheetOptions* SheetOptions = {read=GetSheetOptions, write=SetSheetOptions};
 	__property bool Selected = {read=FSelected, write=FSelected, nodefault};
+	__property TZSheetPrintTitles* RowsToRepeat = {read=FPrintRows, write=SetPrintRows};
+	__property TZSheetPrintTitles* ColsToRepeat = {read=FPrintCols, write=SetPrintCols};
 };
 
 
@@ -515,7 +575,7 @@ public:
 };
 
 
-typedef DynamicArray<TZCell* >  TCellColumn;
+typedef DynamicArray<TZCell* >  TZCellColumn;
 
 class DELPHICLASS TZRowColOptions;
 class PASCALIMPLEMENTATION TZRowColOptions : public Classes::TPersistent 
@@ -598,16 +658,17 @@ public:
 };
 
 
-typedef DynamicArray<DynamicArray<TZCell* > >  zexmlss__51;
+typedef DynamicArray<DynamicArray<TZCell* > >  zexmlss__61;
 
-typedef DynamicArray<TZRowOptions* >  zexmlss__61;
+typedef DynamicArray<TZRowOptions* >  zexmlss__71;
 
-typedef DynamicArray<TZColOptions* >  zexmlss__71;
+typedef DynamicArray<TZColOptions* >  zexmlss__81;
 
-typedef DynamicArray<TZSheet* >  zexmlss__91;
+typedef DynamicArray<TZSheet* >  zexmlss__02;
 
 //-- var, const, procedure ---------------------------------------------------
 extern PACKAGE double _PointToMM;
+#define ZEAnsiString (TZCellType)(3)
 extern PACKAGE void __fastcall CorrectStrForXML(const AnsiString St, AnsiString &Corrected, bool &UseXMLNS);
 extern PACKAGE AnsiString __fastcall ColorToHTMLHex(Graphics::TColor Color);
 extern PACKAGE Graphics::TColor __fastcall HTMLHexToColor(AnsiString value);

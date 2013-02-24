@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2012.08.05
+// Last update: 2013.02.23
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -77,8 +77,8 @@ function ZENormalizeAngle180(const value: TZCellTextRotate): integer;
 
 // single place to update version et all
 function ZELibraryName: string;
-const ZELibraryVersion = '0.0.5';
-      ZELibraryFork = 'Arioch';  // or empty str   // URL ?
+const ZELibraryVersion = '0.0.6';
+      ZELibraryFork = '';//'Arioch';  // or empty str   // URL ?
 implementation
 
 function ZELibraryName: string;
@@ -92,6 +92,7 @@ begin   // todo: compiler version and date ?
     {$ELSE}
     'DELPHI_or_CBUILDER';
     {$ENDIF}
+  Result := Result + ' ZEXMLSS/' + {$I git_hash.inc};
 end;
 
 // despite formal angle datatype declaration in default "range check off" mode

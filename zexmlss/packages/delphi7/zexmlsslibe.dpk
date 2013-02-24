@@ -1,8 +1,8 @@
 package zexmlsslib;
 
-{$R *.RES}
+{$R *.res}
 {$R '..\..\src\zexmlss.dcr'}
-{$ALIGN ON}
+{$ALIGN 8}
 {$ASSERTIONS ON}
 {$BOOLEVAL OFF}
 {$DEBUGINFO ON}
@@ -22,12 +22,12 @@ package zexmlsslib;
 {$VARSTRINGCHECKS ON}
 {$WRITEABLECONST ON}
 {$MINENUMSIZE 1}
-{$DESCRIPTION 'ZEXMLSS component'}
 {$IMAGEBASE $400000}
+{$DESCRIPTION 'ZEXMLSS component'}
 {$IMPLICITBUILD ON}
 
 requires
-  vcl, 
+  vcl,
   zcolor;
 
 contains
@@ -37,6 +37,7 @@ contains
   zeformula in '..\..\src\zeformula.pas',
   zesavecommon in '..\..\src\zesavecommon.pas',
   zexmlssutils in '..\..\src\zexmlssutils.pas',
-  zexslx in '..\..\src\zexslx.pas';
+  zearchhelper in '..\..\src\zearchhelper.pas',
+  zexlsx in '..\..\src\zexlsx.pas';
 
 end.

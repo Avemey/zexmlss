@@ -106,7 +106,7 @@ void __fastcall TForm1::btnCreateClick(TObject *Sender)
 		//€чейка с ссылкой
 		sh->Cell[0][2]->CellStyle = 4;
 		sh->Cell[0][2]->Data = "ƒомашн€€ страница: http://avemey.com";
-		sh->Cell[0][2]->Href = "http://avemey.com";
+		sh->Cell[0][2]->HRef = "http://avemey.com";
 		sh->Cell[0][2]->HRefScreenTip = String(" лацните по ссылке") + sLineBreak + String("(текст всплывающей подсказки к ссылке)");
 		//ќбъединЄнна€ €чейка
 		sh->MergeCells->AddRectXY(0, 2, 10, 2);
@@ -293,7 +293,7 @@ void __fastcall TForm1::btnFormulaClick(TObject *Sender)
 		//€чейка с ссылкой
 		sh->Cell[0][2]->CellStyle = 4;
 		sh->Cell[0][2]->Data = "ƒомашн€€ страница: http://avemey.com";
-		sh->Cell[0][2]->Href = "http://avemey.com";
+		sh->Cell[0][2]->HRef = "http://avemey.com";
 		sh->Cell[0][2]->HRefScreenTip = String(" лацните по ссылке") + sLineBreak + String("(текст всплывающей подсказки к ссылке)");
 		//ќбъединЄнна€ €чейка
 		sh->MergeCells->AddRectXY(0, 2, 10, 2);

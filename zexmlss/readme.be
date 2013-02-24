@@ -1,4 +1,4 @@
-ZEXMLSSLIB 0.0.5 (beta)
+ZEXMLSSLIB 0.0.6 (beta)
 Для Lazarus, Delphi 7, C++Builder 6.
 Borland Developer Studio 2005, BDS 2006, CodeGear Delphi 2007, 
 CodeGear RAD Studio 2009, 2010, Delphi XE і Delphi XE2.
@@ -6,7 +6,7 @@ CodeGear RAD Studio 2009, 2010, Delphi XE і Delphi XE2.
 свае функцыі)
 
 
-Праца з файламі Excel XML Spreadsheet / OpenDocument Format (ODS) / OOXML (xlsx) (толькі чытанне) без усталяванага Excel-а/OO Calc-а.
+Праца з файламі Excel XML Spreadsheet / OpenDocument Format (ODS) / OOXML (xlsx) без усталяванага Excel-а/OO Calc-а.
 
 Усталёўка
 ---------
@@ -31,7 +31,11 @@ CodeGear RAD Studio 2009, 2010, Delphi XE і Delphi XE2.
      Environment Options->Library->Library Path (для BDS 2005 ці 
      BDS 2006 у Tools->Options->Environment Options->Delphi Options->
      Library - Win32->Library Path) 
-  3. Адкрыйце патрэбны zexmlsslibe.dpk (ці zexmlsslib.dpk калі не 
+  3. Для выкарыстання функцый ReadXLSX, SaveXmlssToXLSX, SaveXmlssToODFS 
+     і ReadODFS: прачытайце /delphizip/readme.txt, заменіце ў дырэкторыі src inc-файлы на /delphizip/патрэбны_пакавальнік
+     (пакуль падтрымліваюцца TurboPower Abbrevia (http://sourceforge.net/projects/tpabbrevia/) 
+     і Synzip (http://synopse.info)). Усталюйце патрэбны пакавальнік. 
+  4. Адкрыйце патрэбны zexmlsslibe.dpk (ці zexmlsslib.dpk калі не 
      выкарыстоўваецца ZColorStringGrid). Націсніце "Compile" затым "Install".
 
  3. C++ Builder 6

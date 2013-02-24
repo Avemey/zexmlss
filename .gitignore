@@ -18,7 +18,9 @@
 *.dll
 
 *.ppu
+*.or
 *.o
 *.compiled
 *.obj
 *.dbg
+*.pas.bak
