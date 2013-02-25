@@ -491,25 +491,73 @@ type
     property Value2: String read FValue2 write FValue2;
   end;
 
+  //Область для применения условного форматирования
+  TZConditionalAreaItem = class (TPersistent)
+  private
+    FRow: integer;
+    FColumn: integer;
+    FWidth: integer;
+    FHeight: integer;
+    procedure SetRow(Value: integer);
+    procedure SetColumn(Value: integer);
+    procedure SetWidth(Value: integer);
+    procedure SetHeight(Value: integer);
+  protected
+  public
+    constructor Create(); overload; virtual;
+    constructor Create(ColumnNum, RowNum, AreaWidth, AreaHeight: integer); overload; virtual;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(Source: TPersistent): boolean; virtual;
+    property Row: integer read FRow write SetRow;
+    property Column: integer read FColumn write SetColumn;
+    property Width: integer read FWidth write SetWidth;
+    property Height: integer read FHeight write SetHeight;
+  end;
+
+  //Области для применения условного форматирования
+  TZConditionalAreas = class (TPersistent)
+  private
+    FCount: integer;
+    FItems: array of TZConditionalAreaItem;
+    procedure SetCount(Value: integer);
+    function GetItem(num: integer): TZConditionalAreaItem;
+    procedure SetItem(num: integer; Value: TZConditionalAreaItem);
+  protected
+  public
+    constructor Create(); virtual;
+    destructor Destroy(); override;
+    procedure Add(); overload;
+    procedure Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer); overload;
+    procedure Assign(Source: TPersistent); override;
+    procedure Delete(num: integer);
+    function IsEqual(Source: TPersistent): boolean; virtual;
+    property Count: integer read FCount write SetCount;
+    property Items[num: integer]: TZConditionalAreaItem read GetItem write SetItem; default;
+  end;
+
   //Условное форматирование: список условий
   TZConditionalStyle = class (TPersistent)
   private
     FCount: integer;                    //кол-во условий
     FMaxCount: integer;
+    FAreas: TZConditionalAreas;
     FConditions: array of TZConditionalStyleItem;
     function GetItem(num: integer): TZConditionalStyleItem;
     procedure SetItem(num: integer; Value: TZConditionalStyleItem);
     procedure SetCount(value: integer);
+    procedure SetAreas(Value: TZConditionalAreas);
   protected
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
     procedure Add(); overload;
     procedure Add(StyleItem: TZConditionalStyleItem); overload;
+    procedure Delete(num: integer);
     procedure Insert(num: integer); overload;
     procedure Insert(num: integer; StyleItem: TZConditionalStyleItem); overload;
     procedure Assign(Source: TPersistent); override;
     function IsEqual(Source: TPersistent): boolean; virtual;
+    property Areas: TZConditionalAreas read FAreas write SetAreas;
     property Count: integer read FCount write SetCount;
     property Items[num: integer]: TZConditionalStyleItem read GetItem write SetItem; default;
   end;
@@ -527,6 +575,7 @@ type
     destructor Destroy(); override;
     procedure Add(); overload;
     procedure Add(Style: TZConditionalStyle); overload;
+    procedure Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer); overload;
     procedure Assign(Source: TPersistent); override;
     function IsEqual(Source: TPersistent): boolean; virtual;
     property Count: integer read FCount write SetCount;
@@ -3018,6 +3067,7 @@ begin
   SetLength(FConditions, FMaxCount);
   for i := 0 to FMaxCount - 1 do
     FConditions[i] := TZConditionalStyleItem.Create();
+  FAreas := TZConditionalAreas.Create();
 end; //Create
 
 destructor TZConditionalStyle.Destroy();
@@ -3030,6 +3080,7 @@ begin
       FreeAndNil(FConditions[i]);
   SetLength(FConditions, 0);
   FConditions := nil;
+  FreeAndNil(FAreas);
   inherited;
 end; //Destroy
 
@@ -3103,6 +3154,12 @@ begin
   end;
 end; //SetCount
 
+procedure TZConditionalStyle.SetAreas(Value: TZConditionalAreas);
+begin
+  if (Assigned(Value)) then
+    FAreas.Assign(Value);
+end;
+
 procedure TZConditionalStyle.Add();
 begin
   Count := Count + 1;
@@ -3114,6 +3171,23 @@ begin
   if (Assigned(StyleItem)) then
     FConditions[Count - 1].Assign(StyleItem);
 end; //Add
+
+procedure TZConditionalStyle.Delete(num: integer);
+var
+  i: integer;
+  t: TZConditionalStyleItem;
+
+begin
+  if (num >= 0) and (num < Count) then
+  begin
+    t := FConditions[num];
+    for i := num to Count - 2 do
+      FConditions[i] := FConditions[i + 1];
+    if (Count > 0) then
+      FConditions[Count - 1] := t;
+    Count := Count - 1;
+  end;
+end; //Delete
 
 procedure TZConditionalStyle.Insert(num: integer);
 begin
@@ -3137,6 +3211,209 @@ begin
       FConditions[num].Assign(StyleItem);
   end;
 end; //Insert
+
+////::::::::::::: TZConditionalAreaItem :::::::::::::::::////
+
+constructor TZConditionalAreaItem.Create();
+begin
+  Create(0, 0, 1, 1);
+end;
+
+constructor TZConditionalAreaItem.Create(ColumnNum, RowNum, AreaWidth, AreaHeight: integer);
+begin
+  Row := RowNum;
+  Column := ColumnNum;
+  Width := AreaWidth;
+  Height := AreaHeight;
+end;
+
+procedure TZConditionalAreaItem.SetRow(Value: integer);
+begin
+  if (Value >= 0) then
+    FRow := Value;
+end; //SetRow
+
+procedure TZConditionalAreaItem.SetColumn(Value: integer);
+begin
+  if (Value >= 0) then
+    FColumn := Value;
+end; //SetColumn
+
+procedure TZConditionalAreaItem.SetWidth(Value: integer);
+begin
+  if (Value >= 0) then
+    FWidth := Value;
+end; //SetWidth
+
+procedure TZConditionalAreaItem.SetHeight(Value: integer);
+begin
+  if (Value >= 0) then
+    FHeight := Value;
+end; //SetHeight
+
+procedure TZConditionalAreaItem.Assign(Source: TPersistent);
+var
+  t: TZConditionalAreaItem;
+
+begin
+  if (Source is TZConditionalAreaItem) then
+  begin
+    t := Source as TZConditionalAreaItem;
+    Row := t.Row;
+    Column := t.Column;
+    Height := t.Height;
+    Width := t.Width;
+  end else
+    inherited Assign(Source);
+end; //Assign
+
+function TZConditionalAreaItem.IsEqual(Source: TPersistent): boolean;
+var
+  t: TZConditionalAreaItem;
+
+begin
+  result := false;
+  if (Source is TZConditionalAreaItem) then
+  begin
+    t := Source as TZConditionalAreaItem;
+    if (FRow <> t.Row) then
+      exit;
+    if (FColumn <> t.Column) then
+      exit;
+    if (FWidth <> t.Width) then
+      exit;
+    if (FHeight <> t.Height) then
+      exit;
+
+    result := true;
+  end;
+end; //IsEqual
+
+////::::::::::::: TZConditionalAreas :::::::::::::::::////
+
+constructor TZConditionalAreas.Create();
+begin
+  FCount := 1;
+  SetLength(FItems, FCount);
+  FItems[0] := TZConditionalAreaItem.Create();
+end; //Create
+
+destructor TZConditionalAreas.Destroy();
+var
+  i: integer;
+
+begin
+  for i := 0 to FCount - 1 do
+    if (Assigned(FItems[i])) then
+      FreeAndNil(FItems[i]);
+  Setlength(FItems, 0);
+  FItems := nil;
+
+  inherited;
+end; //Destroy
+
+procedure TZConditionalAreas.SetCount(Value: integer);
+var
+  i: integer;
+
+begin
+  if ((Value >= 0) and (Value <> Count)) then
+  begin
+    if (Value < Count) then
+    begin
+      for i := Value to Count - 1 do
+        if (Assigned(FItems[i])) then
+          FreeAndNil(FItems[i]);
+      Setlength(FItems, Value);
+    end else
+    if (Value > Count) then
+    begin
+      Setlength(FItems, Value);
+      for i := Count to Value - 1 do
+        FItems[i] := TZConditionalAreaItem.Create();
+    end;
+    FCount := Value;
+  end;
+end; //SetCount
+
+function TZConditionalAreas.GetItem(num: integer): TZConditionalAreaItem;
+begin
+  result := nil;
+  if ((num >= 0) and (num < FCount)) then
+    result := FItems[num];
+end; //GetItem
+
+procedure TZConditionalAreas.SetItem(num: integer; Value: TZConditionalAreaItem);
+begin
+  if ((num >= 0) and (num < Count)) then
+    if (Assigned(Value)) then
+      FItems[num].Assign(Value);
+end; //SetItem
+
+procedure TZConditionalAreas.Add();
+begin
+  SetCount(FCount + 1);
+end; //Add
+
+procedure TZConditionalAreas.Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer);
+begin
+  Add();
+  FItems[Count - 1].Row := RowNum;
+  FItems[Count - 1].Column := ColumnNum;
+  FItems[Count - 1].Width := AreaWidth;
+  FItems[Count - 1].Height := AreaHeight;
+end; //Add
+
+procedure TZConditionalAreas.Assign(Source: TPersistent);
+var
+  t: TZConditionalAreas;
+  i: integer;
+
+begin
+  if (Source is TZConditionalAreas) then
+  begin
+    t := Source as TZConditionalAreas;
+    Count := t.Count;
+    for i := 0 to Count - 1 do
+        FItems[i].Assign(t.Items[i]);
+  end else
+    inherited Assign(Source);
+end; //Assign
+
+procedure TZConditionalAreas.Delete(num: integer);
+var
+  t: TZConditionalAreaItem;
+  i: integer;
+
+begin
+  if ((num >= 0) and (num < Count)) then
+  begin
+    t := FItems[num];
+    for i := num to Count - 2 do
+      FItems[i] := FItems[i + 1];
+    FItems[Count - 1] := t;
+    Count := Count -1;
+  end;
+end; //Delete
+
+function TZConditionalAreas.IsEqual(Source: TPersistent): boolean;
+var
+  t: TZConditionalAreas;
+  i: integer;
+
+begin
+  result := false;
+  if (Source is TZConditionalAreas) then
+  begin
+    t := Source as TZConditionalAreas;
+    if (Count <> t.Count) then
+      exit;
+    for i := 0 to Count - 1 do
+      if (not FItems[i].IsEqual(t.Items[i])) then
+        exit;
+    result := true;
+  end;
+end; //IsEqual
 
 ////::::::::::::: TConditionalFormatting :::::::::::::::::////
 
@@ -3208,6 +3485,18 @@ begin
     FStyles[Count - 1].Assign(Style);
 end; //Add
 
+//Добавить условное форматирование с областью
+//INPUT
+//      ColumnNum: integer  - номер колонки
+//      RowNum: integer     - номер строки
+//      AreaWidth: integer  - ширина области
+//      AreaHeight: integer - высота области
+procedure TConditionalFormatting.Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer);
+begin
+  Add(nil);
+//  FStyles[FCount - 1].
+end; //add
+
 procedure TConditionalFormatting.Assign(Source: TPersistent);
 var
   t: TConditionalFormatting;
@@ -3236,6 +3525,9 @@ begin
     t := Source as TConditionalFormatting;
     if (Count <> t.Count) then
       exit;
+    for i := 0 to Count - 1 do
+      if (not FStyles[i].Equals(t.Items[i])) then
+        exit;
 
     result := true;
   end;
