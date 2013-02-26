@@ -562,7 +562,7 @@ type
     property Items[num: integer]: TZConditionalStyleItem read GetItem write SetItem; default;
   end;
 
-  TConditionalFormatting = class (TPersistent)
+  TZConditionalFormatting = class (TPersistent)
   private
     FStyles: array of TZConditionalStyle;
     FCount: integer;
@@ -603,6 +603,11 @@ type
     FSheetOptions: TZSheetOptions;
     FSelected: boolean;
     FPrintRows, FPrintCols: TZSheetPrintTitles;
+
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    FConditionalFormatting: TZConditionalFormatting;
+    procedure SetConditionalFormatting(Value: TZConditionalFormatting);
+    {$ENDIF}
 
     procedure SetColumn(num: integer; const Value:TZColOptions);
     function  GetColumn(num: integer): TZColOptions;
@@ -649,6 +654,10 @@ type
 
     property RowsToRepeat: TZSheetPrintTitles read FPrintRows write SetPrintRows;
     property ColsToRepeat: TZSheetPrintTitles read FPrintCols write SetPrintCols;
+
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    property ConditionalFormatting: TZConditionalFormatting read FConditionalFormatting write SetConditionalFormatting;
+    {$ENDIF}
   end;
 
   //—траницы
@@ -2371,19 +2380,28 @@ begin
 
   FPrintRows := TZSheetPrintTitles.Create(Self, false);
   FPrintCols := TZSheetPrintTitles.Create(Self, true);
+  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+  FConditionalFormatting := TZConditionalFormatting.Create();
+  {$ENDIF}
 end;
 
 destructor TZSheet.Destroy();
 begin
-  FreeAndNil(FMergeCells);
-  FreeAndNil(FSheetOptions);
-  FPrintRows.Free;
-  FPrintCols.Free;
-  Clear();
-  FCells := nil;
-  FRows := nil;
-  FColumns := nil;
-  inherited Destroy();
+  try
+    FreeAndNil(FMergeCells);
+    FreeAndNil(FSheetOptions);
+    FPrintRows.Free;
+    FPrintCols.Free;
+    Clear();
+    FCells := nil;
+    FRows := nil;
+    FColumns := nil;
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    FreeAndNil(FConditionalFormatting);
+    {$ENDIF}
+  finally
+    inherited Destroy();
+  end;
 end;
 
 procedure TZSheet.Assign(Source: TPersistent);
@@ -2426,11 +2444,24 @@ begin
 
     {дописать что ещЄ нужно копировать}
     {tut!}
+
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    ConditionalFormatting.Assign(zSource.ConditionalFormatting);
+    {$ENDIF}
+
     RowsToRepeat.Assign(zSource.RowsToRepeat);
     ColsToRepeat.Assign(zSource.ColsToRepeat);
   end else
     inherited Assign(Source);
 end;
+
+{$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+procedure TZSheet.SetConditionalFormatting(Value: TZConditionalFormatting);
+begin
+  if (Assigned(Value)) then
+    FConditionalFormatting.Assign(Value);
+end; //SetConditionalFormatting
+{$ENDIF}
 
 function TZSheet.GetSheetOptions(): TZSheetOptions;
 begin
@@ -3417,13 +3448,13 @@ end; //IsEqual
 
 ////::::::::::::: TConditionalFormatting :::::::::::::::::////
 
-constructor TConditionalFormatting.Create();
+constructor TZConditionalFormatting.Create();
 begin
   FCount := 0;
   SetLength(FStyles, 0);
 end; //Create
 
-destructor TConditionalFormatting.Destroy();
+destructor TZConditionalFormatting.Destroy();
 var
   i: integer;
 
@@ -3436,7 +3467,7 @@ begin
   inherited;
 end; //Destroy
 
-procedure TConditionalFormatting.SetCount(Value: integer);
+procedure TZConditionalFormatting.SetCount(Value: integer);
 var
   i: integer;
 
@@ -3459,26 +3490,26 @@ begin
   end;
 end; //SetCount
 
-procedure TConditionalFormatting.Add();
+procedure TZConditionalFormatting.Add();
 begin
   Add(nil);
 end; //Add
 
-function TConditionalFormatting.GetItem(num: integer): TZConditionalStyle;
+function TZConditionalFormatting.GetItem(num: integer): TZConditionalStyle;
 begin
   result := nil;
-  if ((num >= 0) and (num < Count - 1)) then
+  if ((num >= 0) and (num < Count)) then
     result := FStyles[num];
 end; //GetItem
 
-procedure TConditionalFormatting.SetItem(num: integer; Value: TZConditionalStyle);
+procedure TZConditionalFormatting.SetItem(num: integer; Value: TZConditionalStyle);
 begin
-  if ((num >= 0) and (num < Count - 1)) then
+  if ((num >= 0) and (num < Count)) then
     if (Assigned(Value)) then
       FStyles[num].Assign(Value);
 end; //SetItem
 
-procedure TConditionalFormatting.Add(Style: TZConditionalStyle);
+procedure TZConditionalFormatting.Add(Style: TZConditionalStyle);
 begin
   Count := Count + 1;
   if (Assigned(Style)) then
@@ -3491,21 +3522,28 @@ end; //Add
 //      RowNum: integer     - номер строки
 //      AreaWidth: integer  - ширина области
 //      AreaHeight: integer - высота области
-procedure TConditionalFormatting.Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer);
+procedure TZConditionalFormatting.Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer);
+var
+  t: TZConditionalAreaItem;
+
 begin
   Add(nil);
-//  FStyles[FCount - 1].
+  t := FStyles[FCount - 1].Areas[0];
+  t.Row := RowNum;
+  t.Column := ColumnNum;
+  t.Width := AreaWidth;
+  t.Height := AreaHeight;
 end; //add
 
-procedure TConditionalFormatting.Assign(Source: TPersistent);
+procedure TZConditionalFormatting.Assign(Source: TPersistent);
 var
-  t: TConditionalFormatting;
+  t: TZConditionalFormatting;
   i: integer;
 
 begin
-  if (Source is TConditionalFormatting) then
+  if (Source is TZConditionalFormatting) then
   begin
-    t := Source as TConditionalFormatting;
+    t := Source as TZConditionalFormatting;
     FCount := t.Count;
     for i := 0 to FCount - 1 do
       FStyles[i].Assign(t.Items[i]);
@@ -3513,16 +3551,16 @@ begin
     inherited Assign(Source);
 end; //Assign
 
-function TConditionalFormatting.IsEqual(Source: TPersistent): boolean;
+function TZConditionalFormatting.IsEqual(Source: TPersistent): boolean;
 var
-  t: TConditionalFormatting;
+  t: TZConditionalFormatting;
   i: integer;
 
 begin
   result := false;
-  if (Source is TConditionalFormatting) then
+  if (Source is TZConditionalFormatting) then
   begin
-    t := Source as TConditionalFormatting;
+    t := Source as TZConditionalFormatting;
     if (Count <> t.Count) then
       exit;
     for i := 0 to Count - 1 do
