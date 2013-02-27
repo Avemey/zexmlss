@@ -138,6 +138,38 @@ type
 
   TZODFTableArray = array of TZODFTableStyle;
 
+  //”словное форматирование
+{$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+
+  TODFCFAreas = array of TZConditionalAreas;
+
+  TODFCFWriterArray = record
+    CountCF: integer;             //кол-во стилей
+    StyleCFID: TIntegerDynArray;  //номер стил€ c условным форматированием
+    Areas: TODFCFAreas;           //ќбласти
+  end;
+
+  //ѕомошник дл€ записи условного форматировани€
+  TZODFConditionalWriteHelper = class
+  private
+    FCount: integer;
+    FPageIndex: TIntegerDynArray;
+    FPageNames: TStringDynArray;
+    FPageCF: array of TODFCFWriterArray;
+    FXMLSS: TZEXMLSS;
+  protected
+  public
+    constructor Create(ZEXMLSS: TZEXMLSS;
+                       const _pages: TIntegerDynArray;
+                       const _names: TStringDynArray;
+                       PageCount: integer);
+    procedure WriteCFStyles(xml: TZsspXMLWriterH);
+    function GetStyleNum(const PageIndex, Col, Row: integer): integer;
+    destructor Destroy(); override;
+  end;
+
+{$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
+
 {$IFDEF FPC}
   //ƒл€ распаковки в поток
   TODFZipHelper = class
@@ -189,6 +221,111 @@ begin
 end; //DoDoneOutZipStream
 
 {$ENDIF}
+
+{$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+
+////::::::::::::: TZODFConditionalWriteHelper :::::::::::::::::////
+
+//конструктор
+//INPUT
+//      ZEXMLSS: TZEXMLSS           - хранилище
+//  const _pages: TIntegerDynArray  - индексы страниц
+//  const _names: TStringDynArray   - названи€ страниц
+//      PageCount: integer          - кол-во страниц
+constructor TZODFConditionalWriteHelper.Create(ZEXMLSS: TZEXMLSS;
+                                               const _pages: TIntegerDynArray;
+                                               const _names: TStringDynArray;
+                                               PageCount: integer);
+var
+  i: integer;
+
+begin
+  SetLength(FPageIndex, PageCount);
+  Setlength(FPageNames, PageCount);
+  SetLength(FPageCF, PageCount);
+  FCount := PageCount;
+  for i := 0 to FCount - 1 do
+  begin
+    FPageindex[i] := _pages[i];
+    FPageNames[i] := _names[i];
+    FPageCF[i].CountCF := 0;
+  end;
+  FXMLSS := ZEXMLSS;
+end; //Create
+
+destructor TZODFConditionalWriteHelper.Destroy();
+var
+  i: integer;
+
+begin
+  SetLength(FPageIndex, 0);
+  FPageIndex := nil;
+  SetLength(FPageNames, 0);
+  FPageNames := nil;
+
+  for i := 0 to FCount - 1 do
+  begin
+    SetLength(FPageCF[i].StyleCFID, 0);
+    FPageCF[i].StyleCFID := nil;
+    SetLength(FPageCF[i].Areas, 0);
+    FPageCF[i].Areas := nil;
+  end;
+
+  SetLength(FPageCF, 0);
+  FPageCF := nil;
+  inherited
+end; //Destroy
+
+//«апись стилей с условным форматированием
+//INPUT
+//      xml: TZsspXMLWriterH - куда записывать
+procedure TZODFConditionalWriteHelper.WriteCFStyles(xml: TZsspXMLWriterH);
+var
+  i, j: integer;
+  _sheet: TZSheet;
+  _CFStyle: TZConditionalStyle;
+  _StyleID: integer;
+
+begin
+  if (not Assigned(xml)) then
+    exit;
+  if (not Assigned(FXMLSS)) then
+    exit;
+
+  _StyleID := FXMLSS.Styles.Count;
+  for i := 1 to FCount - 1 do
+  begin
+    _sheet := FXMLSS.Sheets[FPageIndex[i]];
+    if (_sheet.ConditionalFormatting.Count > 0) then
+    begin
+      _CFStyle := _sheet.ConditionalFormatting[i];
+      if (_CFStyle.Count > 0) then
+      begin
+        for j := 0 to _CFStyle.Count - 1 do
+        begin
+          if (_CFStyle.Areas.Count > 0) then
+          begin
+            //добавл€ем стиль
+          end;
+        end; //jor j
+      end; //if
+    end; //if
+  end; //for i
+end; //WriteCFStyles
+
+//ѕолучить номер стил€ (с условным форматированием или без) €чейки
+//INPUT
+//  const PageIndex: integer  - индекс страницы
+//  const Col: integer        - номер столбца
+//  const Row: integer        - номер строки
+//RETURN
+//      integer - номер стил€ (-1 - стиль по-умолчанию)
+function TZODFConditionalWriteHelper.GetStyleNum(const PageIndex, Col, Row: integer): integer;
+begin
+  result := -1;
+end; //GetStyleNum
+
+{$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
 
 //BooleanToStr дл€ ODF //TODO: потом заменить
 function ODFBoolToStr(value: boolean): string;
@@ -946,6 +1083,9 @@ var
   _xml: TZsspXMLWriterH;
   ColumnStyle, RowStyle: array of array of integer;  //стили столбцов/строк
   i: integer;
+  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+  _cfwriter: TZODFConditionalWriteHelper;
+  {$ENDIF}
 
   //«аголовок дл€ content.xml
   procedure WriteHeader();
@@ -1129,6 +1269,11 @@ var
       ODFWriteTableStyle(XMLSS, _xml, i, false);
       _xml.WriteEndTagNode(); //style:style
     end;
+
+    //—тили дл€ условного форматировани€
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    _cfwriter.WriteCFStyles(_xml);
+    {$ENDIF}
 
     _xml.WriteEndTagNode(); //office:automatic-styles
   end; //WriteHeader
@@ -1314,7 +1459,11 @@ var
         end;
 
         //стиль
+        {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+        _StyleID := _cfwriter.GetStyleNum(PageIndex, j, i);
+        {$ELSE}
         _StyleID := ProcessedSheet.Cell[j, i].CellStyle;
+        {$ENDIF}
         if ((_StyleID >= 0) and (_StyleID < XMLSS.Styles.Count)) then
           _xml.Attributes.Add('table:style-name', 'ce' + IntToStr(_StyleID), false);
 
@@ -1432,6 +1581,9 @@ var
 begin
   result := 0;
   _xml := nil;
+  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+  _cfwriter := nil;
+  {$ENDIF}
   try
     _xml := TZsspXMLWriterH.Create();
     _xml.TabLength := 1;
@@ -1442,6 +1594,9 @@ begin
       result := 2;
       exit;
     end;
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    _cfwriter := TZODFConditionalWriteHelper.Create(XMLSS, _pages, _names, PageCount);
+    {$ENDIF}
     WriteHeader();
     WriteBody();
     _xml.EndSaveTo();
@@ -1460,6 +1615,10 @@ begin
       RowStyle[i] := nil;
     end;
     RowStyle := nil;
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    if Assigned(_cfwriter) then
+      FreeAndNil(_cfwriter);
+    {$ENDIF}
   end;
 end; //ODFCreateContent
 
