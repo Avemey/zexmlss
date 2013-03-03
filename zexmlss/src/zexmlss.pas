@@ -1806,7 +1806,7 @@ begin
   begin
     zzz := Source as TZStyles;
     FDefaultStyle.Assign(zzz.DefaultStyle);
-    FCount := zzz.Count;
+    Count := zzz.Count;
     for i := 0 to Count - 1 do
       FStyles[i].Assign(zzz[i]);
   end else
