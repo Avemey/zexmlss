@@ -530,6 +530,7 @@ type
     procedure Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer); overload;
     procedure Assign(Source: TPersistent); override;
     procedure Delete(num: integer);
+    function IsCellInArea(ColumnNum, RowNum: integer): boolean;
     function IsEqual(Source: TPersistent): boolean; virtual;
     property Count: integer read FCount write SetCount;
     property Items[num: integer]: TZConditionalAreaItem read GetItem write SetItem; default;
@@ -673,6 +674,7 @@ type
   public
     constructor Create(AStore: TZEXMLSS); virtual;
     destructor  Destroy(); override;
+    procedure Assign(Source: TPersistent); override;
     property Count: integer read FCount write SetSheetCount;
     property Sheet[num: integer]: TZSheet read GetSheet write SetSheet; default;
   end;
@@ -727,6 +729,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy();override;
+    procedure Assign(Source: TPersistent); override;
     procedure GetPixelSize(hdc: HWND);  // получает HorPixelSize и VertPixelSize
     //»ћ’ќ, лучще сделать функции сохранени€/загрузки в другом модуле
     //function SaveToFile(const FileName: ansistring; const SheetsNumbers: array of integer; const SheetsNames: array of ansistring; CodePage: byte {$IFDEF VER130}{$ELSE} = 0{$ENDIF}): integer; overload; virtual;
@@ -2700,6 +2703,22 @@ begin
   inherited Destroy();
 end;
 
+procedure TZSheets.Assign(Source: TPersistent);
+var
+  t: TZSheets;
+  i: integer;
+
+begin
+  if (Source is TZSheets) then
+  begin
+    t := Source as TZSheets;
+    Count := t.Count;
+    for i := 0 to Count - 1 do
+      Sheet[i].Assign(t.Sheet[i]);
+  end else
+    inherited Assign(Source);
+end; //Assign
+
 procedure TZSheets.SetSheetCount(const Value: integer);
 var
   i: integer;
@@ -2816,6 +2835,26 @@ begin
   FreeAndNil(FSheets);
   inherited Destroy();
 end;
+
+procedure TZEXMLSS.Assign(Source: TPersistent);
+var
+  t: TZEXMLSS;
+
+begin
+  if (Source is TZEXMLSS) then
+  begin
+    t := Source as TZEXMLSS;
+    Styles.Assign(t.Styles);
+    Sheets.Assign(t.Sheets);
+  end else
+  if (Source is TZStyles) then
+    Styles.Assign(Source as TZStyles)
+  else
+  if (Source is TZSheets) then
+    Sheets.Assign(Source as TZSheets)
+  else
+    inherited Assign(Source);
+end; //Assign
 
 procedure TZEXMLSS.SetHorPixelSize(Value: real);
 begin
@@ -3426,6 +3465,34 @@ begin
     Count := Count -1;
   end;
 end; //Delete
+
+//ќпредел€ет, находитс€ ли €чейка в области
+//INPUT
+//      ColumnNum: integer  - номер столбца €чейки
+//      RowNum: integer     - номер строки €чейки
+//RETURN
+//      boolean - true - €чейка входит в область
+function TZConditionalAreas.IsCellInArea(ColumnNum, RowNum: integer): boolean;
+var
+  i: integer;
+  x, y, xx, yy: integer;
+
+begin
+  result := false;
+  for i := 0 to Count - 1 do
+  begin
+    x := FItems[i].Column;
+    y := FItems[i].Row;
+    xx := x + FItems[i].Width;
+    yy := y + FItems[i].Height;
+    if ((ColumnNum >= x) and (ColumnNum <= xx) and
+        (RowNum >= y) and (RowNum <= yy))  then
+    begin
+      result := true;
+      break;
+    end;
+  end;
+end; //IsCellInArea
 
 function TZConditionalAreas.IsEqual(Source: TPersistent): boolean;
 var
