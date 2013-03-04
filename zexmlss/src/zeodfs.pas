@@ -2685,7 +2685,8 @@ var
             CheckCol(_CurrentPage, _CurrentCol + _RepeatCellCount + 1);
             for i := 1 to _RepeatCellCount do
               XMLSS.Sheets[_CurrentPage].Cell[_CurrentCol + i, _CurrentRow].Assign(_CurrCell);
-            inc(_CurrentCol, _RepeatCellCount);
+            //-1, т.к. нужно учитывать, что номер €чейки увеличиваетс€ на 1 каждый раз
+            inc(_CurrentCol, _RepeatCellCount - 1);
           end;
 
         inc(_CurrentCol);
