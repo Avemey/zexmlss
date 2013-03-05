@@ -285,6 +285,7 @@ var
   _sheet: TZSheet;
   _CFStyle: TZConditionalStyle;
   _StyleID: integer;
+  _kol: integer;
 
 begin
   if (not Assigned(xml)) then
@@ -293,7 +294,7 @@ begin
     exit;
 
   _StyleID := FXMLSS.Styles.Count;
-  for i := 1 to FCount - 1 do
+  for i := 0 to FCount - 1 do
   begin
     _sheet := FXMLSS.Sheets[FPageIndex[i]];
     if (_sheet.ConditionalFormatting.Count > 0) then
@@ -305,7 +306,18 @@ begin
         begin
           if (_CFStyle.Areas.Count > 0) then
           begin
-            //добавляем стиль
+            //добавляем стиль для условного форматирования
+            //  обычно будет максимум 1-2 условное форматирование,
+            //    поэтому пока не паримся насчёт SetLength.
+            //  TODO: если в будущем понадобится добавлять большое кол-во
+            //        условных форматирований, то нужно будет чуть оптимизировать.
+            inc(FPageCF[i].CountCF);
+            _kol := FPageCF[i].CountCF;
+            SetLength(FPageCF[i].StyleCFID, _kol);
+            SetLength(FPageCF[i].Areas, _kol);
+            FPageCF[i].StyleCFID[_kol - 1] := _StyleID;
+            FPageCF[i].Areas[_kol - 1] := _CFStyle.Areas;
+            inc(_StyleID);
           end;
         end; //jor j
       end; //if
@@ -1465,6 +1477,7 @@ var
         //стиль
         {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
         _StyleID := _cfwriter.GetStyleNum(PageIndex, j, i);
+        _StyleID := ProcessedSheet.Cell[j, i].CellStyle;
         {$ELSE}
         _StyleID := ProcessedSheet.Cell[j, i].CellStyle;
         {$ENDIF}
@@ -1495,6 +1508,7 @@ var
             // всё остальное считаем строкой (потом подправить, возможно, добавить новые типы)
             {ZEansistring ZEError ZEDateTime}
         end;
+
         if (length(ss) > 0) then
           _xml.Attributes.Add('office:value-type', ss, false);
 
