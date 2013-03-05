@@ -520,6 +520,10 @@ begin
     end;
   end;
 
+  //TODO: по умолчанию no-wrap?
+  if (ProcessedStyle.Alignment.WrapText) then
+    _xml.Attributes.Add('fo:wrap-option', 'wrap');
+
   for j := n to 5 do
   begin
     case (j) of
@@ -2096,6 +2100,12 @@ var
           s := xml.Attributes.ItemsByName['style:diagonal-tl-br'];
           if (length(s) > 0) then
             ZEStrToODFBorderStyle(s, _style.Border[5]);
+
+          //ѕеренос по словам (wrap no-wrap)
+          s := xml.Attributes.ItemsByName['fo:wrap-option'];
+          if (length(s) > 0) then
+            if (UpperCase(s) = 'WRAP') then
+              _style.Alignment.WrapText := true;
         end else //if
 
         if ((xml.TagName = 'style:paragraph-properties') and (xml.TagType in [4, 5])) then
@@ -2407,7 +2417,14 @@ var
         //текущее строковое значение
         //*s := xml.Attributes.ItemsByName['office:string-value'];
         //“ип значени€ в €чейке
-        _CurrCell.CellType := ODFTypeToZCellType(xml.Attributes.ItemsByName['table:value-type']);
+        s := xml.Attributes.ItemsByName['table:value-type'];
+        if (length(s) = 0) then
+        begin
+          s := xml.Attributes.ItemsByName['office:value-type'];
+          _CurrCell.CellType := ODFTypeToZCellType(s);
+        end else
+          _CurrCell.CellType := ODFTypeToZCellType(s);
+
         //защищЄнность €чейки
         s := xml.Attributes.ItemsByName['table:protected']; //{tut} надо будет добавить ещЄ один стиль
         //table:number-matrix-rows-spanned ??
@@ -2516,7 +2533,7 @@ var
           end; //while *table-cell
         end; //if
 
-        _CurrCell.Data := _celltext;
+        _CurrCell.Data := ZEReplaceEntity(_celltext);
 
         //≈сли €чейку нужно повторить
         if (isRepeatCell) then
