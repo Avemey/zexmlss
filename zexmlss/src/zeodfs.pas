@@ -45,7 +45,7 @@ interface
 {$ENDIF}
 
 uses
-  SysUtils, Graphics, Classes, Types, 
+  SysUtils, Graphics, Classes, Types,
   zsspxml, zexmlss, zesavecommon, zeZippy
   {$IFDEF FPC},zipper {$ELSE}{$I odszipuses.inc}{$ENDIF};
 
@@ -99,7 +99,8 @@ function ReadODFContent(var XMLSS: TZEXMLSS; stream: TStream): boolean;
 function ReadODFSettings(var XMLSS: TZEXMLSS; stream: TStream): boolean;
 
 implementation
-uses StrUtils;
+
+uses StrUtils, zeformula;
 
 const
   ZETag_StyleFontFace       = 'style:font-face';      //style:font-face
@@ -157,6 +158,7 @@ type
     FPageNames: TStringDynArray;
     FPageCF: array of TODFCFWriterArray;
     FXMLSS: TZEXMLSS;
+    FStylesCount: integer;
   protected
   public
     constructor Create(ZEXMLSS: TZEXMLSS;
@@ -166,6 +168,7 @@ type
     procedure WriteCFStyles(xml: TZsspXMLWriterH);
     function GetStyleNum(const PageIndex, Col, Row: integer): integer;
     destructor Destroy(); override;
+    property StylesCount: integer read FStylesCount;
   end;
 
 {$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
@@ -240,6 +243,7 @@ var
   i: integer;
 
 begin
+  FStylesCount := 0;
   SetLength(FPageIndex, PageCount);
   Setlength(FPageNames, PageCount);
   SetLength(FPageCF, PageCount);
@@ -286,46 +290,176 @@ var
   _CFStyle: TZConditionalStyle;
   _StyleID: integer;
   _kol: integer;
+  _StCondition: TZConditionalStyleItem;
+  _att: TZAttributesH;
+  v1, v2: string;
+  d1, d2: Double;
+  b: boolean;
+  _currPageName: string;
+  s: string;
+
+  //Добавить условие
+  //INPUT
+  //      mapnum: integer - номер условия
+  //RETURN
+  //      boolean - true - условие адекватное, добавляем
+  function _AddMapCondition(mapnum: integer): boolean;
+  var
+    i: integer;
+
+  begin
+    result := false;
+    _StCondition := _CFStyle[mapnum];
+    xml.Attributes.Clear();
+
+    v1 := _StCondition.Value1;
+    v2 := _StCondition.Value2;
+
+    s := '';
+    case _StCondition.Condition of
+      ZCFIsTrueFormula:;
+      ZCFCellContentIsBetween:
+        begin
+          d1 := ZETryStrToFloat(v1, b);
+          if (b) then
+          begin
+            d2 := ZETryStrToFloat(v2, b);
+            if (b and (d1 <= d2)) then
+            begin
+              result := true;
+              s := 'cell-content-is-between(' +
+                   ZEFloatSeparator(FormatFloat('', d1)) + ',' +
+                   ZEFloatSeparator(FormatFloat('', d2)) + ')'
+            end;
+          end;
+        end;
+      ZCFCellContentIsNotBetween:;
+      ZCFCellContentOperator:;
+      ZCFNumberValue:;
+      ZCFString:;
+      ZCFBoolTrue:;
+      ZCFBoolFalse:;
+      ZCFFormula:;
+    end; //case
+
+    if (result) then
+    begin
+      xml.Attributes.Add('style:condition', s);
+      if ((_StCondition.ApplyStyleID >= 0) and (_StCondition.ApplyStyleID < FXMLSS.Styles.Count)) then
+      begin
+        s := 'ce' + IntToStr(_StCondition.ApplyStyleID);
+        xml.Attributes.Add('style:apply-style-name', s);
+
+        if ((_StCondition.BaseCellPageIndex < 0) or (_StCondition.BaseCellPageIndex >= FCount)) then
+          s := _currPageName
+        else
+        begin
+          b := false;
+          for i := 0 to FCount - 1 do
+            if (FPageIndex[i] = _StCondition.BaseCellPageIndex) then
+            begin
+              s := FPageNames[i];
+              b := true;
+              break;
+            end;
+          if (not b) then
+            s := _currPageName;
+        end;
+        //listname.ColRow
+        s := s + '.' + ZEGetA1byCol(_StCondition.BaseCellColumnIndex) + IntToStr(_StCondition.BaseCellRowIndex + 1);
+
+        xml.Attributes.Add('style:base-cell-address', s);
+      end else
+        result := false;
+    end;
+  end; //_AddMapCondition
+
+  //Добавить стиль условного форматирования
+  //  (текущий итем условного форматирования берётся из _CFStyle)
+  //INPUT
+  //      idx: integer - "индекс" страницы
+  procedure _AddCFStyle(idx: integer);
+  var
+    i: integer;
+    _addedCount: integer; //кол-во добавленных условий
+
+  begin
+    _addedCount := 0;
+    //добавляем стиль для условного форматирования
+    //  обычно будет максимум 1-2 условное форматирование,
+    //    поэтому пока не паримся насчёт SetLength.
+    //  TODO: если в будущем понадобится добавлять большое кол-во
+    //        условных форматирований, то нужно будет чуть оптимизировать.
+    inc(FPageCF[idx].CountCF);
+    _kol := FPageCF[idx].CountCF;
+    SetLength(FPageCF[idx].StyleCFID, _kol);
+    SetLength(FPageCF[idx].Areas, _kol);
+    FPageCF[idx].StyleCFID[_kol - 1] := _StyleID;
+    FPageCF[idx].Areas[_kol - 1] := _CFStyle.Areas;
+
+    _att.Clear();
+    _att.Add('style:name', 'ce' + IntToStr(_StyleID));
+    _att.Add('style:family', 'table-cell');
+    //TODO: разобраться в style:parent-style-name для условного форматирования.
+    //      Скорее всего придётся игнорировать стиль ячейки, или усложнять
+    //      эту функцию ^_^
+    _att.Add('style:parent-style-name', 'Default');
+
+    for i := 0 to _CFStyle.Count - 1 do
+      if (_AddMapCondition(i)) then
+      begin
+        //Если добавилось хотя бы 1 условие
+        if (_addedCount = 0) then
+          xml.WriteTagNode('style:style', _att, true, true, false);
+
+        xml.WriteEmptyTag('style:map', true, true);
+        inc(_addedCount);
+      end; //if
+
+    if (_addedCount > 0) then
+    begin
+      xml.WriteEndTagNode(); //style:style
+      inc(_StyleID);
+      inc(FStylesCount);
+    end else
+    begin
+      //уменьшаем кол-во стилей
+      dec(FPageCF[idx].CountCF);
+    end;
+
+  end; //_AddCFStyle
 
 begin
   if (not Assigned(xml)) then
     exit;
   if (not Assigned(FXMLSS)) then
     exit;
+  _att := nil;
 
-  _StyleID := FXMLSS.Styles.Count;
-  for i := 0 to FCount - 1 do
-  begin
-    _sheet := FXMLSS.Sheets[FPageIndex[i]];
-    if (_sheet.ConditionalFormatting.Count > 0) then
+  try
+    _att := TZAttributesH.Create();
+    _StyleID := FXMLSS.Styles.Count;
+    for i := 0 to FCount - 1 do
     begin
-      _CFStyle := _sheet.ConditionalFormatting[i];
-      if (_CFStyle.Count > 0) then
-      begin
-        for j := 0 to _CFStyle.Count - 1 do
+      _sheet := FXMLSS.Sheets[FPageIndex[i]];
+      _currPageName := FPageNames[i];
+      if (_sheet.ConditionalFormatting.Count > 0) then
+        for j := 0 to _sheet.ConditionalFormatting.Count - 1 do
         begin
-          if (_CFStyle.Areas.Count > 0) then
-          begin
-            //добавляем стиль для условного форматирования
-            //  обычно будет максимум 1-2 условное форматирование,
-            //    поэтому пока не паримся насчёт SetLength.
-            //  TODO: если в будущем понадобится добавлять большое кол-во
-            //        условных форматирований, то нужно будет чуть оптимизировать.
-            inc(FPageCF[i].CountCF);
-            _kol := FPageCF[i].CountCF;
-            SetLength(FPageCF[i].StyleCFID, _kol);
-            SetLength(FPageCF[i].Areas, _kol);
-            FPageCF[i].StyleCFID[_kol - 1] := _StyleID;
-            FPageCF[i].Areas[_kol - 1] := _CFStyle.Areas;
-            inc(_StyleID);
-          end;
-        end; //jor j
-      end; //if
-    end; //if
-  end; //for i
+          _CFStyle := _sheet.ConditionalFormatting[j];
+          if ((_CFStyle.Count > 0) and (_CFStyle.Areas.Count > 0)) then
+            _AddCFStyle(i);
+        end; //for
+    end; //for i
+  finally
+    if (Assigned(_att)) then
+      FreeAndNil(_att);
+  end;
 end; //WriteCFStyles
 
 //Получить номер стиля (с условным форматированием или без) ячейки
+//  подразумевается, что индекс страницы и координаты ячейки правильные и
+//  не выходят за границы.
 //INPUT
 //  const PageIndex: integer  - индекс страницы
 //  const Col: integer        - номер столбца
@@ -333,8 +467,22 @@ end; //WriteCFStyles
 //RETURN
 //      integer - номер стиля (-1 - стиль по-умолчанию)
 function TZODFConditionalWriteHelper.GetStyleNum(const PageIndex, Col, Row: integer): integer;
+var
+  i: integer;
+
 begin
-  result := -1;
+  if (FPageCF[PageIndex].CountCF > 0) then
+  begin
+    for i := 0 to FPageCF[PageIndex].CountCF - 1 do
+      if (FPageCF[PageIndex].Areas[i].IsCellInArea(Col, Row)) then
+      begin
+        result := FPageCF[PageIndex].StyleCFID[i];
+        exit;
+      end;
+  end;
+
+  //Если не найдено условное форматирование
+  result := FXMLSS.Sheets[FPageIndex[PageIndex]].Cell[Col, Row].CellStyle;
 end; //GetStyleNum
 
 {$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
@@ -1477,11 +1625,11 @@ var
         //стиль
         {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
         _StyleID := _cfwriter.GetStyleNum(PageIndex, j, i);
-        _StyleID := ProcessedSheet.Cell[j, i].CellStyle;
+        if ((_StyleID >= 0) and (_StyleID < XMLSS.Styles.Count + _cfwriter.StylesCount)) then
         {$ELSE}
         _StyleID := ProcessedSheet.Cell[j, i].CellStyle;
-        {$ENDIF}
         if ((_StyleID >= 0) and (_StyleID < XMLSS.Styles.Count)) then
+        {$ENDIF}
           _xml.Attributes.Add('table:style-name', 'ce' + IntToStr(_StyleID), false);
 
         //защита ячейки

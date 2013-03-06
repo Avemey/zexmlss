@@ -32,7 +32,8 @@ const
 //  TZESaveStrArray = array of string;  // Since Delphi 7 and FPC 2005 - TStringDynArray
 
 //ѕопытка преобразовать строку в число
-function ZETryStrToFloat(const st: string; valueIfError: double = 0): double;
+function ZETryStrToFloat(const st: string; valueIfError: double = 0): double; overload;
+function ZETryStrToFloat(const st: string; out isOk: boolean; valueIfError: double = 0): double; overload;
 
 //ѕопытка преобразовать строку в boolean
 function ZETryStrToBoolean(const st: string; valueIfError: boolean = false): boolean;
@@ -265,6 +266,42 @@ begin
       result := valueIfError;
   end;
 end; //ZETryStrToBoolean
+
+//ѕопытка преобразовать строку в число
+//INPUT
+//  const st: string        - строка
+//  out isOk: boolean       - если true - ошибки небыло
+//    valueIfError: double  - значение, которое подставл€етс€ при ошибке преобразовани€
+function ZETryStrToFloat(const st: string; out isOk: boolean; valueIfError: double = 0): double;
+var
+  s: string;
+  i: integer;
+
+begin
+  result := 0;
+  isOk := true;
+  if (length(trim(st)) <> 0) then
+  begin
+    s := '';
+    for i := 1 to length(st) do
+      {$IFDEF DELPHI_UNICODE}
+      if (CharInSet(st[i], ['.', ','])) then
+      {$ELSE}
+      if (st[i] in ['.', ',']) then
+      {$ENDIF}
+        {$IFDEF DELPHI_UNICODE}
+        s := s + FormatSettings.DecimalSeparator
+        {$ELSE}
+        s := s + DecimalSeparator
+        {$ENDIF}
+      else if (st[i] <> ' ') then
+        s := s + st[i];
+
+    isOk := TryStrToFloat(s, result);
+    if (not isOk) then
+      result := valueIfError;
+  end;
+end; //ZETryStrToFloat
 
 //ѕопытка преобразовать строку в число
 //INPUT
