@@ -14,8 +14,7 @@ V 0.0.6  	2013.02.23
         * можно написать свою обёртку для любимого упаковщика
     + функции для экспорта в запакованные ODS и XLSX с использованием
       zeZippy: ExportXmlssToODFS и ExportXmlssToXLSX.
-    + zeSave.pas (только для Delphi+windows (можно Lazarus+windows, но не
-      кросплатформенно)): IZXMLSSave/TZXMLSSave интерфейс для простого экспорта
+    + zeSave.pas: IZXMLSSave/TZXMLSSave интерфейс для простого экспорта
       в нужный формат (ods - zeSaveODS.pas; excel xml - zeSaveEXML.pas; 
       xlsx - zeSaveXLSX.pas).
     + Добавлены свойства в TZCell: AsDouble и AsInteger.
