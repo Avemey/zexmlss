@@ -100,11 +100,18 @@ function ReadODFSettings(var XMLSS: TZEXMLSS; stream: TStream): boolean;
 
 implementation
 
-uses StrUtils, zeformula;
+uses
+   StrUtils
+   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}, zeformula {$ENDIF} //пока формулы нужны только для условного форматирования
+   ;
 
 const
   ZETag_StyleFontFace       = 'style:font-face';      //style:font-face
   ZETag_Attr_StyleName      = 'style:name';           //style:name
+
+  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+  const_ConditionalStylePrefix = 'ConditionalStyle_f';
+  {$ENDIF}
 
 type
   TZODFColumnStyle = record
@@ -297,6 +304,7 @@ var
   b: boolean;
   _currPageName: string;
   s: string;
+  num: integer;
 
   //Добавить условие
   //INPUT
@@ -311,6 +319,7 @@ var
     result := false;
     _StCondition := _CFStyle[mapnum];
     xml.Attributes.Clear();
+    inc(num);
 
     v1 := _StCondition.Value1;
     v2 := _StCondition.Value2;
@@ -347,7 +356,7 @@ var
       xml.Attributes.Add('style:condition', s);
       if ((_StCondition.ApplyStyleID >= 0) and (_StCondition.ApplyStyleID < FXMLSS.Styles.Count)) then
       begin
-        s := 'ce' + IntToStr(_StCondition.ApplyStyleID);
+        s := const_ConditionalStylePrefix + IntToStr(num);//'ce' + IntToStr(_StCondition.ApplyStyleID);
         xml.Attributes.Add('style:apply-style-name', s);
 
         if ((_StCondition.BaseCellPageIndex < 0) or (_StCondition.BaseCellPageIndex >= FCount)) then
@@ -419,14 +428,13 @@ var
     if (_addedCount > 0) then
     begin
       xml.WriteEndTagNode(); //style:style
-      inc(_StyleID);
       inc(FStylesCount);
+      inc(_StyleID);
     end else
     begin
       //уменьшаем кол-во стилей
       dec(FPageCF[idx].CountCF);
     end;
-
   end; //_AddCFStyle
 
 begin
@@ -435,6 +443,7 @@ begin
   if (not Assigned(FXMLSS)) then
     exit;
   _att := nil;
+  num := 0;
 
   try
     _att := TZAttributesH.Create();
@@ -465,12 +474,13 @@ end; //WriteCFStyles
 //  const Col: integer        - номер столбца
 //  const Row: integer        - номер строки
 //RETURN
-//      integer - номер стиля (-1 - стиль по-умолчанию)
+//      integer - номер стиля (-1 - стиль по умолчанию)
 function TZODFConditionalWriteHelper.GetStyleNum(const PageIndex, Col, Row: integer): integer;
 var
   i: integer;
 
 begin
+  result := -1;
   if (FPageCF[PageIndex].CountCF > 0) then
   begin
     for i := 0 to FPageCF[PageIndex].CountCF - 1 do
@@ -1054,7 +1064,35 @@ end; //ODFWriteTableStyle
 function ODFCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
                           const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
 var
-  _xml: TZsspXMLWriterH; 
+  _xml: TZsspXMLWriterH;
+
+  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+  //Добавить стили условного форматирования
+  procedure _AddConditionalStyles();
+  var
+    i, j, k: integer;
+    _cf: TZConditionalFormatting;
+    num: integer;
+
+  begin
+    num := 1;
+    for i := 0 to PageCount - 1 do
+    begin
+      _cf := XMLSS.Sheets[i].ConditionalFormatting;
+      for j := 0 to _cf.Count - 1 do
+      for k := 0 to _cf[j].Count - 1 do
+      begin
+        _xml.Attributes.Clear();
+        _xml.Attributes.Add(ZETag_Attr_StyleName, const_ConditionalStylePrefix + IntToStr(num));
+        _xml.Attributes.Add('style:family', 'table-cell', false);
+        _xml.WriteTagNode('style:style', true, true, true);
+        ODFWriteTableStyle(XMLSS, _xml, _cf[j][k].ApplyStyleID, false);
+        _xml.WriteEndTagNode();
+        inc(num);
+      end; //for k
+    end; //for i
+  end; //_AddConditionalStyles
+  {$ENDIF}
 
 begin
   result := 0;
@@ -1087,6 +1125,10 @@ begin
     _xml.WriteTagNode('style:style', true, true, true);
     ODFWriteTableStyle(XMLSS, _xml, -1, true);
     _xml.WriteEndTagNode();
+
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    _AddConditionalStyles();
+    {$ENDIF}
 
     _xml.WriteEndTagNode(); //office:styles
 
