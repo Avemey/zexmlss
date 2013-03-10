@@ -622,25 +622,82 @@ begin
 end; //GenODStylesAttr
 
 //<office:font-face-decls> ... </office:font-face-decls>
-procedure ZEWriteFontFaceDecls(_xml: TZsspXMLWriterH);
+procedure ZEWriteFontFaceDecls(XMLSS: TZEXMLSS; _xml: TZsspXMLWriterH);
+var
+  kol, maxkol: integer;
+  _fn: array of string;
+
+  procedure _addFonts();
+  var
+    i, j: integer;
+    s: string;
+    b: boolean;
+    _name: string;
+
+  begin
+    for i := -1 to XMLSS.Styles.Count - 1 do
+    begin
+      _name := XMLSS.Styles[i].Font.Name;
+      s := UpperCase(_name);
+      b := true;
+      for j := 0 to kol - 1 do
+        if (_fn[j] = s) then
+        begin
+          b := false;
+          break;
+        end;
+      if (b) then
+      begin
+        _xml.Attributes.ItemsByNum[0] := _name;
+        if (pos(' ', _name) = 0) then
+          _xml.Attributes.ItemsByNum[1] := _name
+        else
+          _xml.Attributes.ItemsByNum[1] := '''' + _name + '''';
+
+        _xml.WriteEmptyTag(ZETag_StyleFontFace, true, true);
+        inc(kol);
+        if (kol + 1 >= maxkol) then
+        begin
+          inc(maxkol, 10);
+          SetLength(_fn, maxkol);
+        end;
+        _fn[kol - 1] := s;
+      end; //if
+    end; //for
+  end; //_addFonts
+
 begin
-  _xml.WriteTagNode('office:font-face-decls', true, true, true);
-  _xml.Attributes.Add(ZETag_Attr_StyleName, 'Arial', true);
-  _xml.Attributes.Add('svg:font-family', 'Arial', true);
-  _xml.Attributes.Add('style:font-family-generic', 'swiss', true);
-  _xml.Attributes.Add('style:font-pitch', 'variable', true);
-  _xml.WriteEmptyTag(ZETag_StyleFontFace, true, false);
+  maxkol := 10;
+  SetLength(_fn, maxkol);
+  kol := 3;
+  _fn[0] := 'ARIAL';
+  _fn[1] := 'MANGAL';
+  _fn[2] := 'TAHOMA';
+  try
+    _xml.WriteTagNode('office:font-face-decls', true, true, true);
+    _xml.Attributes.Add(ZETag_Attr_StyleName, 'Arial', true);
+    _xml.Attributes.Add('svg:font-family', 'Arial', true);
+    _xml.Attributes.Add('style:font-family-generic', 'swiss', true);
+    _xml.Attributes.Add('style:font-pitch', 'variable', true);
+    _xml.WriteEmptyTag(ZETag_StyleFontFace, true, false);
 
-  _xml.Attributes.ItemsByNum[0] := 'Mangal';
-  _xml.Attributes.ItemsByNum[1] := 'Mangal';
-  _xml.Attributes.ItemsByNum[2] := 'system';
-  _xml.WriteEmptyTag(ZETag_StyleFontFace, true, false);
+    _xml.Attributes.ItemsByNum[0] := 'Mangal';
+    _xml.Attributes.ItemsByNum[1] := 'Mangal';
+    _xml.Attributes.ItemsByNum[2] := 'system';
+    _xml.WriteEmptyTag(ZETag_StyleFontFace, true, false);
 
-  _xml.Attributes.ItemsByNum[0] := 'Tahoma';
-  _xml.Attributes.ItemsByNum[1] := 'Tahoma';
-  _xml.WriteEmptyTag(ZETag_StyleFontFace, true, false);
-  _xml.Attributes.Clear();
-  _xml.WriteEndTagNode(); //office:font-face-decls
+    _xml.Attributes.ItemsByNum[0] := 'Tahoma';
+    _xml.Attributes.ItemsByNum[1] := 'Tahoma';
+    _xml.WriteEmptyTag(ZETag_StyleFontFace, true, false);
+
+    _addFonts();
+
+    _xml.Attributes.Clear();
+    _xml.WriteEndTagNode(); //office:font-face-decls
+  finally
+    SetLength(_fn, 0);
+    _fn := nil;
+  end;
 end; //WriteFontFaceDecls
 
 //Переводит стиль границы в строку для ODF
@@ -1112,7 +1169,7 @@ begin
     GenODStylesAttr(_xml.Attributes);
     _xml.WriteTagNode('office:document-styles', true, true, true);
     _xml.Attributes.Clear();
-    ZEWriteFontFaceDecls(_xml);
+    ZEWriteFontFaceDecls(XMLSS, _xml);
 
     //office:styles
     _xml.Attributes.Clear();
@@ -1419,7 +1476,7 @@ var
     _xml.WriteTagNode('office:document-content', true, true, false);
     _xml.Attributes.Clear();
     _xml.WriteEmptyTag('office:scripts', true, false);  //потом на досуге можно подумать
-    ZEWriteFontFaceDecls(_xml);
+    ZEWriteFontFaceDecls(XMLSS, _xml);
 
     ///********   Automatic Styles   ********///
     _xml.WriteTagNode('office:automatic-styles', true, true, false);
@@ -3006,6 +3063,7 @@ var
           if (TryStrToInt(s, t)) then
             if (t < 255) then
             begin
+              dec(t); //т.к. один столбец уже есть
               CheckCol(_CurrentPage, _MaxCol + t + 1);
               for i := 1 to t do
                 XMLSS.Sheets[_CurrentPage].Columns[_MaxCol + i].Assign(XMLSS.Sheets[_CurrentPage].Columns[_MaxCol]);
