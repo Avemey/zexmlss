@@ -75,9 +75,23 @@ function SaveXmlssToHtml(var XMLSS: TZEXMLSS; const PageNum: integer; Title: str
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 
+//Сохраняет в поток в формате Excel XML SpreadSheet
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string): integer; overload;
+
+//Сохраняет в поток в формате Excel XML SpreadSheet
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream): integer; overload;
+
 //Сохраняет в файл в формате Excel XML SpreadSheet
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
+
+//Сохраняет в файл в формате Excel XML SpreadSheet
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string): integer; overload;
+
+//Сохраняет в файл в формате Excel XML SpreadSheet
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
 
 //Читает из потока Excel XML SpreadSheet (EXMLSS)
 //      XMLSS: TZEXMLSS                 - хранилище
@@ -1883,6 +1897,26 @@ begin
   end;
 end; //SaveXmlssToEXML
 
+//Сохраняет в поток в формате Excel XML SpreadSheet
+//      XMLSS: TZEXMLSS                 - хранилище
+//      Stream: TStream                 - поток
+//      SheetsNumbers: array of integer - массив номеров страниц в нужной последовательности
+//      SheetsNames: array of string    - массив названий страниц
+//              количество элементов в двух массивах должны совпадать
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string): integer; overload;
+begin
+  result := SaveXmlssToEXML(XMLSS, Stream, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
+end;
+
+//Сохраняет в поток в формате Excel XML SpreadSheet
+//      XMLSS: TZEXMLSS                 - хранилище
+//      Stream: TStream                 - поток
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream): integer; overload;
+begin
+  result := SaveXmlssToEXML(XMLSS, Stream, [], []);
+end;
+
 //Сохраняет в файл в формате Excel XML SpreadSheet
 //      XMLSS: TZEXMLSS                 - хранилище
 //      FileName: string            - Имя файла
@@ -1911,6 +1945,26 @@ begin
     if Stream <> nil then
       Stream.Free;
   end;
+end; //SaveXmlssToEXML
+
+//Сохраняет в файл в формате Excel XML SpreadSheet
+//      XMLSS: TZEXMLSS                 - хранилище
+//      FileName: string            - Имя файла
+//      SheetsNumbers: array of integer - массив номеров страниц в нужной последовательности
+//      SheetsNames: array of string    - массив названий страниц
+//              количество элементов в двух массивах должны совпадать
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string): integer; overload;
+begin
+  result := SaveXmlssToEXML(XMLSS, FileName, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
+end; //SaveXmlssToEXML
+
+//Сохраняет в файл в формате Excel XML SpreadSheet
+//      XMLSS: TZEXMLSS                 - хранилище
+//      FileName: string            - Имя файла
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
+begin
+  result := SaveXmlssToEXML(XMLSS, FileName, [], []);
 end; //SaveXmlssToEXML
 
 //Читает из потока Excel XML SpreadSheet (EXMLSS)

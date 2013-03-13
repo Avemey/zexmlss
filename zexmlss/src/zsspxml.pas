@@ -506,6 +506,9 @@ function RecognizeBOM(var txt: ansistring): integer;
 //Распознаёт кодировку XML и HTML текста вместе с BOM
 function RecognizeEncodingXML(var txt: ansistring; out BOM: integer; out cpfromtext: integer; out cpname: ansistring; out ftype: integer): boolean; overload;
 
+//Получить дефолтный UTF8 конвертер
+function ZEGetDefaultUTF8Converter(): TAnsiToCPConverter;
+
 implementation
 
 {$IFDEF DELPHI_UNICODE}
@@ -990,6 +993,20 @@ begin
   end;
 end; //CheckStrEntity
 {$ENDIF}
+
+//Получить дефолтный UTF8 конвертер
+function ZEGetDefaultUTF8Converter(): TAnsiToCPConverter;
+begin
+  {$IFDEF FPC}
+  result := nil;
+  {$ELSE}
+    {$IFDEF DELPHI_UNICODE}
+  result := nil;
+    {$ELSE}
+  result := @AnsiToUtf8;
+    {$ENDIF}
+  {$ENDIF}
+end; //ZEGetDefaultUTF8Converter
 
 //Возвращает номер кодировки по его названию (UPCASE не забываем!)
 //INPUT

@@ -52,10 +52,18 @@ uses
 //Сохраняет незапакованный документ в формате Open Document
 function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
+//Сохраняет незапакованный документ в формате Open Document
+function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string): integer; overload;
+//Сохраняет незапакованный документ в формате Open Document
+function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string): integer; overload;
 
 {$IFDEF FPC}
 function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
+function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string): integer; overload;
+function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
 {$ENDIF}
 
 function ExportXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
@@ -315,6 +323,23 @@ var
   var
     i: integer;
 
+    function _AddBetweenCond(const ConditName: string): boolean;
+    begin
+      result := false;
+      d1 := ZETryStrToFloat(v1, b);
+      if (b) then
+      begin
+        d2 := ZETryStrToFloat(v2, b);
+        if (b and (d1 <= d2)) then
+        begin
+          result := true;
+          s := ConditName + '(' +
+               ZEFloatSeparator(FormatFloat('', d1)) + ',' +
+               ZEFloatSeparator(FormatFloat('', d2)) + ')'
+        end;
+      end;
+    end; //_AddBetweenCond
+
   begin
     result := false;
     _StCondition := _CFStyle[mapnum];
@@ -328,21 +353,9 @@ var
     case _StCondition.Condition of
       ZCFIsTrueFormula:;
       ZCFCellContentIsBetween:
-        begin
-          d1 := ZETryStrToFloat(v1, b);
-          if (b) then
-          begin
-            d2 := ZETryStrToFloat(v2, b);
-            if (b and (d1 <= d2)) then
-            begin
-              result := true;
-              s := 'cell-content-is-between(' +
-                   ZEFloatSeparator(FormatFloat('', d1)) + ',' +
-                   ZEFloatSeparator(FormatFloat('', d2)) + ')'
-            end;
-          end;
-        end;
-      ZCFCellContentIsNotBetween:;
+        result := _AddBetweenCond('cell-content-is-between');
+      ZCFCellContentIsNotBetween:
+        result := _AddBetweenCond('cell-content-is-not-between');
       ZCFCellContentOperator:;
       ZCFNumberValue:;
       ZCFString:;
@@ -374,6 +387,8 @@ var
           if (not b) then
             s := _currPageName;
         end;
+        if (pos(' ', s) <> 0) then
+          s := '''' + s + '''';
         //listname.ColRow
         s := s + '.' + ZEGetA1byCol(_StCondition.BaseCellColumnIndex) + IntToStr(_StCondition.BaseCellRowIndex + 1);
 
@@ -2104,6 +2119,32 @@ begin
   end;
 end; //SaveXmlssToODFSPath
 
+//Сохраняет незапакованный документ в формате Open Document
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      PathName: string                  - путь к директории для сохранения (должна заканчиватся разделителем директории)
+//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
+//  const SheetsNames: array of string    - массив названий страниц
+//                                          (количество элементов в двух массивах должны совпадать)
+//RETURN
+//      integer
+function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string): integer; overload;
+begin
+  result := SaveXmlssToODFSPath(XMLSS, PathName, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
+end; //SaveXmlssToODFSPath
+
+//Сохраняет незапакованный документ в формате Open Document
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      PathName: string                  - путь к директории для сохранения (должна заканчиватся разделителем директории)
+//RETURN
+//      integer
+function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string): integer; overload;
+begin
+  result := SaveXmlssToODFSPath(XMLSS, PathName, [], []);
+end; //SaveXmlssToODFSPath
+
 {$IFDEF FPC}
 //Сохраняет документ в формате Open Document
 //INPUT
@@ -2190,6 +2231,32 @@ begin
       FreeAndNil(StreamMA);
   end;
 
+end; //SaveXmlssToODFS
+
+//Сохраняет документ в формате Open Document
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      FileName: string                  - имя файла для сохранения
+//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
+//  const SheetsNames: array of string    - массив названий страниц
+//                                          (количество элементов в двух массивах должны совпадать)
+//RETURN
+//      integer
+function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string): integer; overload;
+begin
+  result := SaveXmlssToODFS(XMLSS, FileName, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
+end; //SaveXmlssToODFS
+
+//Сохраняет документ в формате Open Document
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      FileName: string                  - имя файла для сохранения
+//RETURN
+//      integer
+function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
+begin
+  result := SaveXmlssToODFS(XMLSS, FileName, [], []);
 end; //SaveXmlssToODFS
 
 {$ENDIF}

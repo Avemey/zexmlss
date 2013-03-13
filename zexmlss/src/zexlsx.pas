@@ -85,11 +85,17 @@ function ReadXLSX(var XMLSS: TZEXMLSS; FileName: string): integer;
 {$ENDIF}
 
 function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
-                             const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
+                             const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
+function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
+                             const SheetsNames: array of string): integer; overload;
+function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string): integer; overload;
 
 {$IFDEF FPC}
 function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
+function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
+                         const SheetsNames: array of string): integer; overload;
+function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
 {$ENDIF}
 
 {$IFNDEF FPC}
@@ -4795,7 +4801,9 @@ begin
     _commentArray := nil;
     azg.Free;
   end;
-end; //SaveXmlssToXLSXPath     //Сохраняет незапакованный документ в формате Office Open XML (OOXML)
+end;
+
+//Сохраняет незапакованный документ в формате Office Open XML (OOXML)
 //INPUT
 //  var XMLSS: TZEXMLSS                   - хранилище
 //      PathName: string                  - путь к директории для сохранения (должна заканчиватся разделителем директории)
@@ -4808,7 +4816,7 @@ end; //SaveXmlssToXLSXPath     //Сохраняет незапакованный документ в формате Off
 //RETURN
 //      integer
 function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 var
   _pages: TIntegerDynArray;      //номера страниц
   _names: TStringDynArray;      //названия страниц
@@ -4920,6 +4928,35 @@ begin
     SetLength(_commentArray, 0);
     _commentArray := nil;
   end;
+end; //SaveXmlssToXLSXPath
+
+//SaveXmlssToXLSXPath
+//Сохраняет незапакованный документ в формате Office Open XML (OOXML)
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      PathName: string                  - путь к директории для сохранения (должна заканчиватся разделителем директории)
+//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
+//  const SheetsNames: array of string    - массив названий страниц
+//                                          (количество элементов в двух массивах должны совпадать)
+//RETURN
+//      integer
+function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
+                             const SheetsNames: array of string): integer; overload;
+
+begin
+  result := SaveXmlssToXLSXPath(XMLSS, PathName, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
+end; //SaveXmlssToXLSXPath
+
+//SaveXmlssToXLSXPath
+//Сохраняет незапакованный документ в формате Office Open XML (OOXML)
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      PathName: string                  - путь к директории для сохранения (должна заканчиватся разделителем директории)
+//RETURN
+//      integer
+function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string): integer; overload;
+begin
+  result := SaveXmlssToXLSXPath(XMLSS, PathName, [], []);
 end; //SaveXmlssToXLSXPath
 
 {$IFDEF FPC}
@@ -5068,6 +5105,32 @@ begin
   end;
   Result := 0;
 end; //SaveXmlssToXSLX
+
+//Сохраняет документ в формате Open Office XML (xlsx)
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      FileName: string                  - имя файла для сохранения
+//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
+//  const SheetsNames: array of string    - массив названий страниц
+//                                          (количество элементов в двух массивах должны совпадать)
+//RETURN
+//      integer
+function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
+                         const SheetsNames: array of string): integer; overload;
+begin
+  result := SaveXmlssToXLSX(XMLSS, FileName, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
+end; //SaveXmlssToXLSX
+
+//Сохраняет документ в формате Open Office XML (xlsx)
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      FileName: string                  - имя файла для сохранения
+//RETURN
+//      integer
+function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
+begin
+  result := SaveXmlssToXLSX(XMLSS, FileName, [], []);
+end; //SaveXmlssToXLSX
 
 {$ENDIF}
 
