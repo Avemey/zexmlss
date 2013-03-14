@@ -159,10 +159,20 @@ type
 
   TODFCFAreas = array of TZConditionalAreas;
 
+  TODFCFmatch = record
+    StyleID: integer;
+    StyleCFID: integer;
+  end;
+
+  TODFStyleCFID = record
+    Count: integer;
+    ID: array of TODFCFmatch;
+  end;
+
   TODFCFWriterArray = record
-    CountCF: integer;             //кол-во стилей
-    StyleCFID: TIntegerDynArray;  //номер стил€ c условным форматированием
-    Areas: TODFCFAreas;           //ќбласти
+    CountCF: integer;                   //кол-во стилей
+    StyleCFID: array of TODFStyleCFID;  //номер стил€ c условным форматированием
+    Areas: TODFCFAreas;                 //ќбласти
   end;
 
   //ѕомошник дл€ записи условного форматировани€
@@ -313,6 +323,13 @@ var
   _currPageName: string;
   s: string;
   num: integer;
+  _BeforeCFStyles: TIntegerDynArray;
+  _BeforeCFStyleCount: integer;
+  _BeforeCFStyleMaxCount: integer;
+
+  CFMaps: array of array [0..2] of string;
+  CFMapsCount: integer;
+  CFMapsMaxCount: integer;
 
   //ƒобавить условие
   //INPUT
@@ -398,6 +415,65 @@ var
     end;
   end; //_AddMapCondition
 
+  procedure _CheckBorders(var brd: integer; maxborder: integer);
+  begin
+    if (brd >= maxborder) then
+        brd := maxborder - 1;
+      if (brd < 0) then
+        brd := 0;
+  end; //_CheckBorders
+
+  //ѕолучает все стили из области с условным форматированием
+  procedure _GetAreasStyles();
+  var
+    i, j, k: integer;
+    _cs, _ce: integer;
+    _rs, _re: integer;
+    t: integer;
+    b: boolean;
+    _StyleID: integer;
+
+  begin
+    _BeforeCFStyleCount := 0;
+    for i := 0 to _CFStyle.Areas.Count - 1 do
+    begin
+      _cs := _CFStyle.Areas[i].Column;
+      _CheckBorders(_cs, _sheet.ColCount);
+      _ce := _cs + _CFStyle.Areas[i].Width - 1;
+      _CheckBorders(_ce, _sheet.ColCount);
+
+      _rs := _CFStyle.Areas[i].Row;
+      _CheckBorders(_cs, _sheet.RowCount);
+      _re := _rs + _CFStyle.Areas[i].Height - 1;
+      _CheckBorders(_re, _sheet.RowCount);
+
+      for j := _cs to _ce do
+      for k := _rs to _re do
+      begin
+        b := true;
+        _StyleID := _sheet.Cell[j, k].CellStyle;
+        if (_styleID < 0) or (_StyleID >= FXMLSS.Styles.Count) then
+          _StyleID := -1;
+        for t := 0 to _BeforeCFStyleCount - 1 do
+          if (_BeforeCFStyles[t] = _StyleID) then
+          begin
+            b := false;
+            break;
+          end;
+        if (b) then
+        begin
+          if (_BeforeCFStyleCount + 1 >= _BeforeCFStyleMaxCount) then
+          begin
+            inc(_BeforeCFStyleMaxCount);
+            SetLength(_BeforeCFStyles, _BeforeCFStyleMaxCount);
+          end;
+          _BeforeCFStyles[_BeforeCFStyleCount] := _StyleID;
+          inc(_BeforeCFStyleCount);
+        end; //if
+      end; //for k
+    end; // for i
+  end; //_GetAreasStyles
+
   //ƒобавить стиль условного форматировани€
   //  (текущий итем условного форматировани€ берЄтс€ из _CFStyle)
   //INPUT
@@ -418,7 +494,10 @@ var
     _kol := FPageCF[idx].CountCF;
     SetLength(FPageCF[idx].StyleCFID, _kol);
     SetLength(FPageCF[idx].Areas, _kol);
-    FPageCF[idx].StyleCFID[_kol - 1] := _StyleID;
+
+    _GetAreasStyles();
+
+//    FPageCF[idx].StyleCFID[_kol - 1] := _StyleID;
     FPageCF[idx].Areas[_kol - 1] := _CFStyle.Areas;
 
     _att.Clear();
@@ -460,6 +539,12 @@ begin
   _att := nil;
   num := 0;
 
+  _BeforeCFStyleMaxCount := 10;
+  SetLength(_BeforeCFStyles, _BeforeCFStyleMaxCount);
+
+  CFMapsMaxCount := 10;
+  SetLength(CFMaps, CFMapsMaxCount);
+
   try
     _att := TZAttributesH.Create();
     _StyleID := FXMLSS.Styles.Count;
@@ -478,6 +563,11 @@ begin
   finally
     if (Assigned(_att)) then
       FreeAndNil(_att);
+   SetLength(_BeforeCFStyles, 0);
+   _BeforeCFStyles := nil;
+
+   Setlength(CFMaps, 0);
+   CFMaps := nil;
   end;
 end; //WriteCFStyles
 
@@ -501,7 +591,7 @@ begin
     for i := 0 to FPageCF[PageIndex].CountCF - 1 do
       if (FPageCF[PageIndex].Areas[i].IsCellInArea(Col, Row)) then
       begin
-        result := FPageCF[PageIndex].StyleCFID[i];
+//        result := FPageCF[PageIndex].StyleCFID[i];
         exit;
       end;
   end;
