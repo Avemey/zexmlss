@@ -393,6 +393,30 @@ begin
   end;
 end; //WriteFontFaceDecls
 
+//Получит нужный цвет для цвета фона
+//TODO: нужно будет восстанавливать цвет по названию
+//INPUT
+//  const value: string - цвет фона
+//RETURN
+//      TColor - цвет фона (clwindow = transparent)
+function GetBGColorForODS(const value: string): TColor;
+var
+  l: integer;
+
+begin
+  l := length(value);
+  result := 0;
+  if (l >= 1) then
+    if (value[1] = '#') then
+      result := HTMLHexToColor(value)
+    else
+    begin
+      if (value = 'transparent') then
+        result := clWindow
+      //добавить нужные цвета
+    end;
+end; //GetBGColorForODS
+
 //Переводит стиль границы в строку для ODF
 //INPUT
 //      BStyle: TZBorderStyle - стиль границы
@@ -2123,7 +2147,7 @@ var
           //цвет фона
           s := xml.Attributes.ItemsByName['fo:background-color'];
           if (length(s) > 0) then
-            _style.BGColor := HTMLHexToColor(s);
+            _style.BGColor := GetBGColorForODS(s);//HTMLHexToColor(s);
 
           //подгонять ли, если текст не помещается
           s := xml.Attributes.ItemsByName['style:shrink-to-fit'];
@@ -2220,7 +2244,7 @@ var
           //fo:font-style (style:font-style-asian style:font-style-complex)
           s := xml.Attributes.ItemsByName['fo:font-style'];
           if (length(s) > 0) then
-            if (s <> 'italic') then
+            if (s = 'italic') then
               _style.Font.Style := _style.Font.Style + [fsItalic];
 
           //цвет fo:color
@@ -2539,8 +2563,11 @@ var
                   _CurrCell.HRefScreenTip := s;
                 end; //if
 
+                //TODO: <text:span> - в будущем нужно будет как-то обрабатывать текст с
+                //      форматированием, сейчас игнорируем
                 _celltext := _celltext + xml.TextBeforeTag;
-                if ((xml.TagName <> 'text:p') and (xml.TagName <> 'text:a') and (xml.TagName <> 'text:s')) then
+                if ((xml.TagName <> 'text:p') and (xml.TagName <> 'text:a') and (xml.TagName <> 'text:s') and
+                    (xml.TagName <> 'text:span')) then
                   _celltext := _celltext +  xml.RawTextTag;
               end; //while
               _isnf := true;
