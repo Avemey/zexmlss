@@ -140,7 +140,7 @@ type
   TZODFRowStyleArray = array of TZODFRowStyle;
 
   TZODFStyle = record
-    name: string; 
+    name: string;
     index: integer;
   end;
 
@@ -252,6 +252,8 @@ end; //DoDoneOutZipStream
 
 {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
 
+procedure ODFWriteTableStyle(var XMLSS: TZEXMLSS; _xml: TZsspXMLWriterH; const StyleNum: integer; isDefaultStyle: boolean); forward;
+
 ////::::::::::::: TZODFConditionalWriteHelper :::::::::::::::::////
 
 //конструктор
@@ -284,7 +286,7 @@ end; //Create
 
 destructor TZODFConditionalWriteHelper.Destroy();
 var
-  i: integer;
+  i, j: integer;
 
 begin
   SetLength(FPageIndex, 0);
@@ -294,6 +296,12 @@ begin
 
   for i := 0 to FCount - 1 do
   begin
+    for j := 0 to FPageCF[i].CountCF - 1 do
+    begin
+      SetLength(FPageCF[i].StyleCFID[j].ID, 0);
+      FPageCF[i].StyleCFID[j].ID := nil;
+    end;
+
     SetLength(FPageCF[i].StyleCFID, 0);
     FPageCF[i].StyleCFID := nil;
     SetLength(FPageCF[i].Areas, 0);
@@ -360,7 +368,6 @@ var
   begin
     result := false;
     _StCondition := _CFStyle[mapnum];
-    xml.Attributes.Clear();
     inc(num);
 
     v1 := _StCondition.Value1;
@@ -383,11 +390,16 @@ var
 
     if (result) then
     begin
-      xml.Attributes.Add('style:condition', s);
+      if (CFMapsCount + 1 >= CFMapsMaxCount) then
+      begin
+        inc(CFMapsMaxCount, 10);
+        SetLength(CFMaps, CFMapsMaxCount);
+      end;
+      CFMaps[CFMapsCount][0] := s;
       if ((_StCondition.ApplyStyleID >= 0) and (_StCondition.ApplyStyleID < FXMLSS.Styles.Count)) then
       begin
-        s := const_ConditionalStylePrefix + IntToStr(num);//'ce' + IntToStr(_StCondition.ApplyStyleID);
-        xml.Attributes.Add('style:apply-style-name', s);
+        s := const_ConditionalStylePrefix + IntToStr(num);
+       CFMaps[CFMapsCount][1] := s;
 
         if ((_StCondition.BaseCellPageIndex < 0) or (_StCondition.BaseCellPageIndex >= FCount)) then
           s := _currPageName
@@ -409,7 +421,8 @@ var
         //listname.ColRow
         s := s + '.' + ZEGetA1byCol(_StCondition.BaseCellColumnIndex) + IntToStr(_StCondition.BaseCellRowIndex + 1);
 
-        xml.Attributes.Add('style:base-cell-address', s);
+        CFMaps[CFMapsCount][2] := s;
+        inc(CFMapsCount);
       end else
         result := false;
     end;
@@ -480,11 +493,12 @@ var
   //      idx: integer - "индекс" страницы
   procedure _AddCFStyle(idx: integer);
   var
-    i: integer;
+    i, j: integer;
     _addedCount: integer; //кол-во добавленных условий
 
   begin
     _addedCount := 0;
+    CFMapsCount := 0;
     //добавл€ем стиль дл€ условного форматировани€
     //  обычно будет максимум 1-2 условное форматирование,
     //    поэтому пока не паримс€ насчЄт SetLength.
@@ -497,33 +511,41 @@ var
 
     _GetAreasStyles();
 
-//    FPageCF[idx].StyleCFID[_kol - 1] := _StyleID;
+    FPageCF[idx].StyleCFID[_kol - 1].Count := _BeforeCFStyleCount;
+    SetLength(FPageCF[idx].StyleCFID[_kol - 1].ID, _BeforeCFStyleCount);
     FPageCF[idx].Areas[_kol - 1] := _CFStyle.Areas;
-
-    _att.Clear();
-    _att.Add('style:name', 'ce' + IntToStr(_StyleID));
-    _att.Add('style:family', 'table-cell');
-    //TODO: разобратьс€ в style:parent-style-name дл€ условного форматировани€.
-    //      —корее всего придЄтс€ игнорировать стиль €чейки, или усложн€ть
-    //      эту функцию ^_^
-    _att.Add('style:parent-style-name', 'Default');
 
     for i := 0 to _CFStyle.Count - 1 do
       if (_AddMapCondition(i)) then
-      begin
-        //≈сли добавилось хот€ бы 1 условие
-        if (_addedCount = 0) then
-          xml.WriteTagNode('style:style', _att, true, true, false);
-
-        xml.WriteEmptyTag('style:map', true, true);
         inc(_addedCount);
-      end; //if
 
     if (_addedCount > 0) then
     begin
-      xml.WriteEndTagNode(); //style:style
-      inc(FStylesCount);
-      inc(_StyleID);
+      for i := 0 to _BeforeCFStyleCount - 1 do
+      begin
+        FPageCF[idx].StyleCFID[_kol - 1].ID[i].StyleID := _BeforeCFStyles[i];
+        FPageCF[idx].StyleCFID[_kol - 1].ID[i].StyleCFID := _StyleID;
+
+        _att.Clear();
+        _att.Add('style:name', 'ce' + IntToStr(_StyleID));
+        _att.Add('style:family', 'table-cell');
+        _att.Add('style:parent-style-name', 'Default');
+        xml.WriteTagNode('style:style', _att, true, true, false);
+        ODFWriteTableStyle(FXMLSS, xml, _BeforeCFStyles[i], false);
+
+        for j := 0 to CFMapsCount - 1 do
+        begin
+          xml.Attributes.Clear();
+          xml.Attributes.Add('style:condition', CFMaps[j][0]);
+          xml.Attributes.Add('style:apply-style-name', CFMaps[j][1]);
+          xml.Attributes.Add('style:base-cell-address', CFMaps[j][2]);
+          xml.WriteEmptyTag('style:map', true, true);
+        end;
+
+        xml.WriteEndTagNode(); //style:style
+        inc(_StyleID);
+        inc(FStylesCount);
+      end; //for i
     end else
     begin
       //уменьшаем кол-во стилей
@@ -582,22 +604,24 @@ end; //WriteCFStyles
 //      integer - номер стил€ (-1 - стиль по умолчанию)
 function TZODFConditionalWriteHelper.GetStyleNum(const PageIndex, Col, Row: integer): integer;
 var
-  i: integer;
+  i, j: integer;
 
 begin
-  result := -1;
+  result := FXMLSS.Sheets[FPageIndex[PageIndex]].Cell[Col, Row].CellStyle;
+  if (result < -1) then
+    result := -1;
   if (FPageCF[PageIndex].CountCF > 0) then
-  begin
     for i := 0 to FPageCF[PageIndex].CountCF - 1 do
       if (FPageCF[PageIndex].Areas[i].IsCellInArea(Col, Row)) then
       begin
-//        result := FPageCF[PageIndex].StyleCFID[i];
+        for j := 0 to FPageCF[PageIndex].StyleCFID[i].Count - 1 do
+          if (FPageCF[PageIndex].StyleCFID[i].ID[j].StyleID = result) then
+          begin
+            result := FPageCF[PageIndex].StyleCFID[i].ID[j].StyleCFID;
+            exit;
+          end;
         exit;
       end;
-  end;
-
-  //≈сли не найдено условное форматирование
-  result := FXMLSS.Sheets[FPageIndex[PageIndex]].Cell[Col, Row].CellStyle;
 end; //GetStyleNum
 
 {$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
@@ -2444,7 +2468,6 @@ begin
 end; //ExportXmlssToODFS
 
 
-
 /////////////////// чтение
 
 //¬озвращает размер измерени€ в ћћ
@@ -2592,17 +2615,23 @@ var
       t: integer; HAutoForced: boolean;
       r: real;
       s: string;
-     function ODF12AngleUnit(const un: string; const scale: double): boolean;
-     var err: integer; d: double;
-     begin
-       Result := AnsiEndsStr(un, s);
-       if Result then begin
+
+      function ODF12AngleUnit(const un: string; const scale: double): boolean;
+      var
+        err: integer;
+        d: double;
+
+      begin
+        Result := AnsiEndsStr(un, s);
+        if Result then
+        begin
           Val( Trim(Copy( s, 1, length(s) - length(un))), d, err);
           Result := err = 0;
           if Result then
              t := round(d * scale);
-       end;
-     end;
+        end;
+      end;
+
     begin
       if (StyleCount >= MaxStyleCount) then
       begin
@@ -2711,25 +2740,26 @@ var
 
         if ((xml.TagName = 'style:paragraph-properties') and (xml.TagType in [4, 5])) then
         begin
-          if not HAutoForced then begin
-              s := xml.Attributes.ItemsByName['fo:text-align'];
-              if (length(s) > 0) then
-              begin
-                if ((s = 'start') or (s = 'left')) then
-                  _style.Alignment.Horizontal := ZHLeft
-                else
-                if (s = 'center') then
-                  _style.Alignment.Horizontal := ZHCenter
-                else
-                if (s = 'justify') then
-                  _style.Alignment.Horizontal := ZHJustify
-                else
-                if ((s = 'end') or (s = 'right')) then
-                  _style.Alignment.Horizontal := ZHRight
-                else
-                  _style.Alignment.Horizontal := ZHAutomatic;
-              end;
-          end;
+          if not HAutoForced then
+          begin
+            s := xml.Attributes.ItemsByName['fo:text-align'];
+            if (length(s) > 0) then
+            begin
+              if ((s = 'start') or (s = 'left')) then
+                _style.Alignment.Horizontal := ZHLeft
+              else
+              if (s = 'center') then
+                _style.Alignment.Horizontal := ZHCenter
+              else
+              if (s = 'justify') then
+                _style.Alignment.Horizontal := ZHJustify
+              else
+              if ((s = 'end') or (s = 'right')) then
+                _style.Alignment.Horizontal := ZHRight
+              else
+                _style.Alignment.Horizontal := ZHAutomatic;
+            end;
+          end; //if
         end else //if
 
         if ((xml.TagName = 'style:text-properties') and (xml.TagType in [4, 5])) then
@@ -2809,7 +2839,7 @@ var
               if (xml.Eof()) then
                 break;
               xml.ReadTag();
-              if ((xml.TagName ='style:table-column-properties') and (xml.TagType in [4, 5])) then
+              if ((xml.TagName = 'style:table-column-properties') and (xml.TagType in [4, 5])) then
               begin
                 ODFColumnStyles[ColStyleCount].name := _stylename;
                 s := xml.Attributes.ItemsByName['fo:break-before'];
