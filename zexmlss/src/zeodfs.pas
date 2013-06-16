@@ -49,6 +49,19 @@ uses
   zsspxml, zexmlss, zesavecommon, zeZippy
   {$IFDEF FPC},zipper {$ELSE}{$I odszipuses.inc}{$ENDIF};
 
+{$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+type
+  //Для чтения условного форматирования в ODS
+  TZODFConditionalReadHelper = class
+  private
+    FXMLSS: TZEXMLSS;
+  protected
+  public
+    constructor Create(XMLSS: TZEXMLSS);
+    destructor Destroy(); override;
+  end;
+{$ENDIF}
+
 //Сохраняет незапакованный документ в формате Open Document
 function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
@@ -365,6 +378,32 @@ var
       end;
     end; //_AddBetweenCond
 
+    function _getOpStr(_op: TZConditionalOperator): string;
+    begin
+      case _op of
+        ZCFOpGT: result := '>';
+        ZCFOpLT: result := '<';
+        ZCFOpGTE: result := '>=';
+        ZCFOpLTE: result := '<=';
+        ZCFOpEqual: result := '=';
+        ZCFOpNotEqual: result := '!=';
+        else
+          result := '';
+      end;
+    end; //_getOpStr
+
+    function _AddContentOperator(): boolean;
+    begin
+      result := true;
+      d1 := ZETryStrToFloat(v1, b);
+      if (b) then
+        s := ZEFloatSeparator(FormatFloat('', d1))
+      else
+        //TODO: на случай, если ввели v1 с кавычками, нужно будет потом сделать проверку
+        s := '''' + v1 + '''';
+      s := 'cell-content()' + _getOpStr(_StCondition.ConditionOperator) + s;
+    end; //_AddContentOperator()
+
   begin
     result := false;
     _StCondition := _CFStyle[mapnum];
@@ -380,7 +419,7 @@ var
         result := _AddBetweenCond('cell-content-is-between');
       ZCFCellContentIsNotBetween:
         result := _AddBetweenCond('cell-content-is-not-between');
-      ZCFCellContentOperator:;
+      ZCFCellContentOperator: result := _AddContentOperator();
       ZCFNumberValue:;
       ZCFString:;
       ZCFBoolTrue:;
@@ -623,6 +662,18 @@ begin
         exit;
       end;
 end; //GetStyleNum
+
+////::::::::::::: TZODFConditionalReadHelper :::::::::::::::::////
+
+constructor TZODFConditionalReadHelper.Create(XMLSS: TZEXMLSS);
+begin
+  FXMLSS := XMLSS;
+end;
+
+destructor TZODFConditionalReadHelper.Destroy();
+begin
+  inherited
+end;
 
 {$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
 
