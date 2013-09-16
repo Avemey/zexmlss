@@ -129,6 +129,7 @@ uses
 const
   ZETag_StyleFontFace       = 'style:font-face';      //style:font-face
   ZETag_Attr_StyleName      = 'style:name';           //style:name
+  ZETag_StyleStyle          = 'style:style';
 
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   const_ConditionalStylePrefix = 'ConditionalStyle_f';
@@ -569,7 +570,7 @@ var
         _att.Add('style:name', 'ce' + IntToStr(_StyleID));
         _att.Add('style:family', 'table-cell');
         _att.Add('style:parent-style-name', 'Default');
-        xml.WriteTagNode('style:style', _att, true, true, false);
+        xml.WriteTagNode(ZETag_StyleStyle, _att, true, true, false);
         ODFWriteTableStyle(FXMLSS, xml, _BeforeCFStyles[i], false);
 
         for j := 0 to CFMapsCount - 1 do
@@ -1346,7 +1347,7 @@ var
         _xml.Attributes.Clear();
         _xml.Attributes.Add(ZETag_Attr_StyleName, const_ConditionalStylePrefix + IntToStr(num));
         _xml.Attributes.Add('style:family', 'table-cell', false);
-        _xml.WriteTagNode('style:style', true, true, true);
+        _xml.WriteTagNode(ZETag_StyleStyle, true, true, true);
         ODFWriteTableStyle(XMLSS, _xml, _cf[j][k].ApplyStyleID, false);
         _xml.WriteEndTagNode();
         inc(num);
@@ -1383,7 +1384,7 @@ begin
     _xml.Attributes.Clear();
     _xml.Attributes.Add(ZETag_Attr_StyleName, 'Default');
     _xml.Attributes.Add('style:family', 'table-cell', false);
-    _xml.WriteTagNode('style:style', true, true, true);
+    _xml.WriteTagNode(ZETag_StyleStyle, true, true, true);
     ODFWriteTableStyle(XMLSS, _xml, -1, true);
     _xml.WriteEndTagNode();
 
@@ -1576,7 +1577,7 @@ var
       _xml.Attributes.Clear();
       _xml.Attributes.Add(ZETag_Attr_StyleName, 'co' + IntToStr(now_StyleNumber));
       _xml.Attributes.Add('style:family', 'table-column', false);
-      _xml.WriteTagNode('style:style', true, true, false);
+      _xml.WriteTagNode(ZETag_StyleStyle, true, true, false);
 
       _xml.Attributes.Clear();
       //разрыв страницы (fo:break-before = auto | column | page)
@@ -1626,7 +1627,7 @@ var
       _xml.Attributes.Clear();
       _xml.Attributes.Add(ZETag_Attr_StyleName, 'ro' + IntToStr(now_StyleNumber));
       _xml.Attributes.Add('style:family', 'table-row', false);
-      _xml.WriteTagNode('style:style', true, true, false);
+      _xml.WriteTagNode(ZETag_StyleStyle, true, true, false);
 
       _xml.Attributes.Clear();
       //разрыв страницы (fo:break-before = auto | column | page)
@@ -1732,7 +1733,7 @@ var
       _xml.Attributes.Add(ZETag_Attr_StyleName, 'ce' + IntToStr(i));
       _xml.Attributes.Add('style:family', 'table-cell', false);
         //??style:parent-style-name = Default
-      _xml.WriteTagNode('style:style', true, true, false);
+      _xml.WriteTagNode(ZETag_StyleStyle, true, true, false);
       ODFWriteTableStyle(XMLSS, _xml, i, false);
       _xml.WriteEndTagNode(); //style:style
     end;
@@ -2602,15 +2603,62 @@ begin
     result := false;
 end; //ODFGetValueSizeMM
 
-//Чтение автоматических стилей
+//Чтение стилей документа и автоматических стилей (составная часть стилей)
 //INPUT
 //  var XMLSS: TZEXMLSS - хранилище
 //      stream: TStream - поток для чтения
 //RETURN
 //      boolean - true - всё ок
 function ReadODFStyles(var XMLSS: TZEXMLSS; stream: TStream): boolean;
+var
+  xml: TZsspXMLReaderH;
+
+  //Прочитать один стиль
+  procedure _ReadOneStyle();
+  begin
+    while ((xml.TagType <> 6) or (xml.TagName <> ZETag_StyleStyle)) do
+    begin
+
+      xml.ReadTag();
+      if (xml.Eof) then
+        break;
+    end; //while
+  end; //_ReadOneStyle
+
+  //Чтение стилей
+  procedure _ReadStyles();
+  begin
+    while (not xml.Eof()) do
+    begin
+      if (not xml.ReadTag()) then
+        break;
+
+      //style:style - стиль
+      if ((xml.TagName = ZETag_StyleStyle) and (xml.TagType = 4)) then
+        _ReadOneStyle();
+
+      //style:default-style - стиль по умолчанию
+      //number:number-style - числовой стиль
+      //number:currency-style - валютный стиль
+      //office:automatic-styles - автоматические стили
+      //office:master-styles - мастер страница
+    end; //while
+  end; //_ReadStyles
+
 begin
   result := false;
+  xml := nil;
+  try
+    xml := TZsspXMLReaderH.Create();
+    xml.AttributesMatch := false;
+    if (xml.BeginReadStream(stream) <> 0) then
+      exit;
+    _ReadStyles();
+    result := true;
+  finally
+    if (Assigned(xml)) then
+      FreeAndNil(xml);
+  end;
 end; //ReadODFStyles
 
 //Чтение содержимого документа ODS (content.xml)
@@ -2634,7 +2682,7 @@ var
 
   function IfTag(const TgName: string; const TgType: integer): boolean;
   begin
-    result := (xml.TagName = TgName) and (xml.TagType = TgType);
+    result := (xml.TagType = TgType) and (xml.TagName = TgName);
   end;
 
   //Ищет номер стиля по названию
@@ -2694,7 +2742,7 @@ var
       _style.Assign(XMLSS.Styles.DefaultStyle);
       HAutoForced := false; // pre-clean: paragraph properties may come before cell properties
 
-      while (not IfTag('style:style', 6)) do
+      while (not IfTag(ZETag_StyleStyle, 6)) do
       begin
         if (xml.Eof()) then
           break;
@@ -2869,7 +2917,7 @@ var
           break;
         xml.ReadTag();
 
-        if (IfTag('style:style', 4)) then
+        if (IfTag(ZETag_StyleStyle, 4)) then
         begin
           _stylefamily := xml.Attributes.ItemsByName['style:family'];
           _stylename := xml.Attributes.ItemsByName[ZETag_Attr_StyleName];
@@ -2885,7 +2933,7 @@ var
             ODFColumnStyles[ColStyleCount].breaked := false;
             ODFColumnStyles[ColStyleCount].width := 25;
 
-            while (not IfTag('style:style', 6)) do
+            while (not IfTag(ZETag_StyleStyle, 6)) do
             begin
               if (xml.Eof()) then
                 break;
@@ -2916,7 +2964,7 @@ var
             ODFRowStyles[RowStyleCount].color := clBlack;
             ODFRowStyles[RowStyleCount].height := 10;
 
-            while (not ifTag('style:style', 6)) do
+            while (not ifTag(ZETag_StyleStyle, 6)) do
             begin
               if (xml.Eof()) then
                 break;
@@ -2948,7 +2996,7 @@ var
             end;
             ODFTableStyles[TableStyleCount].name := _stylename;
             ODFTableStyles[TableStyleCount].isColor := false;
-            while (not ifTag('style:style', 6)) do
+            while (not ifTag(ZETag_StyleStyle, 6)) do
             begin
               if (xml.Eof()) then
                 break;
@@ -3359,7 +3407,6 @@ var
 
       if (ifTag('table:table', 4)) then
         _ReadTable();
-
     end;
   end; //_ReadDocument
 
@@ -3556,7 +3603,15 @@ begin
 
   try
     //стили (styles.xml)
-    ReadODFStyles(XMLSS, nil);
+    try
+      stream := TFileStream.Create(DirName + 'styles.xml', fmOpenRead or fmShareDenyNone);
+    except
+      result := 2;
+      exit;
+    end;
+    if (not ReadODFStyles(XMLSS, stream)) then
+      result := result or 2;
+    FreeAndNil(stream);
 
     //содержимое (content.xml)
     try
