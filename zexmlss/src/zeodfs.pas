@@ -72,8 +72,10 @@ type
 type
   //Доп. свойства стиля
   TZEODFStyleProperties = record
-    name: string;
-    idx: integer;
+    name: string;           //Имя стиля
+    index: integer;
+    ParentName: string;     //Имя родителя
+    isHaveParent: boolean;  //Флаг наличая родительского стиля
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     ConditionsCount: integer;             //Кол-во условий (признак условного форматирования)
     Conditions: array of TZEConditionMap; //Условия
@@ -149,7 +151,7 @@ function ODFCreateMeta(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAns
 
 {для чтения}
 //Чтение содержимого документа ODS (content.xml)
-function ReadODFContent(var XMLSS: TZEXMLSS; stream: TStream): boolean;
+function ReadODFContent(var XMLSS: TZEXMLSS; stream: TStream; var ReadHelper: TZEODFReadHelper): boolean;
 
 //Чтение настроек документа ODS (settings.xml)
 function ReadODFSettings(var XMLSS: TZEXMLSS; stream: TStream): boolean;
@@ -188,12 +190,7 @@ type
 
   TZODFRowStyleArray = array of TZODFRowStyle;
 
-  TZODFStyle = record
-    name: string;
-    index: integer;
-  end;
-
-  TZODFStyleArray = array of TZODFStyle;
+  TZODFStyleArray = array of TZEODFStyleProperties;
 
   TZODFTableStyle = record
     name: string;
@@ -254,12 +251,15 @@ type
     FXMLSS: TZEXMLSS;
     FRetCode: integer;
     FFileType: integer;
+    FReadHelper: TZEODFReadHelper;
+    procedure SetXMLSS(AXMLSS: TZEXMLSS);
   protected
   public
     constructor Create(); virtual;
+    destructor Destroy(); override;
     procedure DoCreateOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
     procedure DoDoneOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
-    property XMLSS: TZEXMLSS read FXMLSS write FXMLSS;
+    property XMLSS: TZEXMLSS read FXMLSS write SetXMLSS;
     property RetCode: integer read FRetCode;
     property FileType: integer read FFileType write FFileType;
   end;
@@ -269,6 +269,23 @@ begin
   inherited;
   FXMLSS := nil;
   FRetCode := 0;
+  FReadHelper := nil;
+end;
+
+destructor TODFZipHelper.Destroy();
+begin
+  if (Assigned(FReadHelper)) then
+    FreeAndNil(FReadHelper);
+
+  inherited;
+end;
+
+procedure TODFZipHelper.SetXMLSS(AXMLSS: TZEXMLSS);
+begin
+  if (not Assigned(FReadHelper)) then
+    FReadHelper := TZEODFReadHelper.Create(AXMLSS);
+
+  FXMLSS := AXMLSS;
 end;
 
 procedure TODFZipHelper.DoCreateOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
@@ -277,21 +294,23 @@ begin
 end;
 
 procedure TODFZipHelper.DoDoneOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
+var
+  _isError: boolean;
+
 begin
   if (Assigned(AStream)) then
   try
+    _isError := false;
     AStream.Position := 0;
 
-    if (FileType = 0) then
-    begin
-      if (not ReadODFContent(FXMLSS, AStream)) then
-        FRetCode := FRetCode or 2;
-    end else
-    if (FileType = 1) then
-    begin
-      if (not ReadODFSettings(FXMLSS, AStream)) then
-        FRetCode := FRetCode or 2;
+    case (FileType) of
+      0: _isError := not ReadODFContent(FXMLSS, AStream, FReadHelper);
+      1: _isError := not ReadODFSettings(FXMLSS, AStream);
+      2: _isError := not ReadODFStyles(FXMLSS, AStream, FReadHelper);
     end;
+
+    if (_isError) then
+      FRetCode := FRetCode or 2;
   finally
     FreeAndNil(AStream)
   end;
@@ -717,12 +736,14 @@ end;
 procedure ODFClearStyleProperties(var StyleProperties: TZEODFStyleProperties);
 begin
   StyleProperties.name := '';
-  StyleProperties.idx := -1;
+  StyleProperties.index := -1;
+  StyleProperties.ParentName := '';
+  StyleProperties.isHaveParent := false;
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   StyleProperties.ConditionsCount := 0;
   SetLength(StyleProperties.Conditions, 0);
   {$ENDIF}
-end;
+end; //ODFClearStyleProperties
 
 ///////////////////////////////////////////////////////////////////
 ////::::::::::::::::::: TZEODFReadHelper ::::::::::::::::::::::////
@@ -770,6 +791,8 @@ begin
   SetLength(FStyles, FStylesCount);
   SetLength(StylesProperties, FStylesCount);
   FStyles[num] := TZStyle.Create();
+  if (Assigned(FXMLSS)) then
+    FStyles[num].Assign(FXMLSS.Styles.DefaultStyle);
   ODFClearStyleProperties(StylesProperties[num]);
 end; //AddStyle
 
@@ -2921,24 +2944,36 @@ var
   xml: TZsspXMLReaderH;
   _Style: TZStyle;
   num: integer;
+  s: string;
 
   //Прочитать один стиль
   procedure _ReadOneStyle();
+  var
+    i: integer;
+
   begin
-    num := ReadHelper.StylesCount;
-    ReadHelper.AddStyle();
-    _Style := ReadHelper.Style[num];
-
-    ZEReadODFCellStyleItem(xml, _style {$IFDEF ZUSE_CONDITIONAL_FORMATTING}, ReadHelper.StylesProperties[num] {$ENDIF});
-    {
-    while ((xml.TagType <> 6) or (xml.TagName <> ZETag_StyleStyle)) do
+    if (xml.Attributes['style:family'] = 'table-cell') then
     begin
+      num := ReadHelper.StylesCount;
+      ReadHelper.AddStyle();
+      _Style := ReadHelper.Style[num];
 
-      xml.ReadTag();
-      if (xml.Eof()) then
-        break;
-    end; //while
-    }
+      ReadHelper.StylesProperties[num].name := xml.Attributes['style:name'];
+      s := xml.Attributes['style:parent-style-name'];
+      ReadHelper.StylesProperties[num].ParentName := s;
+      if (length(s) > 0) then
+      begin
+        ReadHelper.StylesProperties[num].isHaveParent := true;
+        for i := 0 to num - 1 do
+          if (ReadHelper.StylesProperties[num].name = s) then
+          begin
+            _Style.Assign(ReadHelper.Style[i]);
+            break;
+          end;
+      end; //if
+
+      ZEReadODFCellStyleItem(xml, _style {$IFDEF ZUSE_CONDITIONAL_FORMATTING}, ReadHelper.StylesProperties[num] {$ENDIF});
+    end;
   end; //_ReadOneStyle
 
   //Чтение стилей
@@ -2981,9 +3016,10 @@ end; //ReadODFStyles
 //INPUT
 //  var XMLSS: TZEXMLSS - хранилище
 //      stream: TStream - поток для чтения
+//  var ReadHelper: TZEODFReadHelper - для хранения доп. инфы
 //RETURN
 //      boolean - true - всё ок
-function ReadODFContent(var XMLSS: TZEXMLSS; stream: TStream): boolean;
+function ReadODFContent(var XMLSS: TZEXMLSS; stream: TStream; var ReadHelper: TZEODFReadHelper): boolean;
 var
   xml: TZsspXMLReaderH;
   ErrorReadCode: integer;
@@ -2995,6 +3031,7 @@ var
   RowStyleCount, MaxRowStyleCount: integer;
   StyleCount, MaxStyleCount: integer;
   TableStyleCount, MaxTableStyleCount: integer;
+  _celltext: string;
 
   function IfTag(const TgName: string; const TgType: integer): boolean;
   begin
@@ -3027,198 +3064,44 @@ var
     //Чтение стиля для ячейки
     procedure _ReadCellStyle();
     var
-      t: integer; HAutoForced: boolean;
-      r: real;
-      s: string;
-
-      function ODF12AngleUnit(const un: string; const scale: double): boolean;
-      var
-        err: integer;
-        d: double;
-
-      begin
-        Result := AnsiEndsStr(un, s);
-        if Result then
-        begin
-          Val( Trim(Copy( s, 1, length(s) - length(un))), d, err);
-          Result := err = 0;
-          if Result then
-             t := round(d * scale);
-        end;
-      end;
+      i: integer;
+      b: boolean;
 
     begin
       if (StyleCount >= MaxStyleCount) then
       begin
         MaxStyleCount := StyleCount + 20;
         SetLength(ODFStyles, MaxStyleCount);
-      end;  
-      ODFStyles[StyleCount].index := -1;
+      end;
+
+      ODFClearStyleProperties(ODFStyles[StyleCount]);
       ODFStyles[StyleCount].name := _stylename;
       _style.Assign(XMLSS.Styles.DefaultStyle);
-      HAutoForced := false; // pre-clean: paragraph properties may come before cell properties
 
-      while (not IfTag(ZETag_StyleStyle, 6)) do
+      s := xml.Attributes['style:parent-style-name'];
+      ODFStyles[StyleCount].ParentName := s;
+      if (length(s) > 0) then
       begin
-        if (xml.Eof()) then
-          break;
-        xml.ReadTag();
-
-        if ((xml.TagName = 'style:table-cell-properties') and (xml.TagType in [4, 5])) then
-        begin
-          //Выравнивание по вертикали
-          s := xml.Attributes.ItemsByName['style:vertical-align'];
-          if (length(s) > 0) then
+        ODFStyles[StyleCount].isHaveParent := true;
+        b := true;
+        for i := 0 to StyleCount - 1 do
+          if (ODFStyles[i].name = s) then
           begin
-            if (s = 'automatic') then
-              _style.Alignment.Vertical := ZVAutomatic
-            else
-            if (s = 'top') then
-              _style.Alignment.Vertical := ZVTop
-            else
-            if (s = 'bottom') then
-              _style.Alignment.Vertical := ZVBottom
-            else
-            if (s = 'middle') then
-              _style.Alignment.Vertical := ZVCenter;
+            b := false;
+            _style.Assign(XMLSS.Styles[ODFStyles[i].index]);
+            break;
           end;
-
-          HAutoForced := 'value-type' = xml.Attributes['style:text-align-source'];
-          If HAutoForced then _style.Alignment.Horizontal := ZHAutomatic;
-
-          //Угол поворота текста
-          s := xml.Attributes.ItemsByName['style:rotation-angle'];
-          if (length(s) > 0) then begin
-            if not TryStrToInt(s, t) // ODS 1.1 - pure integer - failed
-            then begin // ODF 1.2+ ? float with units ?
-              s := LowerCase(Trim(s));
-              if not ODF12AngleUnit('deg', 1) then
-                 if not ODF12AngleUnit('grad', 90 / 100) then
-                    if not ODF12AngleUnit('rad', 180 / Pi ) then
-                       if not ODF12AngleUnit('', 1) then // just unit-less float ?
-                          s := ''; // not parsed
-            end;
-            if s > '' then begin  // need reduce to -180 to +180
-               t := t mod 360;
-               if t > +180 then t := t - 360;
-               if t < -180 then t := t + 360;
-               _style.Alignment.Rotate := t;
-            end;
-          end;
-          _style.Alignment.VerticalText :=
-               'ttb' = xml.Attributes['style:direction'];
-
-          //цвет фона
-          s := xml.Attributes.ItemsByName['fo:background-color'];
-          if (length(s) > 0) then
-            _style.BGColor := GetBGColorForODS(s);//HTMLHexToColor(s);
-
-          //подгонять ли, если текст не помещается
-          s := xml.Attributes.ItemsByName['style:shrink-to-fit'];
-          if (length(s) > 0) then
-            _style.Alignment.ShrinkToFit := ZEStrToBoolean(s);
-
-          ///обрамление
-          s := xml.Attributes.ItemsByName['fo:border'];
-          if (length(s) > 0) then
-          begin
-            ZEStrToODFBorderStyle(s, _style.Border[0]);
-            for t := 1 to 3 do
-              _style.Border[t].Assign(_style.Border[0]);
-          end;
-
-          s := xml.Attributes.ItemsByName['fo:border-left'];
-          if (length(s) > 0) then
-            ZEStrToODFBorderStyle(s, _style.Border[0]);
-          s := xml.Attributes.ItemsByName['fo:border-top'];
-          if (length(s) > 0) then
-            ZEStrToODFBorderStyle(s, _style.Border[1]);
-          s := xml.Attributes.ItemsByName['fo:border-right'];
-          if (length(s) > 0) then
-            ZEStrToODFBorderStyle(s, _style.Border[2]);
-          s := xml.Attributes.ItemsByName['fo:border-bottom'];
-          if (length(s) > 0) then
-            ZEStrToODFBorderStyle(s, _style.Border[3]);
-          s := xml.Attributes.ItemsByName['style:diagonal-bl-tr'];
-          if (length(s) > 0) then
-            ZEStrToODFBorderStyle(s, _style.Border[4]);
-          s := xml.Attributes.ItemsByName['style:diagonal-tl-br'];
-          if (length(s) > 0) then
-            ZEStrToODFBorderStyle(s, _style.Border[5]);
-
-          //Перенос по словам (wrap no-wrap)
-          s := xml.Attributes.ItemsByName['fo:wrap-option'];
-          if (length(s) > 0) then
-            if (UpperCase(s) = 'WRAP') then
-              _style.Alignment.WrapText := true;
-        end else //if
-
-        if ((xml.TagName = 'style:paragraph-properties') and (xml.TagType in [4, 5])) then
-        begin
-          if not HAutoForced then
-          begin
-            s := xml.Attributes.ItemsByName['fo:text-align'];
-            if (length(s) > 0) then
+        if (b) then
+          for i := 0 to ReadHelper.StylesCount - 1 do
+            if (ReadHelper.StylesProperties[i].name = s) then
             begin
-              if ((s = 'start') or (s = 'left')) then
-                _style.Alignment.Horizontal := ZHLeft
-              else
-              if (s = 'center') then
-                _style.Alignment.Horizontal := ZHCenter
-              else
-              if (s = 'justify') then
-                _style.Alignment.Horizontal := ZHJustify
-              else
-              if ((s = 'end') or (s = 'right')) then
-                _style.Alignment.Horizontal := ZHRight
-              else
-                _style.Alignment.Horizontal := ZHAutomatic;
+              _style.Assign(ReadHelper.Style[i]);
+              break;
             end;
-          end; //if
-        end else //if
+      end; //if
 
-        if ((xml.TagName = 'style:text-properties') and (xml.TagType in [4, 5])) then
-        begin
-          //style:font-name (style:font-name-asian style:font-name-complex)
-          s := xml.Attributes.ItemsByName['style:font-name'];
-          if (length(s) > 0) then
-            _style.Font.Name := s;
+      ZEReadODFCellStyleItem(xml, _style {$IFDEF ZUSE_CONDITIONAL_FORMATTING}, ODFStyles[StyleCount] {$ENDIF});
 
-          //fo:font-size (style:font-size-asian style:font-size-complex)
-          s := xml.Attributes.ItemsByName['fo:font-size'];
-          if (length(s) > 0) then
-            if (ODFGetValueSizeMM(s, r, false)) then
-              _style.Font.Size := round(r);
-
-          //fo:font-weight (style:font-weight-asian style:font-weight-complex)
-          s := xml.Attributes.ItemsByName['fo:font-weight'];
-          if (length(s) > 0) then
-            if (s <> 'normal') then
-              _style.Font.Style := _style.Font.Style + [fsBold];
-
-          s := xml.Attributes.ItemsByName['style:text-line-through-type'];
-          if (length(s) > 0) then
-            if (s <> 'none') then
-              _style.Font.Style := _style.Font.Style + [fsStrikeOut];
-
-          s := xml.Attributes.ItemsByName['style:text-underline-type'];
-          if (length(s) > 0) then
-            if (s <> 'none') then
-              _style.Font.Style := _style.Font.Style + [fsUnderline];
-
-          //fo:font-style (style:font-style-asian style:font-style-complex)
-          s := xml.Attributes.ItemsByName['fo:font-style'];
-          if (length(s) > 0) then
-            if (s = 'italic') then
-              _style.Font.Style := _style.Font.Style + [fsItalic];
-
-          //цвет fo:color
-          s := xml.Attributes.ItemsByName['fo:color'];
-          if (length(s) > 0) then
-            _style.Font.Color := HTMLHexToColor(s);
-        end; //if
-
-      end; //while
       ODFStyles[StyleCount].index := XMLSS.Styles.Add(_style, true);
       inc(StyleCount);
     end; //_ReadCellStyle
@@ -3402,7 +3285,6 @@ var
     //Чтение ячейки
     procedure _ReadCell();
     var
-      _celltext: string;
       i: integer;
       _isnf: boolean;
       _numX, _numY: integer;
@@ -3940,7 +3822,7 @@ begin
       result := 2;
       exit;
     end;
-    if (not ReadODFContent(XMLSS, stream)) then
+    if (not ReadODFContent(XMLSS, stream, ReadHelper)) then
       result := result or 2;
     FreeAndNil(stream);
 
@@ -3994,14 +3876,21 @@ begin
 
   try
     lst := TStringList.Create();
-    lst.Clear();
-    lst.Add('content.xml'); //содержимое
     ZH := TODFZipHelper.Create();
     ZH.XMLSS := XMLSS;
     u_zip := TUnZipper.Create();
     u_zip.FileName := FileName;
     u_zip.OnCreateStream := @ZH.DoCreateOutZipStream;
     u_zip.OnDoneStream := @ZH.DoDoneOutZipStream;
+
+    lst.Clear();
+    lst.Add('styles.xml'); //стили (styles.xml)
+    ZH.FileType := 2;
+    u_zip.UnZipFiles(lst);
+    result := result or ZH.RetCode;
+
+    lst.Clear();
+    lst.Add('content.xml'); //содержимое
     ZH.FileType := 0;
     u_zip.UnZipFiles(lst);
     result := result or ZH.RetCode;
