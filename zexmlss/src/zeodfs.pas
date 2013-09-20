@@ -736,7 +736,7 @@ end;
 procedure ODFClearStyleProperties(var StyleProperties: TZEODFStyleProperties);
 begin
   StyleProperties.name := '';
-  StyleProperties.index := -1;
+  StyleProperties.index := -2;
   StyleProperties.ParentName := '';
   StyleProperties.isHaveParent := false;
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
@@ -3050,6 +3050,17 @@ var
     begin
       result := ODFStyles[i].index;
       break;
+    end;
+    if (result < 0) then
+    begin
+      for i := 0 to ReadHelper.StylesCount - 1 do
+        if (ReadHelper.StylesProperties[i].name = st) then
+        begin
+          if (ReadHelper.StylesProperties[i].index = -2) then
+            ReadHelper.StylesProperties[i].index := XMLSS.Styles.Add(ReadHelper.Style[i], true);
+          result := ReadHelper.StylesProperties[i].index;
+          break;
+        end;
     end;
   end; //_FindStyleID
 
