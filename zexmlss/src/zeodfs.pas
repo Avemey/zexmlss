@@ -58,14 +58,26 @@ type
     ApplyBaseCellAddres: string   //Адрес ячейки
   end;
 
+  TZEODFCFLine = record
+    CellNum: integer;
+    StyleID: integer;
+    Count: integer;
+  end;
+
   //Для чтения условного форматирования в ODS
   TZODFConditionalReadHelper = class
   private
     FXMLSS: TZEXMLSS;
+    FCountInLine: integer;        //Кол-во условных стилей в текущей линии
+    FMaxCountInLine: integer;
+    FCurrentLine: array of TZEODFCFLine;
   protected
   public
     constructor Create(XMLSS: TZEXMLSS);
     destructor Destroy(); override;
+    procedure AddToLine(const CellNum: integer; const AStyleID: integer; const ACount: integer);
+    procedure Clear();
+    procedure ClearLine();
   end;
 {$ENDIF}
 
@@ -88,6 +100,9 @@ type
     FXMLSS: TZEXMLSS;
     FStylesCount: integer;                //Кол-во стилей
     FStyles: array of TZStyle;            //Стили из styles.xml
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    FConditionReader: TZODFConditionalReadHelper; //Для чтения условного форматирования
+    {$ENDIF}
     function GetStyle(num: integer): TZStyle;
   protected
   public
@@ -97,6 +112,9 @@ type
     procedure AddStyle();
     property StylesCount: integer read FStylesCount;
     property Style[num: integer]: TZStyle read GetStyle;
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    property ConditionReader: TZODFConditionalReadHelper read FConditionReader;
+    {$ENDIF}
   end;
 
 //Сохраняет незапакованный документ в формате Open Document
@@ -723,12 +741,49 @@ end; //GetStyleNum
 constructor TZODFConditionalReadHelper.Create(XMLSS: TZEXMLSS);
 begin
   FXMLSS := XMLSS;
+  FCountInLine := 0;
+  FMaxCountInLine := 10;
+  SetLength(FCurrentLine, FMaxCountInLine)
 end;
 
 destructor TZODFConditionalReadHelper.Destroy();
 begin
-  inherited
+  Setlength(FCurrentLine, 0);
+  inherited;
 end;
+
+//Добавить к текущей линии
+//INPUT
+//  const CellNum: integer  - номер начальной ячейки
+//  const AStyleID: integer - номер стиля в хранилище
+//  const ACount: integer   - кол-во ячеек
+procedure TZODFConditionalReadHelper.AddToLine(const CellNum: integer; const AStyleID: integer; const ACount: integer);
+var
+  t: integer;
+
+begin
+  t := FCountInLine;
+  inc(FCountInLine);
+  if (FCountInLine >= FMaxCountInLine) then
+  begin
+    inc(FMaxCountInLine, 10);
+    SetLength(FCurrentLine, FMaxCountInLine)
+  end;
+  FCurrentLine[t].CellNum := CellNum;
+  FCurrentLine[t].StyleID := AStyleID;
+  FCurrentLine[t].Count := ACount;
+end; //AddToLine
+
+//Очистка всех условных форматирований (выполняется перед началом нового листа)
+procedure TZODFConditionalReadHelper.Clear();
+begin
+
+end; //Clear
+
+procedure TZODFConditionalReadHelper.ClearLine();
+begin
+  FCountInLine := 0;
+end; //ClearLine
 
 {$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
 
@@ -753,6 +808,9 @@ constructor TZEODFReadHelper.Create(XMLSS: TZEXMLSS);
 begin
   FXMLSS := XMLSS;
   FStylesCount := 0;
+  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+  FConditionReader := TZODFConditionalReadHelper.Create(XMLSS);
+  {$ENDIF}
 end; //Create
 
 destructor TZEODFReadHelper.Destroy();
@@ -767,6 +825,8 @@ begin
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   for i := 0 to FStylesCount - 1 do
     SetLength(StylesProperties[i].Conditions, 0);
+  if (Assigned(FConditionReader)) then
+    FreeAndNil(FConditionReader);
   {$ENDIF}
 
   SetLength(FStyles, 0);
@@ -3494,6 +3554,9 @@ var
     end; //_ReadCell
 
   begin
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    ReadHelper.ConditionReader.Clear();
+    {$ENDIF}
     _CurrentRow := 0; 
     _CurrentCol := 0;
     _MaxCol := 0;
@@ -3522,6 +3585,10 @@ var
       //Строка
       if ((xml.TagName = 'table:table-row') and (xml.TagType in [4, 5])) then
       begin
+        {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+        ReadHelper.ConditionReader.ClearLine();
+        {$ENDIF}
+
         //кол-во повторений строки
         s := xml.Attributes.ItemsByName['table:number-rows-repeated'];
         isRepeatRow := TryStrToInt(s, _RepeatRowCount);
@@ -3645,6 +3712,12 @@ begin
     ODFColumnStyles := nil;
     SetLength(ODFRowStyles, 0);
     ODFRowStyles := nil;
+
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    for RowStyleCount := 0 to  StyleCount - 1 do
+      SetLength(ODFStyles[RowStyleCount].Conditions, 0);
+    {$ENDIF}
+
     SetLength(ODFStyles, 0);
     ODFStyles := nil;
     SetLength(ODFTableStyles, 0);
