@@ -68,23 +68,32 @@ type
   TZODFConditionalReadHelper = class
   private
     FXMLSS: TZEXMLSS;
-    FCountInLine: integer;        //Кол-во условных стилей в текущей линии
+    FCountInLine: integer;            //Кол-во условных стилей в текущей линии
     FMaxCountInLine: integer;
-    FCurrentLine: array of TZEODFCFLine;
+    FCurrentLine: array of TZEODFCFLine; //Текущая строка с условными стилями
     FColumnSCFNumbers: array of array [0..1] of integer;
-    FColumnsCount: integer;
-    FMaxColumnsCount: integer;
+    FColumnsCount: integer;           //Кол-во столбцов в листе
+    FMaxColumnsCount: integer;        //Максимальное кол-во листов
+
+    FLineItemWidth: integer;          //Ширина текущей линии с одинаковым StyleID
+    FLineItemStartCell: integer;      //Номер начальной ячейки в строке
+    FLineItemStyleID: integer;        //Номер стиля
+
   protected
+    procedure AddToLine(const CellNum: integer; const AStyleID: integer; const ACount: integer);
   public
     constructor Create(XMLSS: TZEXMLSS);
     destructor Destroy(); override;
-    procedure AddToLine(const CellNum: integer; const AStyleID: integer; const ACount: integer);
+    procedure CheckCell(CellNum: integer; AStyleID: integer; AIsCFStyle: boolean; RepeatCount: integer = 1);
     procedure ApplyConditionStylesToSheet(SheetNumber: integer);
     procedure AddColumnCF(ColumnNumber: integer; CFStyleID: integer);
     function GetColumnCF(ColumnNumber: integer): integer;
     procedure Clear();
     procedure ClearLine();
     property ColumnsCount: integer read FColumnsCount;
+    property LineItemWidth: integer read FLineItemWidth write FLineItemWidth;
+    property LineItemStartCell: integer read FLineItemStartCell write FLineItemStartCell;
+    property LineItemStyleID: integer read FLineItemStyleID write FLineItemStyleID;
   end;
 {$ENDIF}
 
@@ -763,6 +772,49 @@ begin
   inherited;
 end;
 
+//Проверить условный стиль для текущей ячейки и заполить линию условных стилей
+//INPUT
+//      CellNum: integer      - номер текущей ячейки
+//      AStyleID: integer     - номер стиля ячейки
+//      AIsCFStyle: boolean   - является ли стиль текущей ячейки условным
+//      RepeatCount: integer  - кол-во повторений
+procedure TZODFConditionalReadHelper.CheckCell(CellNum: integer; AStyleID: integer; AIsCFStyle: boolean; RepeatCount: integer = 1);
+var
+  _add: boolean;
+
+  procedure _AddLineItem();
+  begin
+    if (AIsCFStyle) then
+    begin
+      FLineItemWidth := RepeatCount;
+      FLineItemStartCell := CellNum;
+      FLineItemStyleID := AStyleID;
+    end else
+      FLineItemStartCell := -2;
+  end;
+
+begin
+  //Если первая ячейка в строке или если предыдущий стиль был не условным
+  if (FLineItemStartCell < 0) then
+  begin
+    //стиль должен быть только условным
+    _AddLineItem();
+  end else
+  begin
+    _add := false;
+    if (AIsCFStyle and (FLineItemStyleID = AStyleID)) then
+      FLineItemWidth := FLineItemWidth + RepeatCount
+    else
+      _add := true;
+
+    if (_add) then
+    begin
+      AddToLine(FLineItemStartCell, FLineItemStyleID, FLineItemWidth);
+      _AddLineItem();
+    end;
+  end;
+end; //CheckCell
+
 //Добавить к текущей линии
 //INPUT
 //  const CellNum: integer  - номер начальной ячейки
@@ -802,6 +854,9 @@ end; //Clear
 procedure TZODFConditionalReadHelper.ClearLine();
 begin
   FCountInLine := 0;
+  FLineItemWidth := 0;
+  FLineItemStartCell := -2; //Если < 0 - значит это первый раз в строке
+  FLineItemStyleID := 0;
 end; //ClearLine
 
 //Добавить для указанного столбца индекс условного форматирования
@@ -3406,6 +3461,7 @@ var
     _CurrCell: TZCell;
     i, t: integer;
     _IsHaveTextInRow: boolean;
+    _RowDefaultStyleID: integer;
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     b: boolean;
     _ColumnCFDefaultStyleID: integer;
@@ -3700,6 +3756,17 @@ var
 
         //стиль ячейки по умолчанию
         s := xml.Attributes.ItemsByName['table:default-cell-style-name'];
+        if (Length(s) > 0) then
+        begin
+          _RowDefaultStyleID := _FindStyleID(s {$IFDEF ZUSE_CONDITIONAL_FORMATTING}, _isRowDefaultStyleCF {$ENDIF});
+          XMLSS.Sheets[_CurrentRow].Rows[_CurrentRow].StyleID := _RowDefaultStyleID;
+        end else
+        begin
+          _RowDefaultStyleID := -1;
+          {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+          _isRowDefaultStyleCF := false;
+          {$ENDIF}
+        end;
 
         //Видимость: visible | collapse | filter
         s := xml.Attributes.ItemsByName['table:visibility'];
@@ -3795,6 +3862,14 @@ var
 
       if (ifTag('table:table', 4)) then
         _ReadTable();
+
+      //TODO: для LibreOffice >= 4.0 условное форматирование
+      {
+      if (ifTag('calcext:conditional-formats', 4)) then
+      begin
+
+      end;
+      }
     end;
   end; //_ReadDocument
 
