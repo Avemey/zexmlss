@@ -78,7 +78,8 @@ type
     FLineItemWidth: integer;          //Ўирина текущей линии с одинаковым StyleID
     FLineItemStartCell: integer;      //Ќомер начальной €чейки в строке
     FLineItemStyleID: integer;        //Ќомер стил€
-
+    FCurrentStyleID: integer;         //—тиль текущей €чейки
+    FCurrentIsCF: boolean;            //ѕризнак того, что текуща€ €чейка имеет условный стиль
   protected
     procedure AddToLine(const CellNum: integer; const AStyleID: integer; const ACount: integer);
   public
@@ -94,6 +95,9 @@ type
     property LineItemWidth: integer read FLineItemWidth write FLineItemWidth;
     property LineItemStartCell: integer read FLineItemStartCell write FLineItemStartCell;
     property LineItemStyleID: integer read FLineItemStyleID write FLineItemStyleID;
+    property CurrentStyleID: integer read FCurrentStyleID write FCurrentStyleID;
+    property CurrentIsCF: boolean read FCurrentIsCF write FCurrentIsCF;
+
   end;
 {$ENDIF}
 
@@ -830,7 +834,7 @@ begin
   if (FCountInLine >= FMaxCountInLine) then
   begin
     inc(FMaxCountInLine, 10);
-    SetLength(FCurrentLine, FMaxCountInLine)
+    SetLength(FCurrentLine, FMaxCountInLine);
   end;
   FCurrentLine[t].CellNum := CellNum;
   FCurrentLine[t].StyleID := AStyleID;
@@ -3210,7 +3214,6 @@ var
   _isRowDefaultStyleCF: boolean;        //явл€етс€ ли стиль по умолчанию дл€ €чейки в строке условным стилем
   _isCellStyleCF: boolean;              //явл€етс€ ли стиль €чейки условным
   {$ENDIF}
-  _DefaultCellInRowStyleID: integer;    //ID стил€ по-умолчанию в строке
 
   function IfTag(const TgName: string; const TgType: integer): boolean;
   begin
@@ -3461,7 +3464,7 @@ var
     _CurrCell: TZCell;
     i, t: integer;
     _IsHaveTextInRow: boolean;
-    _RowDefaultStyleID: integer;
+    _RowDefaultStyleID: integer;  //ID стил€ по-умолчанию в строке
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     b: boolean;
     _ColumnCFDefaultStyleID: integer;
@@ -3533,17 +3536,28 @@ var
         end;
 
         //стиль €чейки
+        //TODO: Ќужно разобратьс€ с приоритетом. ≈сли дл€ €чейки не указан стиль,
+        //      какой стиль нужно брать раньше: стиль столбца или строки?
+        //      ѕока пусть будет как дл€ столбца. »ли, может, если не указан стиль,
+        //      то ставить дефолтный (-1)?
         s := xml.Attributes.ItemsByName['table:style-name'];
         _CurrCell.CellStyle := XMLSS.Sheets[_CurrentPage].Columns[_CurrentCol].StyleID;
+        {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+        {$ENDIF}
         if (length(s) > 0) then
           _CurrCell.CellStyle := _FindStyleID(s {$IFDEF ZUSE_CONDITIONAL_FORMATTING}, _isCellStyleCF{$ENDIF})
         else
         begin
-          _CurrCell.CellStyle := _DefaultCellInRowStyleID;
+          _CurrCell.CellStyle := _RowDefaultStyleID;
           {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
           _isCellStyleCF := _isRowDefaultStyleCF;
           {$ENDIF}
         end;
+
+        {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+        if (_isCellStyleCF) then
+
+        {$ENDIF}
 
         //ѕроверка правильности наполнени€
         //*s := xml.Attributes.ItemsByName['table:cell-content-validation'];
@@ -3566,11 +3580,8 @@ var
         //“ип значени€ в €чейке
         s := xml.Attributes.ItemsByName['table:value-type'];
         if (length(s) = 0) then
-        begin
           s := xml.Attributes.ItemsByName['office:value-type'];
-          _CurrCell.CellType := ODFTypeToZCellType(s);
-        end else
-          _CurrCell.CellType := ODFTypeToZCellType(s);
+        _CurrCell.CellType := ODFTypeToZCellType(s);
 
         //защищЄнность €чейки
         s := xml.Attributes.ItemsByName['table:protected']; //{tut} надо будет добавить ещЄ один стиль
@@ -3704,6 +3715,7 @@ var
   begin
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     ReadHelper.ConditionReader.Clear();
+    _ColumnCFDefaultStyleID := -2;
     {$ENDIF}
     _CurrentRow := 0; 
     _CurrentCol := 0;
@@ -3810,7 +3822,8 @@ var
           XMLSS.Sheets[_CurrentPage].Columns[_MaxCol].StyleID := _ColumnCFDefaultStyleID;
           if (b) then
             ReadHelper.ConditionReader.AddColumnCF(_MaxCol, _ColumnCFDefaultStyleID);
-        end;
+        end else
+          b := false;
         {$ELSE}
           XMLSS.Sheets[_CurrentPage].Columns[_MaxCol].StyleID := _FindStyleID(s);
         {$ENDIF}
@@ -3901,7 +3914,7 @@ begin
     ODFRowStyles := nil;
 
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-    for RowStyleCount := 0 to  StyleCount - 1 do
+    for RowStyleCount := 0 to StyleCount - 1 do
       SetLength(ODFStyles[RowStyleCount].Conditions, 0);
     {$ENDIF}
 
