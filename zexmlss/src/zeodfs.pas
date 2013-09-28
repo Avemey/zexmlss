@@ -49,19 +49,43 @@ uses
   zsspxml, zexmlss, zesavecommon, zeZippy
   {$IFDEF FPC},zipper {$ELSE}{$I odszipuses.inc}{$ENDIF};
 
-{$IFDEF ZUSE_CONDITIONAL_FORMATTING}
 type
+  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   TZEConditionMap = record
     ConditionValue: string;       //Условие
     ApplyStyleName: string;       //Применяемый стиль
     ApplyStyleIDX: integer;       //Номер применяемого стиля
     ApplyBaseCellAddres: string   //Адрес ячейки
   end;
+  {$ENDIF}
 
+  //Доп. свойства стиля
+  TZEODFStyleProperties = record
+    name: string;           //Имя стиля
+    index: integer;
+    ParentName: string;     //Имя родителя
+    isHaveParent: boolean;  //Флаг наличая родительского стиля
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    ConditionsCount: integer;             //Кол-во условий (признак условного форматирования)
+    Conditions: array of TZEConditionMap; //Условия
+    {$ENDIF}
+  end;
+
+  TZODFStyleArray = array of TZEODFStyleProperties;
+
+{$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   TZEODFCFLine = record
     CellNum: integer;
-    StyleID: integer;
+    StyleNumber: integer;
     Count: integer;
+  end;
+
+  TZEODFCFAreaItem = record
+    RowNum: integer;
+    ColNum: integer;
+    Width: integer;
+    Height: integer;
+    CFStyleNumber: integer;
   end;
 
   //Для чтения условного форматирования в ODS
@@ -75,44 +99,31 @@ type
     FColumnsCount: integer;           //Кол-во столбцов в листе
     FMaxColumnsCount: integer;        //Максимальное кол-во листов
 
+    FAreas: array of TZEODFCFAreaItem;//Области с условным морматированием
+    FAreasCount: integer;             //Кол-во областей с условным форматированием
+    FMaxAreasCount: integer;
+
     FLineItemWidth: integer;          //Ширина текущей линии с одинаковым StyleID
     FLineItemStartCell: integer;      //Номер начальной ячейки в строке
-    FLineItemStyleID: integer;        //Номер стиля
-    FCurrentStyleID: integer;         //Стиль текущей ячейки
-    FCurrentIsCF: boolean;            //Признак того, что текущая ячейка имеет условный стиль
+    FLineItemStyleCFNumber: integer;  //Номер стиля
   protected
-    procedure AddToLine(const CellNum: integer; const AStyleID: integer; const ACount: integer);
+    procedure AddToLine(const CellNum: integer; const AStyleCFNumber: integer; const ACount: integer);
   public
     constructor Create(XMLSS: TZEXMLSS);
     destructor Destroy(); override;
-    procedure CheckCell(CellNum: integer; AStyleID: integer; AIsCFStyle: boolean; RepeatCount: integer = 1);
-    procedure ApplyConditionStylesToSheet(SheetNumber: integer);
-    procedure AddColumnCF(ColumnNumber: integer; CFStyleID: integer);
+    procedure CheckCell(CellNum: integer; AStyleCFNumber: integer; RepeatCount: integer = 1);
+    procedure ApplyConditionStylesToSheet(SheetNumber: integer; var StylesArray: TZODFStyleArray; StylesCount: integer);
+    procedure AddColumnCF(ColumnNumber: integer; StyleCFNumber: integer);
     function GetColumnCF(ColumnNumber: integer): integer;
     procedure Clear();
     procedure ClearLine();
+    procedure ProgressLine(RowNumber: integer; RepeatCount: integer = 1);
     property ColumnsCount: integer read FColumnsCount;
     property LineItemWidth: integer read FLineItemWidth write FLineItemWidth;
     property LineItemStartCell: integer read FLineItemStartCell write FLineItemStartCell;
-    property LineItemStyleID: integer read FLineItemStyleID write FLineItemStyleID;
-    property CurrentStyleID: integer read FCurrentStyleID write FCurrentStyleID;
-    property CurrentIsCF: boolean read FCurrentIsCF write FCurrentIsCF;
-
+    property LineItemStyleID: integer read FLineItemStyleCFNumber write FLineItemStyleCFNumber;
   end;
 {$ENDIF}
-
-type
-  //Доп. свойства стиля
-  TZEODFStyleProperties = record
-    name: string;           //Имя стиля
-    index: integer;
-    ParentName: string;     //Имя родителя
-    isHaveParent: boolean;  //Флаг наличая родительского стиля
-    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-    ConditionsCount: integer;             //Кол-во условий (признак условного форматирования)
-    Conditions: array of TZEConditionMap; //Условия
-    {$ENDIF}
-  end;
 
   //Для чтения стилей и всего такого
   TZEODFReadHelper = class
@@ -227,8 +238,6 @@ type
   end;
 
   TZODFRowStyleArray = array of TZODFRowStyle;
-
-  TZODFStyleArray = array of TZEODFStyleProperties;
 
   TZODFTableStyle = record
     name: string;
@@ -767,32 +776,35 @@ begin
   FColumnsCount := 0;
   FMaxColumnsCount := 10;
   SetLength(FColumnSCFNumbers, FMaxColumnsCount);
+  FAreasCount := 0;
+  FMaxAreasCount := 10;
+  SetLength(FAreas, FMaxAreasCount);
 end;
 
 destructor TZODFConditionalReadHelper.Destroy();
 begin
-  Setlength(FCurrentLine, 0);
+  SetLength(FCurrentLine, 0);
   SetLength(FColumnSCFNumbers, 0);
+  SetLength(FAreas, 0);
   inherited;
 end;
 
 //Проверить условный стиль для текущей ячейки и заполить линию условных стилей
 //INPUT
-//      CellNum: integer      - номер текущей ячейки
-//      AStyleID: integer     - номер стиля ячейки
-//      AIsCFStyle: boolean   - является ли стиль текущей ячейки условным
-//      RepeatCount: integer  - кол-во повторений
-procedure TZODFConditionalReadHelper.CheckCell(CellNum: integer; AStyleID: integer; AIsCFStyle: boolean; RepeatCount: integer = 1);
+//      CellNum: integer        - номер текущей ячейки
+//      AStyleCFNumber: integer - номер условного стиля ячейки (из массивов)
+//      RepeatCount: integer    - кол-во повторений
+procedure TZODFConditionalReadHelper.CheckCell(CellNum: integer; AStyleCFNumber: integer; RepeatCount: integer = 1);
 var
   _add: boolean;
 
   procedure _AddLineItem();
   begin
-    if (AIsCFStyle) then
+    if (AStyleCFNumber >= 0) then
     begin
       FLineItemWidth := RepeatCount;
       FLineItemStartCell := CellNum;
-      FLineItemStyleID := AStyleID;
+      FLineItemStyleCFNumber := AStyleCFNumber;
     end else
       FLineItemStartCell := -2;
   end;
@@ -806,14 +818,14 @@ begin
   end else
   begin
     _add := false;
-    if (AIsCFStyle and (FLineItemStyleID = AStyleID)) then
+    if ((AStyleCFNumber >= 0) and (FLineItemStyleCFNumber = AStyleCFNumber)) then
       FLineItemWidth := FLineItemWidth + RepeatCount
     else
       _add := true;
 
     if (_add) then
     begin
-      AddToLine(FLineItemStartCell, FLineItemStyleID, FLineItemWidth);
+      AddToLine(FLineItemStartCell, FLineItemStyleCFNumber, FLineItemWidth);
       _AddLineItem();
     end;
   end;
@@ -821,10 +833,10 @@ end; //CheckCell
 
 //Добавить к текущей линии
 //INPUT
-//  const CellNum: integer  - номер начальной ячейки
-//  const AStyleID: integer - номер стиля в хранилище
-//  const ACount: integer   - кол-во ячеек
-procedure TZODFConditionalReadHelper.AddToLine(const CellNum: integer; const AStyleID: integer; const ACount: integer);
+//  const CellNum: integer        - номер начальной ячейки
+//  const AStyleCFNumber: integer - номер стиля в хранилище
+//  const ACount: integer         - кол-во ячеек
+procedure TZODFConditionalReadHelper.AddToLine(const CellNum: integer; const AStyleCFNumber: integer; const ACount: integer);
 var
   t: integer;
 
@@ -837,15 +849,73 @@ begin
     SetLength(FCurrentLine, FMaxCountInLine);
   end;
   FCurrentLine[t].CellNum := CellNum;
-  FCurrentLine[t].StyleID := AStyleID;
+  FCurrentLine[t].StyleNumber := AStyleCFNumber;
   FCurrentLine[t].Count := ACount;
 end; //AddToLine
 
 //Применить условные форматирования к листу
 //INPUT
-//      SheetNumber: integer - номер листа
-procedure TZODFConditionalReadHelper.ApplyConditionStylesToSheet(SheetNumber: integer);
+//      SheetNumber: integer          - номер листа
+//   var StylesArray: TZODFStyleArray - массив со стилями
+//      StylesCount: integer          - кол-во стилей в массиве
+procedure TZODFConditionalReadHelper.ApplyConditionStylesToSheet(SheetNumber: integer; var StylesArray: TZODFStyleArray; StylesCount: integer);
+var
+  i, j: integer;
+  _CFCount: integer;            //сколько нужно добавить условных стилей
+  _CFArray: array of integer;
+  t: integer;
+
+  procedure _CheckAreas();
+  var
+    i, j: integer;
+    b: boolean;
+
+  begin
+    _CFCount := 0;
+    SetLength(_CFArray, FAreasCount);
+    for i := 0 to FAreasCount - 1 do
+    begin
+      b := true;
+      t := FAreas[i].CFStyleNumber;
+      for j := 0 to _CFCount - 1 do
+        if (t = _CFArray[j]) then
+        begin
+          b := false;
+          break;
+        end;
+        //FXMLSS.Sheets[SheetNumber].ConditionalFormatting[1].
+      if (b) then
+      begin
+        _CFArray[_CFCount] := t;
+        inc(_CFCount);
+      end;
+    end; //for i
+  end; //_CheckAreas
+
+  //Добавить новую область к условному форматированию в хранилище
+  //INPUT
+  //      AreaNumber: integer   - номер области условного форматирования на текущем листе
+  //      NewCFNumber: integer  - номер существующего условного форматирования в хранилище
+  procedure _AddArea(AreaNumber: integer; NewCFNumber: integer);
+  begin
+  end; //_AddArea
+
 begin
+  if (FAreasCount > 0) then
+    if (Assigned(FXMLSS)) then
+    try
+      _CheckAreas();
+      for i := 0 to FAreasCount - 1 do
+      for j := 0 to _CFCount - 1 do
+        if (FAreas[i].CFStyleNumber = _CFArray[j]) then
+        begin
+          _AddArea(i, j);
+          break;
+        end;
+
+    finally
+      SetLength(_CFArray, 0);
+    end;
 end; //ApplyConditionStylesToSheet
 
 //Очистка всех условных форматирований (выполняется перед началом нового листа)
@@ -853,6 +923,7 @@ procedure TZODFConditionalReadHelper.Clear();
 begin
   ClearLine();
   FColumnsCount := 0;
+  FAreasCount := 0;
 end; //Clear
 
 procedure TZODFConditionalReadHelper.ClearLine();
@@ -860,14 +931,64 @@ begin
   FCountInLine := 0;
   FLineItemWidth := 0;
   FLineItemStartCell := -2; //Если < 0 - значит это первый раз в строке
-  FLineItemStyleID := 0;
+  FLineItemStyleCFNumber := 0;
 end; //ClearLine
+
+//Добавить текущую строку с условными стилями в список условных стилей текущей страницы
+//INPUT
+//      RowNumber: integer    - текущая строка
+//      RepeatCount: integer  - кол-во повторов строки
+procedure TZODFConditionalReadHelper.ProgressLine(RowNumber: integer; RepeatCount: integer = 1);
+var
+  b: boolean;
+  i, j: integer;
+  LastAreaIndexBeforeProgress: integer;
+
+begin
+  if (FLineItemStartCell >= 0) then
+  begin
+    AddToLine(FLineItemStartCell, FLineItemStyleCFNumber, FLineItemWidth);
+    FLineItemStartCell := -2;
+  end;
+
+  LastAreaIndexBeforeProgress := FAreasCount - 1;
+  for i := 0 to FCountInLine - 1 do
+  begin
+    b := true;
+    for j := 0 to LastAreaIndexBeforeProgress do
+      if (FCurrentLine[i].StyleNumber = FAreas[j].CFStyleNumber) then
+        if (FCurrentLine[i].CellNum = FAreas[j].ColNum) then
+          if (FCurrentLine[i].Count = FAreas[j].Width) then
+            if (FAreas[j].RowNum + FAreas[j].Height = RowNumber) then
+            begin
+              FAreas[j].Height := FAreas[j].Height + RepeatCount;
+              b := false;
+              break;
+            end;
+
+    if (b) then
+    begin
+      j := FAreasCount;
+      inc(FAreasCount);
+      if (FAreasCount >= FMaxAreasCount) then
+      begin
+        inc(FMaxAreasCount, 10);
+        SetLength(FAreas, FMaxAreasCount);
+      end;
+      FAreas[j].RowNum := RowNumber;
+      FAreas[j].ColNum := FCurrentLine[i].CellNum;
+      FAreas[j].Width := FCurrentLine[i].Count;
+      FAreas[j].Height := RepeatCount;
+      FAreas[j].CFStyleNumber := FCurrentLine[i].StyleNumber;
+    end;
+  end;
+end; //ProgressLine
 
 //Добавить для указанного столбца индекс условного форматирования
 //INPUT
-//      ColumnNumber: integer - номер столбца
-//      CFStyleID: integer    - номер условного стиля
-procedure TZODFConditionalReadHelper.AddColumnCF(ColumnNumber: integer; CFStyleID: integer);
+//      ColumnNumber: integer   - номер столбца
+//      StyleCFNumber: integer  - номер условного стиля (в массиве)
+procedure TZODFConditionalReadHelper.AddColumnCF(ColumnNumber: integer; StyleCFNumber: integer);
 var
   t: integer;
 
@@ -880,14 +1001,14 @@ begin
     SetLength(FColumnSCFNumbers, FMaxColumnsCount);
   end;
   FColumnSCFNumbers[t][0] := ColumnNumber;
-  FColumnSCFNumbers[t][1] := CFStyleID;
+  FColumnSCFNumbers[t][1] := StyleCFNumber;
 end;  //AddColumnCF
 
 //Получить номер стиля условного форматирования для колонки
 //INPUT
 //      ColumnNumber: integer - номер столбца
 //RETURN
-//      integer - >= 0 - номер стиля условного форматирования
+//      integer - >= 0 - номер стиля условного форматирования в массиве
 //                < 0 - для данного столбца не применялся условный стиль по дефолту
 function TZODFConditionalReadHelper.GetColumnCF(ColumnNumber: integer): integer;
 var
@@ -3211,8 +3332,8 @@ var
   TableStyleCount, MaxTableStyleCount: integer;
   _celltext: string;
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-  _isRowDefaultStyleCF: boolean;        //Является ли стиль по умолчанию для ячейки в строке условным стилем
-  _isCellStyleCF: boolean;              //Является ли стиль ячейки условным
+  _RowDefaultStyleCFNumber: integer;    //Является ли стиль по умолчанию для ячейки в строке условным стилем
+  _CellStyleCFNumber: integer;          //Является ли стиль ячейки условным (номер в массиве)
   {$ENDIF}
 
   function IfTag(const TgName: string; const TgType: integer): boolean;
@@ -3223,9 +3344,11 @@ var
   //Ищет номер стиля по названию
   //INPUT
   //  const st: string        - название стиля
-  //  out retCFFlag: boolean  - возвращает, был ли стиль условным
+  //  out retCFIndex: integer - возвращает номер условного стиля в массиве,
+  //                            если < 0 - стиль не условный.
+  //                            Если >= StyleCount, то стиль в массиве ReadHelper.StylesProperties.
   function _FindStyleID(const st: string {$IFDEF ZUSE_CONDITIONAL_FORMATTING};
-                                         out retCFFlag: boolean
+                                         out retCFIndex: integer
                                          {$ENDIF}): integer;
   var
     i: integer;
@@ -3233,14 +3356,15 @@ var
   begin
     result := -1;
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-    retCFFlag := false;
+    retCFIndex := -1;
     {$ENDIF}
     for i := 0 to StyleCount - 1 do
     if (ODFStyles[i].name = st) then
     begin
       result := ODFStyles[i].index;
       {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-      retCFFlag := ODFStyles[i].ConditionsCount > 0;
+      if (ODFStyles[i].ConditionsCount > 0) then
+        retCFIndex := i;
       {$ENDIF}
       break;
     end;
@@ -3254,7 +3378,8 @@ var
           result := ReadHelper.StylesProperties[i].index;
 
           {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-          retCFFlag := ReadHelper.StylesProperties[i].ConditionsCount > 0;
+          if (ReadHelper.StylesProperties[i].ConditionsCount > 0) then
+            retCFIndex := i + StyleCount;
           {$ENDIF}
 
           break;
@@ -3466,8 +3591,7 @@ var
     _IsHaveTextInRow: boolean;
     _RowDefaultStyleID: integer;  //ID стиля по-умолчанию в строке
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-    b: boolean;
-    _ColumnCFDefaultStyleID: integer;
+    _tmpNum: integer;
     {$ENDIF}
 
     //Повторить строку
@@ -3476,6 +3600,20 @@ var
       i, j, n, z: integer;
 
     begin
+      {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+      if (isRepeatRow) then
+      begin
+        if (_RepeatRowCount <= 2000) then
+        begin
+          z := _RepeatRowCount;
+          if ((not _IsHaveTextInRow) and (z > 512)) then
+            z := 512;
+        end else
+          z := 1;
+      end else
+        z := 1;
+      ReadHelper.ConditionReader.ProgressLine(_CurrentRow - 1, z);
+      {$ENDIF}
       //Максимум строка может повторятся 2000 раз
       if ((isRepeatRow) and (_RepeatRowCount <= 2000)) then
       begin
@@ -3512,6 +3650,9 @@ var
         _CurrCell := XMLSS.Sheets[_CurrentPage].Cell[_CurrentCol, _CurrentRow];
         s := xml.Attributes.ItemsByName['table:number-columns-repeated'];
         isRepeatCell := TryStrToInt(s, _RepeatCellCount);
+        if (not isRepeatCell) then
+          _RepeatCellCount := 1;
+
         //кол-во объединённых столбцов
         s := xml.Attributes.ItemsByName['table:number-columns-spanned'];
         if (TryStrToInt(s, _numX)) then
@@ -3543,20 +3684,19 @@ var
         s := xml.Attributes.ItemsByName['table:style-name'];
         _CurrCell.CellStyle := XMLSS.Sheets[_CurrentPage].Columns[_CurrentCol].StyleID;
         {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+        _CellStyleCFNumber := ReadHelper.ConditionReader.GetColumnCF(_CurrentCol);
         {$ENDIF}
         if (length(s) > 0) then
-          _CurrCell.CellStyle := _FindStyleID(s {$IFDEF ZUSE_CONDITIONAL_FORMATTING}, _isCellStyleCF{$ENDIF})
+          _CurrCell.CellStyle := _FindStyleID(s {$IFDEF ZUSE_CONDITIONAL_FORMATTING}, _CellStyleCFNumber{$ENDIF})
         else
         begin
-          _CurrCell.CellStyle := _RowDefaultStyleID;
           {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-          _isCellStyleCF := _isRowDefaultStyleCF;
+          _CellStyleCFNumber := _RowDefaultStyleCFNumber;
           {$ENDIF}
         end;
 
         {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-        if (_isCellStyleCF) then
-
+        ReadHelper.ConditionReader.CheckCell(_CurrentCol, _CellStyleCFNumber, _RepeatCellCount);
         {$ENDIF}
 
         //Проверка правильности наполнения
@@ -3715,7 +3855,6 @@ var
   begin
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     ReadHelper.ConditionReader.Clear();
-    _ColumnCFDefaultStyleID := -2;
     {$ENDIF}
     _CurrentRow := 0; 
     _CurrentCol := 0;
@@ -3770,13 +3909,13 @@ var
         s := xml.Attributes.ItemsByName['table:default-cell-style-name'];
         if (Length(s) > 0) then
         begin
-          _RowDefaultStyleID := _FindStyleID(s {$IFDEF ZUSE_CONDITIONAL_FORMATTING}, _isRowDefaultStyleCF {$ENDIF});
+          _RowDefaultStyleID := _FindStyleID(s {$IFDEF ZUSE_CONDITIONAL_FORMATTING}, _RowDefaultStyleCFNumber {$ENDIF});
           XMLSS.Sheets[_CurrentRow].Rows[_CurrentRow].StyleID := _RowDefaultStyleID;
         end else
         begin
-          _RowDefaultStyleID := -1;
+          //_RowDefaultStyleID := -1;
           {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-          _isRowDefaultStyleCF := false;
+          _RowDefaultStyleCFNumber := -1;
           {$ENDIF}
         end;
 
@@ -3818,12 +3957,11 @@ var
         if (length(s) > 0) then
         {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
         begin
-          _ColumnCFDefaultStyleID := _FindStyleID(s, b);
-          XMLSS.Sheets[_CurrentPage].Columns[_MaxCol].StyleID := _ColumnCFDefaultStyleID;
-          if (b) then
-            ReadHelper.ConditionReader.AddColumnCF(_MaxCol, _ColumnCFDefaultStyleID);
+          XMLSS.Sheets[_CurrentPage].Columns[_MaxCol].StyleID := _FindStyleID(s, _tmpNum);
+          if (_tmpNum >= 0) then
+            ReadHelper.ConditionReader.AddColumnCF(_MaxCol, _tmpNum);
         end else
-          b := false;
+          _tmpNum := -1;
         {$ELSE}
           XMLSS.Sheets[_CurrentPage].Columns[_MaxCol].StyleID := _FindStyleID(s);
         {$ENDIF}
@@ -3839,8 +3977,8 @@ var
               begin
                 XMLSS.Sheets[_CurrentPage].Columns[_MaxCol + i].Assign(XMLSS.Sheets[_CurrentPage].Columns[_MaxCol]);
                 {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-                if (b) then
-                  ReadHelper.ConditionReader.AddColumnCF(_MaxCol + i, _ColumnCFDefaultStyleID);
+                if (_tmpNum >= 0) then
+                  ReadHelper.ConditionReader.AddColumnCF(_MaxCol + i, _tmpNum);
                 {$ENDIF}
               end;
               inc(_MaxCol, t);
@@ -3855,7 +3993,7 @@ var
     end; //while
 
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-    ReadHelper.ConditionReader.ApplyConditionStylesToSheet(_CurrentPage);
+    ReadHelper.ConditionReader.ApplyConditionStylesToSheet(_CurrentPage, ODFStyles, StyleCount);
     {$ENDIF}
 
     for i := 0 to XMLSS.Sheets[_CurrentPage].ColCount - 1 do
