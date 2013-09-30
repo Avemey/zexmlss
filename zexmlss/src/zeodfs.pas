@@ -112,7 +112,9 @@ type
     constructor Create(XMLSS: TZEXMLSS);
     destructor Destroy(); override;
     procedure CheckCell(CellNum: integer; AStyleCFNumber: integer; RepeatCount: integer = 1);
-    procedure ApplyConditionStylesToSheet(SheetNumber: integer; var StylesArray: TZODFStyleArray; StylesCount: integer);
+    procedure ApplyConditionStylesToSheet(SheetNumber: integer;
+                                          var DefStylesArray: TZODFStyleArray; DefStylesCount: integer;
+                                          var StylesArray: TZODFStyleArray; StylesCount: integer);
     procedure AddColumnCF(ColumnNumber: integer; StyleCFNumber: integer);
     function GetColumnCF(ColumnNumber: integer): integer;
     procedure Clear();
@@ -137,7 +139,7 @@ type
     function GetStyle(num: integer): TZStyle;
   protected
   public
-    StylesProperties: array of TZEODFStyleProperties;
+    StylesProperties: TZODFStyleArray;
     constructor Create(XMLSS: TZEXMLSS);
     destructor Destroy(); override;
     procedure AddStyle();
@@ -855,15 +857,97 @@ end; //AddToLine
 
 //Применить условные форматирования к листу
 //INPUT
-//      SheetNumber: integer          - номер листа
-//   var StylesArray: TZODFStyleArray - массив со стилями
-//      StylesCount: integer          - кол-во стилей в массиве
-procedure TZODFConditionalReadHelper.ApplyConditionStylesToSheet(SheetNumber: integer; var StylesArray: TZODFStyleArray; StylesCount: integer);
+//      SheetNumber: integer            - номер листа
+//  var DefStylesArray: TZODFStyleArray - массив со стилями (Styles.xml)
+//      DefStylesCount: integer         - кол-во стилей в массиве
+//  var StylesArray: TZODFStyleArray    - массив со стилями (основной из content)
+//      StylesCount: integer            - кол-во стилей в массиве
+procedure TZODFConditionalReadHelper.ApplyConditionStylesToSheet(SheetNumber: integer;
+                                                     var DefStylesArray: TZODFStyleArray; DefStylesCount: integer;
+                                                     var StylesArray: TZODFStyleArray; StylesCount: integer);
 var
   i, j: integer;
   _CFCount: integer;            //сколько нужно добавить условных стилей
   _CFArray: array of integer;
   t: integer;
+  _StartIDX: integer;
+  _CF: TZConditionalFormatting;
+
+  //Получить из текста условия (style:condition) уловие, оператор и значения
+  //INPUT
+  //  const ConditionalValue: string
+  //  out Condition: TZCondition
+  //  out ConditionOperator: TZConditionalOperator
+  //  out Value1: string
+  //  out Value2: string
+  //RETURN
+  //      boolean - true - уловие успешно определено
+  function ODFReadGetConditional(const ConditionalValue: string;
+                                  out Condition: TZCondition;
+                                  out ConditionOperator: TZConditionalOperator;
+                                  out Value1: string;
+                                  out Value2: string): boolean;
+  var
+    i: integer;
+    len: integer;
+
+  begin
+    result := false;
+    Value1 := '';
+    Value2 := '';
+    Condition := ZCFNumberValue;
+    ConditionOperator := ZCFOpGT;
+    len := length(ConditionalValue);
+    if (len > 0) then
+    begin
+      result := true;
+      for i := 1 to len do
+      begin
+      end; //for i
+    end;
+  end; //ODFReadGetConditional
+
+  procedure _AddCFItem(CFStyle: TZConditionalStyle; var StyleItem: TZEODFStyleProperties);
+  var
+    i: integer;
+    _Condition: TZCondition;
+    _ConditionOperator: TZConditionalOperator;
+    _Value1: string;
+    _Value2: string;
+    t: integer;
+
+  begin
+    for i := 0 to StyleItem.ConditionsCount - 1 do
+      if (ODFReadGetConditional(StyleItem.Conditions[i].ConditionValue,
+                              _Condition,
+                              _ConditionOperator,
+                              _Value1,
+                              _Value2)) then
+      begin
+        t := CFStyle.Count;
+        CFStyle.Add();
+        CFStyle[t].Condition := _Condition;
+        CFStyle[t].ConditionOperator := _ConditionOperator;
+        CFStyle[t].Value1 := _Value1;
+        CFStyle[t].Value2 := _Value2;
+      end;
+  end; //_AddCFItem
+
+  procedure _FillCF();
+  var
+    StyleIDX: integer;
+    _numCF: integer;
+
+  begin
+    _numCF := _CFCount + _StartIDX;
+    StyleIDX := _CFArray[_CFCount];
+    if (StyleIDX >= StylesCount) then
+    begin
+      StyleIDX := StyleIDX - StylesCount;
+      _AddCFItem(_CF[_numCF], DefStylesArray[StyleIDX]);
+    end else
+      _AddCFItem(_CF[_numCF], StylesArray[StyleIDX]);
+  end; //_FillCF
 
   procedure _CheckAreas();
   var
@@ -873,6 +957,8 @@ var
   begin
     _CFCount := 0;
     SetLength(_CFArray, FAreasCount);
+    _CF := FXMLSS.Sheets[SheetNumber].ConditionalFormatting;
+    _StartIDX := _CF.Count - 1;
     for i := 0 to FAreasCount - 1 do
     begin
       b := true;
@@ -883,10 +969,11 @@ var
           b := false;
           break;
         end;
-        //FXMLSS.Sheets[SheetNumber].ConditionalFormatting[1].
       if (b) then
       begin
+        _CF.Add();
         _CFArray[_CFCount] := t;
+        _FillCF();
         inc(_CFCount);
       end;
     end; //for i
@@ -898,6 +985,10 @@ var
   //      NewCFNumber: integer  - номер существующего условного форматирования в хранилище
   procedure _AddArea(AreaNumber: integer; NewCFNumber: integer);
   begin
+    _cf.Items[NewCFNumber].Areas.Add(FAreas[AreaNumber].ColNum,
+                                     FAreas[AreaNumber].RowNum,
+                                     FAreas[AreaNumber].Width,
+                                     FAreas[AreaNumber].Height);
   end; //_AddArea
 
 begin
@@ -909,10 +1000,9 @@ begin
       for j := 0 to _CFCount - 1 do
         if (FAreas[i].CFStyleNumber = _CFArray[j]) then
         begin
-          _AddArea(i, j);
+          _AddArea(i, j + _StartIDX);
           break;
         end;
-
     finally
       SetLength(_CFArray, 0);
     end;
@@ -3993,7 +4083,11 @@ var
     end; //while
 
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-    ReadHelper.ConditionReader.ApplyConditionStylesToSheet(_CurrentPage, ODFStyles, StyleCount);
+    ReadHelper.ConditionReader.ApplyConditionStylesToSheet(_CurrentPage,
+                                                           ReadHelper.StylesProperties,
+                                                           ReadHelper.StylesCount,
+                                                           ODFStyles,
+                                                           StyleCount);
     {$ENDIF}
 
     for i := 0 to XMLSS.Sheets[_CurrentPage].ColCount - 1 do
