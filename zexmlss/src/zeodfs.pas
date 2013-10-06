@@ -890,6 +890,119 @@ var
   var
     i: integer;
     len: integer;
+    s: string;
+    ch: char;
+    kol: integer;
+    _OCount: integer;
+    _strArr: array of string;
+    _maxKol: integer;
+
+    //«аполн€ет строку retStr до тех пор, пока не встретит символ=ch или не дойдЄт до конца
+    //INPUT
+    //  var retStr: string  - результирующа€ строка
+    //  var num: integer    - позици€ текущего символа в исходной строке
+    //      ch: char        - до кокого символа просматривать
+    procedure _ReadWhileNotChar(var retStr: string; var num: integer; ch: char);
+    begin
+      while (num < len - 1) do
+      begin
+        inc(num);
+        if (ConditionalValue[num] = ch) then
+          break
+        else
+          retStr := retStr + ConditionalValue[num];
+      end; //while
+    end; //_ReadWhileNotChar
+
+    procedure _ProcessBeforeDelimiter();
+    begin
+      if (length(trim(s)) > 0) then
+      begin
+        _strArr[kol] := s;
+        inc(kol);
+        if (kol >= _maxKol) then
+        begin
+          inc(_maxKol, 5);
+          SetLength(_strArr, _maxKol);
+        end;
+        s := '';
+      end;
+    end; //_ProcessBeforeDelimiter
+
+    //ќпределить оператор (дл€ ODF)
+    //INPUT
+    //  const st: string                             - текст оператора
+    //  var ConditionOperator: TZConditionalOperator - возвращаемый оператор
+    //RETURN
+    //      boolean - true - оператор успешно определЄн
+    function ODFGetOperatorByStr(const st: string; var ConditionOperator: TZConditionalOperator): boolean;
+    begin
+      result := true;
+      if (st = '<') then
+         ConditionOperator := ZCFOpLT
+      else
+      if (st = '>') then
+         ConditionOperator := ZCFOpGT
+      else
+      if (st = '<=') then
+         ConditionOperator := ZCFOpLTE
+      else
+      if (st = '>=') then
+         ConditionOperator := ZCFOpGTE
+      else
+      if (st = '=') then
+         ConditionOperator := ZCFOpEqual
+      else
+      if (st = '!=') then
+         ConditionOperator := ZCFOpNotEqual
+      else
+        result := false;
+    end; //ODFGetOperatorByStr
+
+    //ќпределение услови€
+    function _CheckCondition(): boolean;
+    var
+      t: integer;
+      v1, v2: double;
+      FS: TFormatSettings;
+
+      function _CheckBetween(val: TZCondition): boolean;
+      begin
+        result := false;
+        if (kol = 3) then
+          if (TryStrToFloat(_strArr[1], v1 , FS)) then
+            if (TryStrToFloat(_strArr[2], v2 , FS)) then
+            begin
+              result := true;
+              Condition := val;
+              Value1 := _strArr[1];
+              Value2 := _strArr[2];
+            end;
+      end; //_CheckBetween
+
+    begin
+      result := false;
+      s := _strArr[0];
+      FS.DecimalSeparator := '.';
+
+      //TODO: не забыть добавить все остальные услови€
+
+      if (s = 'cell-content-is-between') then
+      begin
+        result := _CheckBetween(ZCFCellContentIsBetween);
+      end else
+      if (s = 'cell-content-is-not-between') then
+      begin
+        result := _CheckBetween(ZCFCellContentIsNotBetween);
+      end else
+      if (s = 'cell-content') then
+      begin
+      end else
+      if (s = 'value') then
+      begin
+      end;
+
+    end; //_CheckCondition
 
   begin
     result := false;
@@ -898,23 +1011,91 @@ var
     Condition := ZCFNumberValue;
     ConditionOperator := ZCFOpGT;
     len := length(ConditionalValue);
+
+    //TODO: нужно потом на досуге подумать более приличный способ разбора формул
+    //      (перевести в обратную польскую запись и всЄ такое)
+    {
+    is-true-formula()                             (??)
+    cell-content-is-between(value1, value2)
+    cell-content-is-not-between(value1, value2)
+    cell-content() operator value1
+    string                                        (??)
+    formula                                       (??)
+    value() operator n                            (??)
+    bool (true/false)                             (??)
+
+    Example:
+    cell-content-is-between(0,3)
+    }
+
     if (len > 0) then
-    begin
+    try
+      _maxKol := 4;
+      SetLength(_strArr, _maxKol);
       result := true;
-      for i := 1 to len do
+      s := '';
+      kol := 0;
+      _OCount := 0;
+      i := 0;
+      while (i < len) do
       begin
-      end; //for i
-    end;
+        inc(i);
+        ch := ConditionalValue[i];
+        case (ch) of
+          ' ':
+            begin
+              _ProcessBeforeDelimiter();
+            end;
+          '''', '"':
+            begin
+              _ProcessBeforeDelimiter();
+              _ReadWhileNotChar(s, i, ch);
+            end;
+          '(':
+            begin
+              _ProcessBeforeDelimiter();
+              inc(_OCount);
+            end;
+          ')':
+            begin
+              _ProcessBeforeDelimiter();
+              dec(_OCount);
+              if (_OCount < 0) then
+              begin
+                result := false;
+                break;
+              end;
+            end;
+          ',':
+            begin
+              _ProcessBeforeDelimiter();
+            end;
+          else
+            s := s + ch;
+        end; //case
+      end; //while
+
+      _ProcessBeforeDelimiter();
+      if (_OCount <> 0) then
+        result := false;
+      if (kol > 0) then
+        result := _CheckCondition()
+      else
+        result := false;
+    finally
+      SetLength(_strArr, 0);
+    end; //if
   end; //ODFReadGetConditional
 
   procedure _AddCFItem(CFStyle: TZConditionalStyle; var StyleItem: TZEODFStyleProperties);
   var
-    i: integer;
+    i, j: integer;
     _Condition: TZCondition;
     _ConditionOperator: TZConditionalOperator;
     _Value1: string;
     _Value2: string;
     t: integer;
+    b: boolean;
 
   begin
     for i := 0 to StyleItem.ConditionsCount - 1 do
@@ -924,13 +1105,32 @@ var
                               _Value1,
                               _Value2)) then
       begin
-        t := CFStyle.Count;
-        CFStyle.Add();
-        CFStyle[t].Condition := _Condition;
-        CFStyle[t].ConditionOperator := _ConditionOperator;
-        CFStyle[t].Value1 := _Value1;
-        CFStyle[t].Value2 := _Value2;
-      end;
+        b := true;
+        if (StyleItem.Conditions[i].ApplyStyleIDX < 0) then
+        begin
+          for j := 0 to DefStylesCount - 1 do
+            if (StyleItem.Conditions[i].ApplyStyleName = DefStylesArray[j].name) then
+            begin
+              if (DefStylesArray[j].index >= 0) then
+              begin
+                StyleItem.Conditions[i].ApplyStyleIDX := DefStylesArray[j].index;
+                break;
+              end;
+
+            end;
+
+        end;
+        if (b) then
+        begin
+          t := CFStyle.Count;
+          CFStyle.Add();
+          CFStyle[t].Condition := _Condition;
+          CFStyle[t].ConditionOperator := _ConditionOperator;
+          CFStyle[t].Value1 := _Value1;
+          CFStyle[t].Value2 := _Value2;
+          CFStyle[t].ApplyStyleID := StyleItem.Conditions[i].ApplyStyleIDX;
+        end; //if
+      end; //if
   end; //_AddCFItem
 
   procedure _FillCF();
@@ -958,7 +1158,7 @@ var
     _CFCount := 0;
     SetLength(_CFArray, FAreasCount);
     _CF := FXMLSS.Sheets[SheetNumber].ConditionalFormatting;
-    _StartIDX := _CF.Count - 1;
+    _StartIDX := _CF.Count {- 1};
     for i := 0 to FAreasCount - 1 do
     begin
       b := true;
