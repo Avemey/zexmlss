@@ -131,11 +131,14 @@ function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; TextCon
 function ZEXLSXCreateDocPropsApp(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateDocPropsCore(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 
-implementation uses
+implementation
+
+uses
 {$IfDef DELPHI_UNICODE}
   AnsiStrings,  // AnsiString targeted overloaded versions of Pos, Trim, etc
 {$EndIf}
-  StrUtils;
+  StrUtils,
+  Math;
 
 type
   //шрифт
@@ -1435,6 +1438,7 @@ type
     bgcolor: TColor;
     patterncolor: TColor;
     patternColorType: byte;
+    lumFactor: double;
   end;
 
   TZXLSXFillArray = array of TZXLSXFill;
@@ -1962,10 +1966,14 @@ var
             begin
               FillArray[_currFill].bgColorType := 2;
               FillArray[_currFill].bgcolor := _l;
-            end;  
+              FillArray[_currFill].lumFactor := 0.0;
+            end;
           end;
+          s := xml.Attributes.ItemsByName['tint'];
+          if (length(s) > 0) then
+            FillArray[_currFill].lumFactor := ZETryStrToFloat(s, 0);
         end;
-      end;
+      end; //fgColor
     end; //while
   end; //_ReadFills
 
@@ -2269,6 +2277,94 @@ var
     end;
   end; //_ApplyStyle
 
+  //Конвертирует RGB в HSL
+  //http://en.wikipedia.org/wiki/HSL_color_space
+  //INPUT
+  //      r: byte     -
+  //      g: byte     -
+  //      b: byte     -
+  //  out h: double   - Hue - тон цвета
+  //  out s: double   - Saturation - насыщенность
+  //  out l: double   - Lightness (Intensity) - светлота (яркость)
+  procedure ZRGBToHSL(r, g, b: byte; out h, s, l: double);
+  var
+    _max, _min: double;
+    intMax, intMin: integer;
+    _r, _g, _b: double;
+    _delta: double;
+    _idx: integer;
+
+  begin
+    _r := r / 255;
+    _g := g / 255;
+    _b := b / 255;
+
+    intMax := Max(r, Max(g, b));
+    intMin := Min(r, Min(g, b));
+
+    _max := Max(_r, Max(_g, _b));
+
+    if (r > b) then
+    begin
+      if (r > g) then
+        _idx := 1
+      else
+        _idx := 2;
+    end else
+    begin
+      if (b > g) then
+        _idx := 3
+      else
+        _idx := 2;
+    end;
+
+    _min := Min(_r, Min(_g, _b));
+    h := (_max + _min) * 0.5;
+    s := h;
+    l := h;
+    if (intMax = intMin) then
+    begin
+      h := 0;
+      s := 0;
+    end else
+    begin
+      _delta := _max - _min;
+      if (l > 0.5) then
+        s := _delta / (2 - _max - _min)
+      else
+        s := _delta / (_max + min);
+
+        case (_idx) of
+          1:
+            begin
+              h = (_g - _b) / _delta;
+              if (g < b) then
+                h := h + 6;
+            end;
+          2: h = (_b - _r) / _delta + 2;
+          3: h = (_r - _g) / _delta + 4;
+        end;
+        
+        h := h / 6;
+    end;
+  end; //ZRGBToHSL
+
+  //Конвертирует TColor (RGB) в HSL
+  //http://en.wikipedia.org/wiki/HSL_color_space
+  //INPUT
+  //      Color: TColor - цвет
+  //  out h: double     - Hue - тон цвета
+  //  out s: double     - Saturation - насыщенность
+  //  out l: double     - Lightness (Intensity) - светлота (яркость)
+  procedure ZColorToHSL(Color: TColor; out h, s, l: double);
+  var
+    _RGB: integer;
+
+  begin
+    _RGB := ColorToRGB(Color);
+    ZRGBToHSL(byte(_RGB), byte(_RGB shr 8), byte(_RGB shr 16), h, s, l);
+  end; //ZColorToHSL
+
 begin
   result := false;
   xml := nil;
@@ -2326,6 +2422,17 @@ begin
         t := FillArray[i].bgcolor;
         if ((t >= 0) and (t < ThemaColorCount)) then
           FillArray[i].bgcolor := ThemaFillsColors[t];
+
+        if FillArray[i].lumFactor > 0.0 then
+        begin
+           RGBtoHSL(FillArray[i].bgcolor,h1,s1,l1);
+           FillArray[i].lumFactor:=1-FillArray[i].lumFactor;
+           if l1=1 then
+              l1:=l1 * (1-FillArray[i].lumFactor)
+           else
+              l1:=l1 * FillArray[i].lumFactor + (1 - FillArray[i].lumFactor);
+           FillArray[i].bgcolor:=HSLtoRGB(h1,s1,l1);
+        end;
       end;
       if (FillArray[i].patternColorType = 2) then
       begin

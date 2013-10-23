@@ -88,6 +88,8 @@ type
     CFStyleNumber: integer;
   end;
 
+  TZEODFReadHelper = class;
+
   //Для чтения условного форматирования в ODS
   TZODFConditionalReadHelper = class
   private
@@ -106,6 +108,7 @@ type
     FLineItemWidth: integer;          //Ширина текущей линии с одинаковым StyleID
     FLineItemStartCell: integer;      //Номер начальной ячейки в строке
     FLineItemStyleCFNumber: integer;  //Номер стиля
+    FReadHelper: TZEODFReadHelper;
   protected
     procedure AddToLine(const CellNum: integer; const AStyleCFNumber: integer; const ACount: integer);
   public
@@ -124,6 +127,7 @@ type
     property LineItemWidth: integer read FLineItemWidth write FLineItemWidth;
     property LineItemStartCell: integer read FLineItemStartCell write FLineItemStartCell;
     property LineItemStyleID: integer read FLineItemStyleCFNumber write FLineItemStyleCFNumber;
+    property ReadHelper: TZEODFReadHelper read FReadHelper write FReadHelper;
   end;
 {$ENDIF}
 
@@ -781,6 +785,7 @@ begin
   FAreasCount := 0;
   FMaxAreasCount := 10;
   SetLength(FAreas, FMaxAreasCount);
+  FReadHelper := nil;
 end;
 
 destructor TZODFConditionalReadHelper.Destroy();
@@ -1105,21 +1110,34 @@ var
                               _Value1,
                               _Value2)) then
       begin
-        b := true;
         if (StyleItem.Conditions[i].ApplyStyleIDX < 0) then
         begin
+          b := false;
+          //Проверка по styles.xml
           for j := 0 to DefStylesCount - 1 do
             if (StyleItem.Conditions[i].ApplyStyleName = DefStylesArray[j].name) then
             begin
-              if (DefStylesArray[j].index >= 0) then
+              b := true;
+              if (DefStylesArray[j].index < 0) then
               begin
-                StyleItem.Conditions[i].ApplyStyleIDX := DefStylesArray[j].index;
-                break;
+
               end;
 
-            end;
-
-        end;
+              StyleItem.Conditions[i].ApplyStyleIDX := DefStylesArray[j].index;
+              break;
+            end; //if
+          //Проверка по стилям из content.xml
+          if (not b) then
+          for j := 0 to StylesCount - 1 do
+            if (StyleItem.Conditions[i].ApplyStyleName = StylesArray[j].name) then
+              if (StylesArray[j].index >= 0) then
+              begin
+                b := true;
+                StyleItem.Conditions[i].ApplyStyleIDX := StylesArray[j].index;
+                break;
+              end;
+        end else
+          b := true;
         if (b) then
         begin
           t := CFStyle.Count;
@@ -1339,6 +1357,7 @@ begin
   FStylesCount := 0;
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   FConditionReader := TZODFConditionalReadHelper.Create(XMLSS);
+  FConditionReader.ReadHelper := self;
   {$ENDIF}
 end; //Create
 
