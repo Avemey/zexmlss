@@ -1463,6 +1463,7 @@ var
   indexedColorMax: integer;
   _Style: TZStyle;
   t, i, n: integer;
+  h1, s1, l1: double;
 
   //Приводит к шрифту по-умолчанию
   //INPUT
@@ -2332,17 +2333,17 @@ var
       if (l > 0.5) then
         s := _delta / (2 - _max - _min)
       else
-        s := _delta / (_max + min);
+        s := _delta / (_max + _min);
 
         case (_idx) of
           1:
             begin
-              h = (_g - _b) / _delta;
+              h := (_g - _b) / _delta;
               if (g < b) then
                 h := h + 6;
             end;
-          2: h = (_b - _r) / _delta + 2;
-          3: h = (_r - _g) / _delta + 4;
+          2: h := (_b - _r) / _delta + 2;
+          3: h := (_r - _g) / _delta + 4;
         end;
         
         h := h / 6;
@@ -2364,6 +2365,75 @@ var
     _RGB := ColorToRGB(Color);
     ZRGBToHSL(byte(_RGB), byte(_RGB shr 8), byte(_RGB shr 16), h, s, l);
   end; //ZColorToHSL
+
+  //Конвертирует HSL в RGB
+  //http://en.wikipedia.org/wiki/HSL_color_space
+  //INPUT
+  //      h: double - Hue - тон цвета
+  //      s: double - Saturation - насыщенность
+  //      l: double - Lightness (Intensity) - светлота (яркость)
+  //  out r: byte   -
+  //  out g: byte   -
+  //  out b: byte   -
+  procedure ZHSLToRGB(h, s, l: double; out r, g, b: byte);
+  var
+    _r, _g, _b: double;
+    q, p: double;
+
+    function HueToRgb(p, q, t: double): double;
+    begin
+      result := p;
+      if (t < 0) then
+        t := t + 1;
+      if (t > 1) then
+        t := t - 1;
+      if (t < 1/6) then
+        result := p + (q - p) * 6 * t;
+      if (t < 0.5) then
+        result := q;
+      if (t < 2/3) then
+        result := p + (q - p) * (2/3 - t) * 6;
+    end; //HueToRgb
+
+  begin
+    if (s = 0) then
+    begin
+      //Оттенок серого
+      _r := l;
+      _g := l;
+      _b := l;
+    end else
+    begin
+      if (l < 0.5) then
+        q := l * (1 + s)
+      else
+        q := l + s  - l * s;
+      p := 2 * l - q;
+      _r := HueToRgb(p, q, h + 1/3);
+      _g := HueToRgb(p, q, h);
+      _b := HueToRgb(p, q, h - 1/3);
+    end;
+    r := byte(round(_r * 255));
+    g := byte(round(_g * 255));
+    b := byte(round(_b * 255));
+  end; //ZHSLToRGB
+
+  //Конвертирует HSL в Color
+  //http://en.wikipedia.org/wiki/HSL_color_space
+  //INPUT
+  //      h: double - Hue - тон цвета
+  //      s: double - Saturation - насыщенность
+  //      l: double - Lightness (Intensity) - светлота (яркость)
+  //RETURN
+  //      TColor - цвет
+  function ZHSLToColor(h, s, l: double): TColor;
+  var
+    r, g, b: byte;
+
+  begin
+    ZHSLToRGB(h, s, l, r, g, b);
+    result := (b shl 16) or (g shl 8) or r;
+  end; //ZHSLToColor
 
 begin
   result := false;
@@ -2423,17 +2493,17 @@ begin
         if ((t >= 0) and (t < ThemaColorCount)) then
           FillArray[i].bgcolor := ThemaFillsColors[t];
 
-        if FillArray[i].lumFactor > 0.0 then
+        if (FillArray[i].lumFactor > 0.0) then
         begin
-           RGBtoHSL(FillArray[i].bgcolor,h1,s1,l1);
-           FillArray[i].lumFactor:=1-FillArray[i].lumFactor;
-           if l1=1 then
-              l1:=l1 * (1-FillArray[i].lumFactor)
-           else
-              l1:=l1 * FillArray[i].lumFactor + (1 - FillArray[i].lumFactor);
-           FillArray[i].bgcolor:=HSLtoRGB(h1,s1,l1);
+          ZColorToHSL(FillArray[i].bgcolor, h1, s1, l1);
+          FillArray[i].lumFactor := 1 - FillArray[i].lumFactor;
+          if (l1 = 1) then
+            l1 := l1 * (1 - FillArray[i].lumFactor)
+          else
+            l1 := l1 * FillArray[i].lumFactor + (1 - FillArray[i].lumFactor);
+          FillArray[i].bgcolor:= ZHSLtoColor(h1, s1, l1);
         end;
-      end;
+      end; //if
       if (FillArray[i].patternColorType = 2) then
       begin
         t := FillArray[i].patterncolor;
