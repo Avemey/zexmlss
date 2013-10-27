@@ -1092,6 +1092,31 @@ var
     end; //if
   end; //ODFReadGetConditional
 
+  //заменить в условных стилях индексы на нужный
+  //INPUT
+  //  const StyleName: string - имя стиля
+  //      StyleIndex: integer - номер стиля в хранилище
+  procedure _ApplyCFDefIndexes(const StyleName: string; StyleIndex: integer);
+  var
+    i, j: integer;
+
+  begin
+    for i := 0 to DefStylesCount - 1 do
+      for j := 0 to DefStylesArray[i].ConditionsCount - 1 do
+        if (DefStylesArray[i].Conditions[j].ApplyStyleIDX < 0) then
+          if (DefStylesArray[i].Conditions[j].ApplyStyleName = StyleName) then
+            DefStylesArray[i].Conditions[j].ApplyStyleIDX := StyleIndex;
+    for i := 0 to StylesCount - 1 do
+      for j := 0 to StylesArray[i].ConditionsCount - 1 do
+        if (StylesArray[i].Conditions[j].ApplyStyleIDX < 0) then
+          if (StylesArray[i].Conditions[j].ApplyStyleName = StyleName) then
+            StylesArray[i].Conditions[j].ApplyStyleIDX := StyleIndex
+  end; //_ApplyCFDefIndexes
+
+  //Добавить условное форматирование в документ
+  //INPUT
+  //      CFStyle: TZConditionalStyle       - добавляемый условный стиль
+  //  var StyleItem: TZEODFStyleProperties  - свойства стилей
   procedure _AddCFItem(CFStyle: TZConditionalStyle; var StyleItem: TZEODFStyleProperties);
   var
     i, j: integer;
@@ -1120,7 +1145,8 @@ var
               b := true;
               if (DefStylesArray[j].index < 0) then
               begin
-
+                DefStylesArray[j].index := FXMLSS.Styles.Add(FReadHelper.FStyles[j], true);
+                _ApplyCFDefIndexes(DefStylesArray[j].name, DefStylesArray[j].index);
               end;
 
               StyleItem.Conditions[i].ApplyStyleIDX := DefStylesArray[j].index;
@@ -1138,6 +1164,7 @@ var
               end;
         end else
           b := true;
+
         if (b) then
         begin
           t := CFStyle.Count;
