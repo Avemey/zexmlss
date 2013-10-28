@@ -298,6 +298,9 @@ type
 {$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
 
 {$IFDEF FPC}
+  function ReadODFStyles(var XMLSS: TZEXMLSS; stream: TStream; var ReadHelper: TZEODFReadHelper): boolean; forward;
+
+type
   //Для распаковки в поток
   TODFZipHelper = class
   private
