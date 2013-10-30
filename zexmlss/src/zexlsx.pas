@@ -1139,7 +1139,7 @@ var
       _maxC := -1;
       _maxR := -1;
       for i := 1 to l do
-      if (st[l] = ':') then
+      if (st[i] = ':') then
       begin
         if (ZEGetCellCoords(s, c, r, true)) then
         begin;
@@ -1151,7 +1151,7 @@ var
           break;
         s := '';
       end else
-        s := s + st[l];
+        s := s + st[i];
       if (_maxC > 0) then
         CheckCol(_maxC);
       if (_maxR > 0) then
@@ -1819,6 +1819,7 @@ var
         FillArray[_currFill].patterncolor := clWindow;
         FillArray[_currFill].bgColorType := 0;
         FillArray[_currFill].patternColorType := 0;
+        FillArray[_currFill].lumFactor := 0.0;
       end else
       if ((xml.TagName = 'patternFill') and (xml.TagType in [4, 5])) then
       begin
@@ -1967,7 +1968,6 @@ var
             begin
               FillArray[_currFill].bgColorType := 2;
               FillArray[_currFill].bgcolor := _l;
-              FillArray[_currFill].lumFactor := 0.0;
             end;
           end;
           s := xml.Attributes.ItemsByName['tint'];
@@ -2304,22 +2304,8 @@ var
     intMin := Min(r, Min(g, b));
 
     _max := Max(_r, Max(_g, _b));
-
-    if (r > b) then
-    begin
-      if (r > g) then
-        _idx := 1
-      else
-        _idx := 2;
-    end else
-    begin
-      if (b > g) then
-        _idx := 3
-      else
-        _idx := 2;
-    end;
-
     _min := Min(_r, Min(_g, _b));
+
     h := (_max + _min) * 0.5;
     s := h;
     l := h;
@@ -2334,6 +2320,14 @@ var
         s := _delta / (2 - _max - _min)
       else
         s := _delta / (_max + _min);
+
+        if (intMax = r) then
+          _idx := 1
+        else
+        if (intMax = g) then
+          _idx := 2
+        else
+          _idx := 3;
 
         case (_idx) of
           1:
@@ -2388,9 +2382,11 @@ var
       if (t > 1) then
         t := t - 1;
       if (t < 1/6) then
-        result := p + (q - p) * 6 * t;
+        result := p + (q - p) * 6 * t
+      else
       if (t < 0.5) then
-        result := q;
+        result := q
+      else
       if (t < 2/3) then
         result := p + (q - p) * (2/3 - t) * 6;
     end; //HueToRgb
@@ -2497,10 +2493,12 @@ begin
         begin
           ZColorToHSL(FillArray[i].bgcolor, h1, s1, l1);
           FillArray[i].lumFactor := 1 - FillArray[i].lumFactor;
+
           if (l1 = 1) then
             l1 := l1 * (1 - FillArray[i].lumFactor)
           else
             l1 := l1 * FillArray[i].lumFactor + (1 - FillArray[i].lumFactor);
+
           FillArray[i].bgcolor:= ZHSLtoColor(h1, s1, l1);
         end;
       end; //if
@@ -3547,7 +3545,10 @@ var
     _xml.WriteEndTagNode(); //sheetPr
 
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('ref', 'A1:' + ZEGetA1byCol(_sheet.ColCount - 1) + IntToStr(_sheet.RowCount));
+    s := 'A1';
+    if (_sheet.ColCount > 0) then
+      s := s + ':' + ZEGetA1byCol(_sheet.ColCount - 1) + IntToStr(_sheet.RowCount);
+    _xml.Attributes.Add('ref', s);
     _xml.WriteEmptyTag('dimension', true, false);
 
     _xml.Attributes.Clear();
@@ -3860,7 +3861,8 @@ begin
 
     _sheet := XMLSS.Sheets[SheetNum];
     WriteXLSXSheetHeader();
-    WriteXLSXSheetCols();
+    if (_sheet.ColCount > 0) then
+      WriteXLSXSheetCols();
     WriteXLSXSheetData();
     WriteXLSXSheetFooter();
 
