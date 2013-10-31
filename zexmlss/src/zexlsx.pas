@@ -140,6 +140,14 @@ uses
   StrUtils,
   Math;
 
+{$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+const
+  ZETag_conditionalFormatting   = 'conditionalFormatting';
+  ZETag_cfRule                  = 'cfRule';
+  ZETag_formula                 = 'formula';
+{$ENDIF}
+
+
 type
   //шрифт
   TZEXLSXFont = record
@@ -1248,6 +1256,83 @@ var
     end; //while
   end; //_ReadSheetViews()
 
+  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+  //„тение условного форматировани€
+  //<conditionalFormatting>..</conditionalFormatting>
+  procedure _ReadConditionFormatting();
+  var
+    s: string;
+    MaxFormulasCount: integer;
+    _formulas: array of string;
+    count: integer;
+
+  begin
+    try
+      MaxFormulasCount := 2;
+      SetLength(_formulas, MaxFormulasCount);
+      while (not ((xml.TagType = 6) and (xml.TagName = ZETag_conditionalFormatting))) do
+      begin
+        xml.ReadTag();
+        if (xml.Eof()) then
+          break;
+
+        // cfRule = Conditional Formatting Rule
+        if ((xml.TagType = 4) and (xml.TagName = ZETag_cfRule)) then
+        begin
+         (*
+          јтрибуты в cfRule:
+          type	       	- тип
+          dxfId	        - ID примен€емого формата
+          priority	    - приоритет
+          stopIfTrue	  -  ??
+          aboveAverage  -  ??
+          percent	      -  ??
+          bottom	      -  ??
+          operator	    - оператор:
+                              lessThan	          <
+                              lessThanOrEqual	    <=
+                              equal	              =
+                              notEqual	          <>
+                              greaterThanOrEqual  >=
+                              greaterThan	        >
+                              between	            Between
+                              notBetween	        Not Between
+                              containsText	      содержит текст
+                              notContains	        не содержит
+                              beginsWith	        начинаетс€ с
+                              endsWith	          оканчиваетс€ на
+          text	        -  ??
+          timePeriod	  -  ??
+          rank	        -  ??
+          stdDev  	    -  ??
+          equalAverage	-  ??
+         *)
+          count := 0;
+          while (not ((xml.TagType = 6) and (xml.TagName = ZETag_cfRule))) do
+          begin
+            xml.ReadTag();
+            if (xml.Eof()) then
+              break;
+            if (xml.TagType = 6) then
+              if (xml.TagName = ZETag_formula) then
+              begin
+                if (count >= MaxFormulasCount) then
+                begin
+                  inc(MaxFormulasCount, 2);
+                  SetLength(_formulas, MaxFormulasCount);
+                end;
+                _formulas[count] := xml.TextBeforeTag;
+                inc(count);
+              end;
+          end; //while
+        end; //if
+      end; //while
+    finally
+      SetLength(_formulas, 0);
+    end;
+  end; //_ReadConditionFormatting
+  {$ENDIF}
+
 begin
   xml := nil;
   result := false;
@@ -1358,8 +1443,13 @@ begin
         _ReadHyperLinks()
       else
       if ((xml.TagName = 'sheetViews') and (xml.TagType = 4)) then
-        _ReadSheetViews();
-
+        _ReadSheetViews()
+      {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+      else
+      if ((xml.TagType = 4) and (xml.TagName = ZETag_conditionalFormatting)) then
+        _ReadConditionFormatting()
+      {$ENDIF}
+      ;
     end; //while
     
     result := true;
@@ -2489,6 +2579,9 @@ begin
         if ((t >= 0) and (t < ThemaColorCount)) then
           FillArray[i].bgcolor := ThemaFillsColors[t];
 
+        //Thanks Tomasz Wieckowski!
+        //  http://msdn.microsoft.com/en-us/library/ff532470%28v=office.12%29.aspx
+        //TODO: проверить, нужно ли tint примен€ть дл€ patterncolor
         if (FillArray[i].lumFactor > 0.0) then
         begin
           ZColorToHSL(FillArray[i].bgcolor, h1, s1, l1);
