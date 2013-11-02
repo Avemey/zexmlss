@@ -1265,9 +1265,90 @@ var
     MaxFormulasCount: integer;
     _formulas: array of string;
     count: integer;
+    _sqref: string;
+    _type: string;
+    _operator: string;
+    _CFCondition: TZCondition;
+    _CFOperator: TZConditionalOperator;
+    _isOk: boolean;
+
+    //Получить условное форматирование и оператор из xlsx
+    //INPUT
+    //  const xlsxCfType: string              - xlsx тип условного форматирования
+    //  const xlsxCFOperator: string          - xlsx оператор
+    //  out CFCondition: TZCondition          - распознанное условие
+    //  out CFOperator: TZConditionalOperator - распознанный оператор
+    //RETURN
+    //      boolean - true - условное форматирование и оператор успешно распознаны
+    function ZEXLSX_getCFCondition(const xlsxCfType, xlsxCFOperator: string;
+                                   out CFCondition: TZCondition;
+                                   out CFOperator: TZConditionalOperator): boolean;
+
+      procedure _SetCFOperator(AOperator: TZConditionalOperator);
+      begin
+        CFOperator := AOperator;
+        CFCondition := ZCFCellContentOperator;
+      end;
+
+    begin
+      result := false;
+      CFCondition := ZCFNumberValue;
+      CFOperator := ZCFOpGT;
+
+      if (xlsxCfType = 'cellIs') then
+      begin
+      end else
+        exit;
+
+      if (xlsxCFOperator = 'lessThan') then
+        _SetCFOperator(ZCFOpLT)
+      else
+      if (xlsxCFOperator = 'equal') then
+        _SetCFOperator(ZCFOpEqual)
+      else
+      if (xlsxCFOperator = 'notEqual') then
+        _SetCFOperator(ZCFOpNotEqual)
+      else
+      if (xlsxCFOperator = 'greaterThanOrEqual') then
+        _SetCFOperator(ZCFOpGTE)
+      else
+      if (xlsxCFOperator = 'greaterThan') then
+        _SetCFOperator(ZCFOpGT)
+      else
+      if (xlsxCFOperator = 'lessThanOrEqual') then
+        _SetCFOperator(ZCFOpLTE)
+      else
+      if (xlsxCFOperator = 'between') then
+        CFCondition := ZCFCellContentIsBetween
+      else
+      if (xlsxCFOperator = 'notBetween') then
+        CFCondition := ZCFCellContentIsNotBetween
+      else
+      if (xlsxCFOperator = 'containsText') then
+      begin
+        exit;
+      end else
+      if (xlsxCFOperator = 'notContains') then
+      begin
+        exit;
+      end else
+      if (xlsxCFOperator = 'beginsWith') then
+      begin
+        exit;
+      end else
+      if (xlsxCFOperator = 'endsWith') then
+      begin
+        exit;
+      end else
+        exit;
+
+      result := true;
+    end; //ZEXLSX_getCFCondition
 
   begin
+    _isOk := true;
     try
+      _sqref := xml.Attributes['sqref'];
       MaxFormulasCount := 2;
       SetLength(_formulas, MaxFormulasCount);
       while (not ((xml.TagType = 6) and (xml.TagName = ZETag_conditionalFormatting))) do
@@ -1276,12 +1357,32 @@ var
         if (xml.Eof()) then
           break;
 
+        //XMLSS.Sheets[0].ConditionalFormatting.Items[0].Items[0].Condition
+
         // cfRule = Conditional Formatting Rule
         if ((xml.TagType = 4) and (xml.TagName = ZETag_cfRule)) then
         begin
          (*
           Атрибуты в cfRule:
           type	       	- тип
+                            expression        - ??
+                            cellIs            -
+                            colorScale        - ??
+                            dataBar           - ??
+                            iconSet           - ??
+                            top10             - ??
+                            uniqueValues      - ??
+                            duplicateValues   - ??
+                            containsText      -    ?
+                            notContainsText   -    ?
+                            beginsWith        -    ?
+                            endsWith          -    ?
+                            containsBlanks    - ??
+                            notContainsBlanks - ??
+                            containsErrors    - ??
+                            notContainsErrors - ??
+                            timePeriod        - ??
+                            aboveAverage      - ?
           dxfId	        - ID применяемого формата
           priority	    - приоритет
           stopIfTrue	  -  ??
@@ -1307,6 +1408,8 @@ var
           stdDev  	    -  ??
           equalAverage	-  ??
          *)
+          _type := xml.Attributes['type'];
+          _operator := xml.Attributes['operator'];
           count := 0;
           while (not ((xml.TagType = 6) and (xml.TagName = ZETag_cfRule))) do
           begin
@@ -1325,6 +1428,28 @@ var
                 inc(count);
               end;
           end; //while
+
+          if (ZEXLSX_getCFCondition(_type, _operator, _CFCondition, _CFOperator)) then
+          begin
+            case (_CFCondition) of
+              ZCFIsTrueFormula:;
+              ZCFCellContentIsBetween:
+                begin
+                  if (count = 2) then
+
+                  else
+                    _isOk := false;
+                end;
+              ZCFCellContentIsNotBetween:;
+              ZCFCellContentOperator:;
+              ZCFNumberValue:;
+              ZCFString:;
+              ZCFBoolTrue:;
+              ZCFBoolFalse:;
+              ZCFFormula:;
+            end; //case
+          end;
+
         end; //if
       end; //while
     finally
