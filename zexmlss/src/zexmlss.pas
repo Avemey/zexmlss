@@ -1019,10 +1019,14 @@ begin
                  begin
                    dec(t);
                    if t <> 1 then
-                     Corrected := Stack[kol-1].TextBeforeTag + Stack[kol-1].RawTag + Corrected +
-                                  Stack[kol].TextBeforeTag + Stack[kol].RawTag
+                   begin
+                     Stack[kol-2].TextBeforeTag := Corrected + Stack[kol-2].TextBeforeTag;
+                     Stack[kol-2].RawTag := Stack[kol-2].RawTag + Stack[kol-1].TextBeforeTag + Stack[kol-1].RawTag +
+                                            Stack[kol].TextBeforeTag + Stack[kol].RawTag ;
+                     Corrected := '';
+                   end
                    else
-                     Corrected :=Corrected + Stack[kol-1].TextBeforeTag + Stack[kol-1].RawTag +
+                     Corrected := Corrected + Stack[kol-1].TextBeforeTag + Stack[kol-1].RawTag +
                                   Stack[kol].TextBeforeTag + Stack[kol].RawTag;
                    dec(t);
                    UseXMLNS := true;
