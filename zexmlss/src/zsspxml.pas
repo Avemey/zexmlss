@@ -44,7 +44,7 @@ type
   TAnsiToCPConverter = function (const AnsiText: ansistring): ansistring;
 
   TReadCPCharObj = procedure(var RetChar: ansistring; var _eof: boolean) of object;
-  TReadCPChar = procedure(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+  TReadCPChar = procedure(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
   TCPToAnsiConverter = TAnsiToCPConverter;
 
   TZAttrArray = array [0..1] of ansistring;
@@ -462,11 +462,11 @@ type
 //конец для Delphi >=2009
 
 //Читатали
-procedure ReadCharUTF8(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
-procedure ReadCharUTF16LE(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
-procedure ReadCharUTF16BE(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
-procedure ReadCharUTF32(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
-procedure ReadCharOneByte(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF8(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF16LE(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF16BE(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF32(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharOneByte(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 
 //////////// Конвертеры
 function conv_UTF8ToLocal(const Text: ansistring): ansistring;
@@ -518,7 +518,7 @@ uses
 
 //// читатели
 
-procedure ReadCharUTF8(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF8(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 var
   s: ansistring;
   t, i: integer;
@@ -562,7 +562,7 @@ begin
     _eof := true;
 end;
 
-procedure ReadCharUTF16LE(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF16LE(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 var
   i, num: integer;
   s: ansistring;
@@ -592,7 +592,7 @@ begin
     _eof := true;
 end;
 
-procedure ReadCharUTF16BE(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF16BE(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 var
   i, num: integer;
   s: ansistring;
@@ -622,7 +622,7 @@ begin
     _eof := true;
 end;
 
-procedure ReadCharUTF32(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF32(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 var
   s: ansistring;
   i: integer;
@@ -642,7 +642,7 @@ begin
 end;
 
 //для однобайтных кодировок
-procedure ReadCharOneByte(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharOneByte(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 begin
   _eof := false;
   text := '';
