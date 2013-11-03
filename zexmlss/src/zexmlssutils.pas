@@ -2060,6 +2060,8 @@ var
           s := _xml.Attributes.ItemsByName['x:CharSet'];
           if length(s) > 0 then
             font.Charset := _StrToInt(s);
+          if ZEStrToBoolean(_xml.Attributes.ItemsByName['ss:Italic']) then
+            font.Style := font.Style + [fsItalic];
           if ZEStrToBoolean(_xml.Attributes.ItemsByName['ss:Bold']) then
             font.Style := font.Style + [fsBold];
           if ZEStrToBoolean(_xml.Attributes.ItemsByName['ss:StrikeThrough']) then
