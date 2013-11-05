@@ -110,6 +110,34 @@ TStringList = class;
 
 implementation uses TypInfo, Contnrs;
 
+resourcestring
+//   EZxCannotOverwriteZip    = 'Cannot remove outdated file %s';
+   EZxCannotOverwriteZip    = 'Невозможно удалить старый файл %s';
+//   EZxWrongZipState         = 'Zip generator state is %s while %s is required for further processing.';
+   EZxWrongZipState         = 'Сжатие Zip: текущий режим "%s", для продолжения работы требуется режим "%s".';
+//   EZxAmbiguousFreeing      = 'Zip file should be either saved or destroyed before freeing';
+   EZxAmbiguousFreeing      = 'Сжатие Zip: файл частично заполнен, нужно или сохранить, или отменить.';
+//   EZxIncompleteDatastreams = 'All data streams should be sealed before saving Zip to disk.';
+   EZxIncompleteDatastreams = 'Сжатие Zip: нельзя сохранить файл - есть неподтверждённые данные.';
+//   EZxSealNil               = 'Given data is nil.';
+//   EZxSealAlient            = 'Given data (%s) does not belong to this zip generator.';
+   EZxSealNil               = 'Сжатие Zip: переданны незаполненныe данные (NIL).';
+   EZxSealAlien             = 'Сжатие Zip: переданны данные (%s) не принадлежащие создаваемому файлу.';
+
+//   EZxFoldersNotAccepted    = 'Zip generator accepts files, not directories: '{+name};
+//   EZxStreamMustHaveFName   = 'Internal file should have a name.';
+//   EZxStreamAlreaydAdded    = 'File >>%s<< already was added to zip generator.';
+   EZxFoldersNotAccepted    = 'Сжатие Zip: нельзя сохранить папку вместо файла:'{+name};
+   EZxStreamMustHaveFName   = 'Сжатие Zip: нельзя сохранить безымянный файл';
+   EZxStreamAlreaydAdded    = 'Сжатие Zip: нельзя сохранить два файла с одинаковым именем'#13#10#9'%s';
+
+//   EZxFolderCreationFailed  = 'Cannot create folder: ';
+   EZxFolderCreationFailed  = 'Невозможно создать папку: ';
+
+//   EZxRegisterNonZip        = 'Registering: not a zip generator ' {+ ClassName};
+//   EZxRegisteredNonZip      = 'Retrieving: not a zip generator ' {+ ClassName};
+   EZxRegisterNonZip        = 'Сжатие Zip: нельзя создавaть Zip с помощью ' {+ ClassName};
+   EZxRegisteredNonZip      = 'Сжатие Zip: нельзя создавaть Zip с помощью ' {+ ClassName};
 { TZxZipGen }
 
 procedure TZxZipGen.AfterConstruction;
@@ -146,7 +174,7 @@ begin
 
   if State <> zgsSealed then begin
      FState := zgsSealed; // breaking infinite loop destructor -> exception -> destructor -> exception ->....
-     raise EZxZipGen.Create('Zip file should be either saved or destroyed before freeing');
+     raise EZxZipGen.Create(EZxAmbiguousFreeing);
   end;
 // even if no streams were added - the file garbage may remain
 end;
@@ -166,7 +194,7 @@ procedure TZxZipGen.SaveAndSeal;
 begin
   RequireState(zgsAccepting);
   if FActiveStreams.Count > 0 then
-     raise EZxZipGen.Create('All data streams should be sealed before saving Zip to disk.');
+     raise EZxZipGen.Create(EZxIncompleteDatastreams);
 
   ChangeState(zgsAccepting, zgsFlushing);
   try
@@ -182,11 +210,11 @@ begin
   RequireState(zgsAccepting);
 
   if nil = Data then
-     raise EZxZipGen.Create('Given data is nil.');
+     raise EZxZipGen.Create(EZxSealNil);
 
   idx := FActiveStreams.IndexOfObject(Data);
   if idx < 0 then
-     raise EZxZipGen.Create('Given data (' + Data.ClassName + ') does not belong to this zip generator.');
+     raise EZxZipGen.CreateFmt(EZxSealAlien, [Data.ClassName]);
 
   if DoSealStream(Data, FActiveStreams[idx]) then begin
      Data.Free;
@@ -213,18 +241,18 @@ begin
   RequireState(zgsAccepting);
 
   if RelativeName[Length(RelativeName)] = PathDelim then
-     raise EZxZipGen.Create('Zip generator accepts files, not directories: '+RelativeName);
+     raise EZxZipGen.Create(EZxFoldersNotAccepted + RelativeName);
 
   fname := RelativeName;
 //  UnifyDelims('\'); UnifyDelims('/');
   UnifyDelims('\', '/');  // Excel 2010 chokes on back-slashes
 
-  if fname = '' then raise EZxZipGen.Create('Internal file should have a name.');
-
   if fname[1] = '/' then Delete(fname,1,1);
 
+  if fname = '' then raise EZxZipGen.Create(EZxStreamMustHaveFName);
+
   if FSealedStreams.Find(fname, idx) or FActiveStreams.Find(fname, idx) then
-     raise EZxZipGen.Create('File >>'+fname+'<< already was added to generator.');
+     raise EZxZipGen.CreateFmt( EZxStreamAlreaydAdded, [fname]);
 
   Result := DoNewStream(fname);
   FActiveStreams.AddObject(fname, Result);
@@ -237,8 +265,7 @@ procedure TZxZipGen.RequireState(const st: TZxZipGenState);
   end;
 begin
   if State <> st then
-     raise EZxZipGen.CreateFmt(
-       'Zip generator state is %s while %s is required for further processing.',
+     raise EZxZipGen.CreateFmt( EZxWrongZipState,
        [ Name(State), Name(st) ]);
 end;
 
@@ -250,6 +277,15 @@ end;
 
 constructor TZxZipGen.Create(const ZipFile: TFileName);
 begin
+   // Try deleting old files to not confusing zippers
+   //   *  would fail on folders for non-packed fake-zip
+   //   *  FileExists is not always reliable
+   //   *  more reliable would be create-temp/remove old/rename sequence,
+   //           but then implementing zippers' would become much more complex
+   if FileExists(ZipFile) then
+      if not SysUtils.DeleteFile(ZipFile) then // not Windows.DeleteFile
+         raise EZxZipGen.CreateFmt(EZxCannotOverwriteZip, [ZipFile]);
+
    inherited Create;
    FFileName := ZipFile;
 end;
@@ -297,7 +333,7 @@ begin
   inherited;
 
   if not ForceDirectories(ZipFileName) // better use name supplied by the base class
-     then raise EZxZipGen.Create('Cannot create folder '+ZipFileName);
+     then raise EZxZipGen.Create(EZxFolderCreationFailed + ZipFileName);
 end;
 
 procedure TZxFolderInsteadOfZip.DoSaveAndSeal;
@@ -316,7 +352,7 @@ begin
 
       repeat
         s := ExtractFileDir(s);
-// "This string is empty if FileName contains no drive and directory parts."
+// Delphi help: "This string is empty if FileName contains no drive and directory parts."
 
         if '' = s  then break;
         if not RemoveDir(s) then break; // error. Parents would not be releted too.
@@ -357,9 +393,12 @@ begin
 end;
 
 class procedure TZxZipGen.RegisterZipGen(const zgc: CZxZipGens);
+var s: string;
 begin
-  if (nil = zgc) or not zgc.InheritsFrom(TZxZipGen) then
-     raise EZxZipGen.Create('Can only register zip generating subclasses.');
+  if (nil = zgc) or (not zgc.InheritsFrom(TZxZipGen)) then begin
+     if nil <> zgc then s := zgc.ClassName else s := 'NIL';
+     raise EZxZipGen.Create(EZxRegisterNonZip + s);
+  end;
 
   ZxZipMakers.Insert(0, zgc); // LIFO
 end;
@@ -384,7 +423,7 @@ begin
 
   c := ZxZipMakers[idx];
   if not c.InheritsFrom(TZxZipGen) then
-     raise EZxZipGen.Create(c.ClassName + ' was registered instead of Zip generator');
+     raise EZxZipGen.Create(EZxRegisteredNonZip + c.ClassName);
 
   Result := CZxZipGens(c);
 end;
@@ -441,8 +480,8 @@ begin
   end;
 
   inherited;
-   // calls OnChang*** events in (almost) proper order
-   // laos this "free later" approach matches the one from Delphi 2010+
+   // calls OnChange*** events in (almost) proper order
+   // this "free later" approach matches the one from Delphi 2010+
 
   if OwnsObjects then
      for i := Low(o) to High(o) do o[i].Free;

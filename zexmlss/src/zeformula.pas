@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2012.08.05
+// Last update: 2013.11.05
 //----------------------------------------------------------------
 {
  Copyright (C) 2012 Ruslan Neborak
@@ -395,7 +395,7 @@ var
               s := '';
             end else
             begin
-              if (length(s) > 0) then
+              if (s > '') then
               begin
                 //O_o Странно
                 retFormula := retFormula + ReturnA1(s, CurCol, CurRow, options, StartZero);
@@ -572,7 +572,7 @@ var
             s := s + ch
           else
           begin
-            if (length(s) > 0) then
+            if (s > '') then
               result := result + s + '!';
             s := '';
           end;
@@ -593,7 +593,7 @@ var
             s := s + ch
           else
           begin
-            if (not _startNumber) and (length(s) > 0) then
+            if (not _startNumber) and (s > '') then
               _GetColumn();
             inc(isAbsolute);
             sa := ch;
@@ -690,7 +690,7 @@ begin
   end; //while
   isNotLast := false;
   _CheckSymbol(';');
-  if (length(s) > 0) then
+  if (s > '') then
     result := result + s; 
 end; //ReturnR1C1
 
@@ -731,7 +731,7 @@ var
               s := '';
             end else
             begin
-              if (length(s) > 0) then
+              if (s > '') then
               begin
                 //O_o Странно
                 retFormula := retFormula + ReturnR1C1(s, CurCol, CurRow, StartZero);
