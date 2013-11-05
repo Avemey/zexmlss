@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2013.02.23
+// Last update: 2013.11.05
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -202,7 +202,7 @@ begin
           result := result + ch;
     end; //case
   end; //for
-  if (length(s) > 0) then
+  if (s > '') then
   begin
     _checkS();
     result := result + s;
@@ -249,7 +249,7 @@ end;
 function ZETryStrToBoolean(const st: string; valueIfError: boolean = false): boolean;
 begin
   result := valueIfError;
-  if (length(st) > 0) then
+  if (st > '') then
   begin
     {$IFDEF DELPHI_UNICODE}
     if (CharInSet(st[1], ['T', 't', '1', '-'])) then
@@ -277,7 +277,7 @@ var
 
 begin
   result := 0;
-  if (length(trim(st)) <> 0) then
+  if (trim(st) <> '') then
   begin
     s := '';
     for i := 1 to length(st) do
@@ -376,7 +376,7 @@ begin
   begin
     WriteRaw(BOM, false, false);
     Attributes.Add('version', '1.0');
-    if length(CodePageName) > 0 then
+    if (CodePageName > '') then
       Attributes.Add('encoding', CodePageName);
     WriteInstruction('xml', false);
     Attributes.Clear();

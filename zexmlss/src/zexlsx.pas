@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2013.02.23
+// Last update: 2013.11.05
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - uniform save API for creating
 //     XLSX files in Delphi/Windows
@@ -685,7 +685,7 @@ begin
       if ((xml.TagName = 'Override') and (xml.TagType = 5)) then
       begin
         s := xml.Attributes.ItemsByName['PartName'];
-        if (length(s) > 0) then
+        if (s > '') then
         begin
           SetLength(FileArray, FilesCount + 1);
           FileArray[FilesCount].name := s;
@@ -852,7 +852,7 @@ var
       if (xml.TagName = 'c') then
       begin
         s := xml.Attributes.ItemsByName['r']; //номер
-        if (length(s) > 0) then
+        if (s > '') then
           if (ZEGetCellCoords(s, _cc, _cr)) then
           begin
             _currCol := _cc;
@@ -867,7 +867,7 @@ var
         _num := 0;
         _currCell := _currSheet.Cell[_currCol, _currRow];
         s := xml.Attributes.ItemsByName['s']; //стиль
-        if (length(s) > 0) then
+        if (s > '') then
           if (tryStrToInt(s, t)) then
             _currCell.CellStyle := t;
         if (xml.TagType = 4) then
@@ -914,7 +914,7 @@ var
       begin
         _currCol := 0;
         s := xml.Attributes.ItemsByName['r']; //индекс строки
-        if (length(s) > 0) then
+        if (s > '') then
           if (TryStrToInt(s, t)) then
           begin
             _currRow := t - 1;
@@ -924,11 +924,11 @@ var
         //s := xml.Attributes.ItemsByName['customFormat'];
         //s := xml.Attributes.ItemsByName['customHeight'];
         s := xml.Attributes.ItemsByName['hidden'];
-        if (length(s) > 0) then
+        if (s > '') then
           _currSheet.Rows[_currRow].Hidden := ZEStrToBoolean(s);
 
         s := xml.Attributes.ItemsByName['ht']; //в поинтах?
-        if (length(s) > 0) then
+        if (s > '') then
         begin
           _tmpr := ZETryStrToFloat(s, 10);
           _tmpr := _tmpr / 2.835; //???
@@ -939,7 +939,7 @@ var
         //s := xml.Attributes.ItemsByName['ph'];
 
         s := xml.Attributes.ItemsByName['s']; //номер стиля
-        if (length(s) > 0) then
+        if (s > '') then
           if (TryStrToInt(s, t)) then
           begin
             //нужно подставить нужный стиль
@@ -1069,13 +1069,13 @@ var
       begin
         CheckCol(num + 1);
         s := xml.Attributes.ItemsByName['bestFit'];
-        if (length(s) > 0) then
+        if (s > '') then
           _currSheet.Columns[num].AutoFitWidth := ZETryStrToBoolean(s);
 
         //s := xml.Attributes.ItemsByName['collapsed'];
         //s := xml.Attributes.ItemsByName['customWidth'];
         s := xml.Attributes.ItemsByName['hidden'];
-        if (length(s) > 0) then
+        if (s > '') then
           _currSheet.Columns[num].Hidden := ZETryStrToBoolean(s);
 
         //s := xml.Attributes.ItemsByName['max'];
@@ -1085,7 +1085,7 @@ var
         s := xml.Attributes.ItemsByName['style'];
 
         s := xml.Attributes.ItemsByName['width'];
-        if (length(s) > 0) then
+        if (s > '') then
         begin
           t := ZETryStrToFloat(s, 5.14509803921569);
           t := 10 * t / 5.14509803921569;
@@ -1100,7 +1100,7 @@ var
   function _StrToMM(const st: string; var retFloat: real): boolean;
   begin
     result := false;
-    if (length(s) > 0) then
+    if (s > '') then
     begin
       retFloat := ZETryStrToFloat(st, -1);
       if (retFloat > 0) then
@@ -1168,7 +1168,7 @@ var
       if ((xml.TagName = 'hyperlink') and (xml.TagType = 5)) then
       begin
         s := xml.Attributes.ItemsByName['ref'];
-        if (length(s) > 0) then
+        if (s > '') then
           if (ZEGetCellCoords(s, _c, _r, true)) then
           begin
             CheckRow(_r);
@@ -1298,7 +1298,7 @@ begin
         //s := xml.Attributes.ItemsByName['draft'];
         //s := xml.Attributes.ItemsByName['errors'];
         s := xml.Attributes.ItemsByName['firstPageNumber'];
-        if (length(s) > 0) then
+        if (s > '') then
           if (TryStrToInt(s, _t)) then
             _currSheet.SheetOptions.StartPageNumber := _t;
             
@@ -1307,7 +1307,7 @@ begin
         //s := xml.Attributes.ItemsByName['horizontalDpi'];
         //s := xml.Attributes.ItemsByName['id'];
         s := xml.Attributes.ItemsByName['orientation'];
-        if (length(s) > 0) then
+        if (s > '') then
         begin
           _currSheet.SheetOptions.PortraitOrientation := false;
           if (s = 'portrait') then
@@ -1317,7 +1317,7 @@ begin
         //s := xml.Attributes.ItemsByName['pageOrder'];
 
         s := xml.Attributes.ItemsByName['paperSize'];
-        if (length(s) > 0) then
+        if (s > '') then
           if (TryStrToInt(s, _t)) then
             _currSheet.SheetOptions.PaperSize := _t;
         //s := xml.Attributes.ItemsByName['paperHeight']; //если утановлены paperHeight и Width, то paperSize игнорируется
@@ -1335,11 +1335,11 @@ begin
         //s := xml.Attributes.ItemsByName['gridLinesSet'];
         //s := xml.Attributes.ItemsByName['headings'];
         s := xml.Attributes.ItemsByName['horizontalCentered'];
-        if (length(s) > 0) then
+        if (s > '') then
           _currSheet.SheetOptions.CenterHorizontal := ZEStrToBoolean(s);
 
         s := xml.Attributes.ItemsByName['verticalCentered'];
-        if (length(s) > 0) then
+        if (s > '') then
           _currSheet.SheetOptions.CenterVertical := ZEStrToBoolean(s);
       end else
       if ((xml.TagName = 'dimension') and (xml.TagType = 5)) then
@@ -1568,7 +1568,7 @@ var
           s := xml.Attributes.ItemsByName['rgb'];
           if (length(s) > 2) then
             delete(s, 1, 2);
-          if (length(s) > 0) then
+          if (s > '') then
             FontArray[_currFont].color := HTMLHexToColor(s);
         end else
         if ((xml.TagName = 'i') and (xml.TagType = 5)) then
@@ -1587,7 +1587,7 @@ var
         end else
         if ((xml.TagName = 'u') and (xml.TagType = 5)) then
         begin
-          if (length(s) > 0) then
+          if (s > '') then
             if (s <> 'none') then
               FontArray[_currFont].underline := true;
         end
@@ -1631,7 +1631,7 @@ var
     begin
       _currBorderItem := borderNum;
       s := xml.Attributes.ItemsByName['style'];
-      if (Length(s) > 0) then
+      if (s > '') then
       begin
         b := true;
         BorderArray[_currBorder][borderNum].width := 1;
@@ -1714,11 +1714,11 @@ var
         _diagDown := false;
         _diagUP := false;
         s := xml.Attributes.ItemsByName['diagonalDown'];
-        if (length(s) > 0) then
+        if (s > '') then
           _diagDown := ZEStrToBoolean(s);
 
         s := xml.Attributes.ItemsByName['diagonalUp'];
-        if (length(s) > 0) then
+        if (s > '') then
           _diagUP := ZEStrToBoolean(s);
       end else
       begin
@@ -1766,7 +1766,7 @@ var
             s := xml.Attributes.ItemsByName['rgb'];
             if (length(s) > 2) then
               delete(s, 1, 2);
-            if (length(s) > 0) then
+            if (s > '') then
             begin
               _color := HTMLHexToColor(s);
               _isColor := true;
@@ -1836,7 +1836,7 @@ var
           *gray0625	Gray 0.0625
           }
 
-          if (length(s) > 0) then
+          if (s > '') then
           begin
             if (s = 'solid') then
               FillArray[_currFill].patternfill := ZPSolid
@@ -1911,11 +1911,11 @@ var
           if (length(s) > 2) then
           begin
             delete(s, 1, 2);
-            if (length(s) > 0) then
+            if (s > '') then
               FillArray[_currFill].patterncolor := HTMLHexToColor(s);
           end;
           s := xml.Attributes.ItemsByName['theme'];
-          if (length(s) > 0) then
+          if (s > '') then
           begin
             if (TryStrToInt(s, _l)) then
             begin
@@ -1946,11 +1946,11 @@ var
           if (length(s) > 2) then
           begin
             delete(s, 1, 2);
-            if (length(s) > 0) then
+            if (s > '') then
               FillArray[_currFill].bgcolor := HTMLHexToColor(s);
           end;
           s := xml.Attributes.ItemsByName['theme'];
-          if (length(s) > 0) then
+          if (s > '') then
           begin
             if (TryStrToInt(s, _l)) then
             begin
@@ -1990,25 +1990,25 @@ var
         SetLength(CSA, StyleCount);
         ZEXLSXZeroCellStyle(CSA[_currCell]);
         s := xml.Attributes.ItemsByName['applyAlignment'];
-        if (length(s) > 0) then
+        if (s > '') then
           CSA[_currCell].applyAlignment := ZEStrToBoolean(s);
 
         s := xml.Attributes.ItemsByName['applyBorder'];
-        if (length(s) > 0) then
+        if (s > '') then
           CSA[_currCell].applyBorder := ZEStrToBoolean(s)
         else
           b := true;
 
         s := xml.Attributes.ItemsByName['applyFont'];
-        if (length(s) > 0) then
+        if (s > '') then
           CSA[_currCell].applyFont := ZEStrToBoolean(s);
 
         s := xml.Attributes.ItemsByName['applyProtection'];
-        if (length(s) > 0) then
+        if (s > '') then
           CSA[_currCell].applyProtection := ZEStrToBoolean(s);
 
         s := xml.Attributes.ItemsByName['borderId'];
-        if (length(s) > 0) then
+        if (s > '') then
           if (TryStrToInt(s, t)) then
           begin
             CSA[_currCell].borderId := t;
@@ -2017,22 +2017,22 @@ var
           end;
 
         s := xml.Attributes.ItemsByName['fillId'];
-        if (length(s) > 0) then
+        if (s > '') then
           if (TryStrToInt(s, t)) then
             CSA[_currCell].fillId := t;
 
         s := xml.Attributes.ItemsByName['fontId'];
-        if (length(s) > 0) then
+        if (s > '') then
           if (TryStrToInt(s, t)) then
             CSA[_currCell].fontId := t;
 
         s := xml.Attributes.ItemsByName['numFmtId'];
-        if (length(s) > 0) then
+        if (s > '') then
           if (TryStrToInt(s, t)) then
             CSA[_currCell].numFmtId := t;
 
         s := xml.Attributes.ItemsByName['xfId'];
-        if (length(s) > 0) then
+        if (s > '') then
           if (TryStrToInt(s, t)) then
             CSA[_currCell].xfId := t;
       end else
@@ -2041,7 +2041,7 @@ var
         if (_currCell >= 0) then
         begin
           s := xml.Attributes.ItemsByName['horizontal'];
-          if (length(s) > 0) then
+          if (s > '') then
           begin
             if (s = 'general') then
               CSA[_currCell].alignment.horizontal := ZHAutomatic
@@ -2066,21 +2066,21 @@ var
           end;
 
           s := xml.Attributes.ItemsByName['indent'];
-          if (length(s) > 0) then
+          if (s > '') then
             if (TryStrToInt(s, t)) then
               CSA[_currCell].alignment.indent := t;
 
           s := xml.Attributes.ItemsByName['shrinkToFit'];
-          if (length(s) > 0) then
+          if (s > '') then
             CSA[_currCell].alignment.shrinkToFit := ZEStrToBoolean(s);
 
           s := xml.Attributes.ItemsByName['textRotation'];
-          if (length(s) > 0) then
+          if (s > '') then
             if (TryStrToInt(s, t)) then
               CSA[_currCell].alignment.textRotation := t;
 
           s := xml.Attributes.ItemsByName['vertical'];
-          if (length(s) > 0) then
+          if (s > '') then
           begin
             if (s = 'center') then
               CSA[_currCell].alignment.vertical := ZVCenter
@@ -2099,7 +2099,7 @@ var
           end;
 
           s := xml.Attributes.ItemsByName['wrapText'];
-          if (length(s) > 0) then
+          if (s > '') then
             CSA[_currCell].alignment.wrapText := ZEStrToBoolean(s);
         end; //if
       end else
@@ -2108,11 +2108,11 @@ var
         if (_currCell >= 0) then
         begin
           s := xml.Attributes.ItemsByName['hidden'];
-          if (length(s) > 0) then
+          if (s > '') then
             CSA[_currCell].hidden := ZEStrToBoolean(s);
 
           s := xml.Attributes.ItemsByName['locked'];
-          if (length(s) > 0) then
+          if (s > '') then
             CSA[_currCell].locked := ZEStrToBoolean(s);
         end;
       end;
@@ -2136,19 +2136,19 @@ var
         b := false;
         SetLength(StyleArray, StyleCount + 1);
         s := xml.Attributes.ItemsByName['builtinId']; //?
-        if (length(s) > 0) then
+        if (s > '') then
           if (TryStrToInt(s, t)) then
             StyleArray[StyleCount].builtinId := t;
 
         s := xml.Attributes.ItemsByName['customBuiltin']; //?
-        if (length(s) > 0) then
+        if (s > '') then
           StyleArray[StyleCount].customBuiltin := ZEStrToBoolean(s);
 
         s := xml.Attributes.ItemsByName['name']; //?
           StyleArray[StyleCount].name := s;
 
         s := xml.Attributes.ItemsByName['xfId'];
-        if (length(s) > 0) then
+        if (s > '') then
           if (TryStrToInt(s, t)) then
           begin
             StyleArray[StyleCount].xfId := t;
@@ -2174,7 +2174,7 @@ var
         s := xml.Attributes.ItemsByName['rgb'];
         if (length(s) > 2) then
           delete(s, 1, 2);
-        if (length(s) > 0) then
+        if (s > '') then
         begin
           inc(indexedColorCount);
           if (indexedColorCount >= indexedColorMax) then
@@ -2549,7 +2549,7 @@ var
     _c := 0;
     _r := 0;
     s := xml.Attributes.ItemsByName['ref'];
-    if (length(s) = 0) then
+    if (s = '') then
       exit;
     if (ZEGetCellCoords(s, _c, _r, true)) then
     begin
@@ -3000,7 +3000,7 @@ var
       s1 := copy(s, t, l - t + 1)
     else
       s1 := s;
-    if (length(s1) > 0) then
+    if (s1 > '') then
     begin
       s1 := s1 + '.rels';
       for i := 0 to ZH.ArchFilesCount - 1 do
@@ -3535,10 +3535,10 @@ var
       begin
         _xml.Attributes.Clear();
         if (not isHaveComments) then
-          if (length(_sheet.Cell[j, i].Comment) > 0) then
+          if (_sheet.Cell[j, i].Comment > '') then
             isHaveComments := true;
-        b := (length(_sheet.Cell[j, i].Data) > 0) or
-             (length(_sheet.Cell[j, i].Formula) > 0);
+        b := (_sheet.Cell[j, i].Data > '') or
+             (_sheet.Cell[j, i].Formula > '');
         _xml.Attributes.Add('r', ZEGetA1byCol(j) + IntToStr(i + 1));
         if (_sheet.Cell[j, i].CellStyle >= -1) and (_sheet.Cell[j, i].CellStyle < XMLSS.Styles.Count) then
           s := IntToStr(_sheet.Cell[j, i].CellStyle + 1)
@@ -3558,13 +3558,13 @@ var
         if (b) then
         begin
           _xml.WriteTagNode('c', true, true, false);
-          if (length(_sheet.Cell[j, i].Formula) > 0) then
+          if (_sheet.Cell[j, i].Formula > '') then
           begin
             _xml.Attributes.Clear();
             _xml.Attributes.Add('aca', 'false');
             _xml.WriteTag('f', _sheet.Cell[j, i].Formula, true, false, true);
           end;
-          if (length(_sheet.Cell[j, i].Data) > 0) then
+          if (_sheet.Cell[j, i].Data > '') then
           begin
             _xml.Attributes.Clear();
             _xml.WriteTag('v', _sheet.Cell[j, i].Data, true, false, true);

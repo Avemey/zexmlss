@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2013.02.23
+// Last update: 2013.11.05
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - added uniform save API
 //     to create ODS in Delphi/Windows
@@ -463,7 +463,7 @@ var
 
   procedure _CheckStr();
   begin
-    if (length(s) > 0) then
+    if (s > '') then
     begin
       if (s[1] = '#') then
         BStyle.Color := HTMLHexToColor(s)
@@ -1246,7 +1246,7 @@ var
     begin
       //ссылка <text:p><text:a xlink:href="http://google.com/" office:target-frame-name="_blank">Some_text</text:a></text:p>
       //Ссылка имеет больший приоритет
-      if (length(href) > 0) then
+      if (href > '') then
       begin
         xml.Attributes.Clear();
         xml.WriteTagNode('text:p', true, false, true);
@@ -1268,7 +1268,7 @@ var
             if (CellData[i] <> AnsiChar(#13)) then
               s := s + CellData[i];
         end;
-        if (length(s) > 0) then
+        if (s > '') then
           xml.WriteTag('text:p', s, true, false, true);
       end;
     end; //WriteTextP
@@ -1427,12 +1427,12 @@ var
             // всё остальное считаем строкой (потом подправить, возможно, добавить новые типы)
             {ZEansistring ZEError ZEDateTime}
         end;
-        if (length(ss) > 0) then
+        if (ss > '') then
           _xml.Attributes.Add('office:value-type', ss, false);
 
         //формула  
         ss := ProcessedSheet.Cell[j, i].Formula;
-        if (Length(ss) > 0) then
+        if (ss > '') then
           _xml.Attributes.Add('table:formula', ss, false);
 
         //Примечание
@@ -1458,7 +1458,7 @@ var
             _xml.Attributes.Add('office:display', ODFBoolToStr(b), false);
           _xml.WriteTagNode('office:annotation', true, true, false);
           //автор примечания
-          if (length(ProcessedSheet.Cell[j, i].CommentAuthor) > 0) then
+          if (ProcessedSheet.Cell[j, i].CommentAuthor > '') then
           begin
             _xml.Attributes.Clear();
             _xml.WriteTag('dc:creator', ProcessedSheet.Cell[j, i].CommentAuthor, true, false, true);
@@ -1469,7 +1469,7 @@ var
         end;
 
         //Содержимое ячейки
-        if (Length(_CellData) > 0) then
+        if (_CellData > '') then
         begin
           if (not isNotEmpty) then
             _xml.WriteTagNode(s, true, true, true);
@@ -2104,7 +2104,7 @@ var
         begin
           //Выравнивание по вертикали
           s := xml.Attributes.ItemsByName['style:vertical-align'];
-          if (length(s) > 0) then
+          if (s > '') then
           begin
             if (s = 'automatic') then
               _style.Alignment.Vertical := ZVAutomatic
@@ -2124,7 +2124,7 @@ var
 
           //Угол поворота текста
           s := xml.Attributes.ItemsByName['style:rotation-angle'];
-          if (length(s) > 0) then begin
+          if (s > '') then begin
             if not TryStrToInt(s, t) // ODS 1.1 - pure integer - failed
             then begin // ODF 1.2+ ? float with units ?
               s := LowerCase(Trim(s));
@@ -2146,17 +2146,17 @@ var
 
           //цвет фона
           s := xml.Attributes.ItemsByName['fo:background-color'];
-          if (length(s) > 0) then
+          if (s > '') then
             _style.BGColor := GetBGColorForODS(s);//HTMLHexToColor(s);
 
           //подгонять ли, если текст не помещается
           s := xml.Attributes.ItemsByName['style:shrink-to-fit'];
-          if (length(s) > 0) then
+          if (s > '') then
             _style.Alignment.ShrinkToFit := ZEStrToBoolean(s);
 
           ///обрамление
           s := xml.Attributes.ItemsByName['fo:border'];
-          if (length(s) > 0) then
+          if (s > '') then
           begin
             ZEStrToODFBorderStyle(s, _style.Border[0]);
             for t := 1 to 3 do
@@ -2164,27 +2164,27 @@ var
           end;
 
           s := xml.Attributes.ItemsByName['fo:border-left'];
-          if (length(s) > 0) then
+          if (s > '') then
             ZEStrToODFBorderStyle(s, _style.Border[0]);
           s := xml.Attributes.ItemsByName['fo:border-top'];
-          if (length(s) > 0) then
+          if (s > '') then
             ZEStrToODFBorderStyle(s, _style.Border[1]);
           s := xml.Attributes.ItemsByName['fo:border-right'];
-          if (length(s) > 0) then
+          if (s > '') then
             ZEStrToODFBorderStyle(s, _style.Border[2]);
           s := xml.Attributes.ItemsByName['fo:border-bottom'];
-          if (length(s) > 0) then
+          if (s > '') then
             ZEStrToODFBorderStyle(s, _style.Border[3]);
           s := xml.Attributes.ItemsByName['style:diagonal-bl-tr'];
-          if (length(s) > 0) then
+          if (s > '') then
             ZEStrToODFBorderStyle(s, _style.Border[4]);
           s := xml.Attributes.ItemsByName['style:diagonal-tl-br'];
-          if (length(s) > 0) then
+          if (s > '') then
             ZEStrToODFBorderStyle(s, _style.Border[5]);
 
           //Перенос по словам (wrap no-wrap)
           s := xml.Attributes.ItemsByName['fo:wrap-option'];
-          if (length(s) > 0) then
+          if (s > '') then
             if (UpperCase(s) = 'WRAP') then
               _style.Alignment.WrapText := true;
         end else //if
@@ -2193,7 +2193,7 @@ var
         begin
           if not HAutoForced then begin
               s := xml.Attributes.ItemsByName['fo:text-align'];
-              if (length(s) > 0) then
+              if (s > '') then
               begin
                 if ((s = 'start') or (s = 'left')) then
                   _style.Alignment.Horizontal := ZHLeft
@@ -2216,40 +2216,40 @@ var
         begin
           //style:font-name (style:font-name-asian style:font-name-complex)
           s := xml.Attributes.ItemsByName['style:font-name'];
-          if (length(s) > 0) then
+          if (s > '') then
             _style.Font.Name := s;
 
           //fo:font-size (style:font-size-asian style:font-size-complex)
           s := xml.Attributes.ItemsByName['fo:font-size'];
-          if (length(s) > 0) then
+          if (s > '') then
             if (ODFGetValueSizeMM(s, r, false)) then
               _style.Font.Size := round(r);
 
           //fo:font-weight (style:font-weight-asian style:font-weight-complex)
           s := xml.Attributes.ItemsByName['fo:font-weight'];
-          if (length(s) > 0) then
+          if (s > '') then
             if (s <> 'normal') then
               _style.Font.Style := _style.Font.Style + [fsBold];
 
           s := xml.Attributes.ItemsByName['style:text-line-through-type'];
-          if (length(s) > 0) then
+          if (s > '') then
             if (s <> 'none') then
               _style.Font.Style := _style.Font.Style + [fsStrikeOut];
 
           s := xml.Attributes.ItemsByName['style:text-underline-type'];
-          if (length(s) > 0) then
+          if (s > '') then
             if (s <> 'none') then
               _style.Font.Style := _style.Font.Style + [fsUnderline];
 
           //fo:font-style (style:font-style-asian style:font-style-complex)
           s := xml.Attributes.ItemsByName['fo:font-style'];
-          if (length(s) > 0) then
+          if (s > '') then
             if (s = 'italic') then
               _style.Font.Style := _style.Font.Style + [fsItalic];
 
           //цвет fo:color
           s := xml.Attributes.ItemsByName['fo:color'];
-          if (length(s) > 0) then
+          if (s > '') then
             _style.Font.Color := HTMLHexToColor(s);
         end; //if
 
@@ -2296,7 +2296,7 @@ var
                 if (s = 'column') then
                   ODFColumnStyles[ColStyleCount].breaked := true;
                 s := xml.Attributes.ItemsByName['style:column-width'];
-                if (length(s) > 0) then
+                if (s > '') then
                   ODFGetValueSizeMM(s, ODFColumnStyles[ColStyleCount].width);
               end;
             end; //while
@@ -2328,10 +2328,10 @@ var
                 if (s = 'page') then
                   ODFRowStyles[RowStyleCount].breaked := true;
                 s := xml.Attributes.ItemsByName['style:row-height'];
-                if (length(s) > 0) then
+                if (s > '') then
                   ODFGetValueSizeMM(s, ODFRowStyles[RowStyleCount].height);
                 s := xml.Attributes.ItemsByName['fo:background-color'];
-               if (length(s) > 0) then
+               if (s > '') then
                  ODFRowStyles[RowStyleCount].color := HTMLHexToColor(s);
               end;
             end; //while
@@ -2356,7 +2356,7 @@ var
               if ((xml.TagName = 'style:table-properties') and (xml.TagType in [4, 5])) then
               begin
                 s := xml.Attributes.ItemsByName['tableooo:tab-color'];
-                if (length(s) > 0) then
+                if (s > '') then
                 begin
                   ODFTableStyles[TableStyleCount].isColor := true;
                   ODFTableStyles[TableStyleCount].Color := HTMLHexToColor(s);
@@ -2477,7 +2477,7 @@ var
         //стиль ячейки
         s := xml.Attributes.ItemsByName['table:style-name'];
         _CurrCell.CellStyle := XMLSS.Sheets[_CurrentPage].Columns[_CurrentCol].StyleID;
-        if (length(s) > 0) then
+        if (s > '') then
           _CurrCell.CellStyle := _FindStyleID(s);
         //Проверка правильности наполнения
         //*s := xml.Attributes.ItemsByName['table:cell-content-validation'];
@@ -2499,7 +2499,7 @@ var
         //*s := xml.Attributes.ItemsByName['office:string-value'];
         //Тип значения в ячейке
         s := xml.Attributes.ItemsByName['table:value-type'];
-        if (length(s) = 0) then
+        if (s = '') then
         begin
           s := xml.Attributes.ItemsByName['office:value-type'];
           _CurrCell.CellType := ODFTypeToZCellType(s);
@@ -2611,7 +2611,7 @@ var
                 end; //if
               end; //while
               _CurrCell.Comment := s;
-              _currCell.ShowComment := length(s) > 0;
+              _currCell.ShowComment := s > '';
             end; //if
 
           end; //while *table-cell
@@ -2646,7 +2646,7 @@ var
     XMLSS.Sheets[_CurrentPage].Protect := ZEStrToBoolean(xml.Attributes.ItemsByName['table:protected']);
 
     s := xml.Attributes.ItemsByName['table:style-name'];
-    if (length(s) > 0) then
+    if (s > '') then
       for i := 0 to TableStyleCount - 1 do
       if (ODFTableStyles[i].name = s) then
       begin
@@ -2671,7 +2671,7 @@ var
         //стиль строки
         s := xml.Attributes.ItemsByName['table:style-name'];
 
-        if (length(s) > 0) then
+        if (s > '') then
           for i := 0 to RowStyleCount - 1 do
             if (ODFRowStyles[i].name = s) then
             begin
@@ -2719,11 +2719,11 @@ var
           end;
 
         s := xml.Attributes.ItemsByName['table:default-cell-style-name'];
-        if (length(s) > 0) then
+        if (s > '') then
           XMLSS.Sheets[_CurrentPage].Columns[_MaxCol].StyleID := _FindStyleID(s);
 
         s := xml.Attributes.ItemsByName['table:number-columns-repeated'];
-        if (length(s) > 0) then
+        if (s > '') then
           if (TryStrToInt(s, t)) then
             if (t < 255) then
             begin
@@ -2827,7 +2827,7 @@ var
 
     procedure _FindParam();
     begin
-      if (length(_ConfigValue) > 0) then
+      if (_ConfigValue > '') then
       begin
         if (_ConfigName = 'CursorPositionX') then
         begin
@@ -2859,7 +2859,7 @@ var
   begin
     b := true;
     s := xml.Attributes.ItemsByName['config:name'];
-    if (length(s) = 0) then
+    if (s = '') then
       exit;
 
     for i := 0 to XMLSS.Sheets.Count - 1 do

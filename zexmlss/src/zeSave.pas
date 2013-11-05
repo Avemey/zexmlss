@@ -10,25 +10,25 @@ interface uses zexmlss,  zsspxml, zeZippy, sysutils, classes, Types;
 type TZxPageInfo = record name: string; no: integer; end;
 
 type IZXMLSSave = interface
-        function ExportFormat(const fmt: string): iZXMLSSave;
-        function As_(const fmt: string): iZXMLSSave;
+        function ExportFormat(const fmt: string): IZXMLSSave;
+        function As_(const fmt: string): IZXMLSSave;
 
-        function ExportTo(const fname: TFileName): iZXMLSSave;
-        function To_(const fname: TFileName): iZXMLSSave;
+        function ExportTo(const fname: TFileName): IZXMLSSave;
+        function To_(const fname: TFileName): IZXMLSSave;
 
-        function Pages(const pages: array of TZxPageInfo): iZXMLSSave; overload;
-        function Pages(const numbers: array of integer): iZXMLSSave; overload;
-        function Pages(const titles: array of string): iZXMLSSave; overload;
+        function Pages(const pages: array of TZxPageInfo): IZXMLSSave; overload;
+        function Pages(const numbers: array of integer): IZXMLSSave; overload;
+        function Pages(const titles: array of string): IZXMLSSave; overload;
 
-        function CharSet(const cs: AnsiString): iZXMLSSave; overload;
-        function CharSet(const converter: TAnsiToCPConverter): iZXMLSSave; overload;
-        function CharSet(const cs: AnsiString; const converter: TAnsiToCPConverter): iZXMLSSave; overload;
-        function CharSet(const codepage: word): iZXMLSSave; overload;
+        function CharSet(const cs: AnsiString): IZXMLSSave; overload;
+        function CharSet(const converter: TAnsiToCPConverter): IZXMLSSave; overload;
+        function CharSet(const cs: AnsiString; const converter: TAnsiToCPConverter): IZXMLSSave; overload;
+        function CharSet(const codepage: word): IZXMLSSave; overload;
 
-        function BOM(const Unicode_BOM: AnsiString): iZXMLSSave; // better rawbytestring ?
+        function BOM(const Unicode_BOM: AnsiString): IZXMLSSave; // better rawbytestring ?
 
-        function ZipWith(const ZipGenerator: CZxZipGens): iZXMLSSave;
-        function NoZip: iZXMLSSave;   // save to folder
+        function ZipWith(const ZipGenerator: CZxZipGens): IZXMLSSave;
+        function NoZip: IZXMLSSave;   // save to folder
 
         /// returns zero on success, according to original
         ///     description for SaveXmlssToEXML
@@ -51,10 +51,10 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
 
      { TZXMLSSave }
 
-     TZXMLSSave = class (tInterfacedObject, IzXMLSSave, IZXMLSSaveImpl)
+     TZXMLSSave = class (TInterfacedObject, IZXMLSSave, IZXMLSSaveImpl)
      protected
         (* two functions below are implementors interface and should be
-           mandatory overriden and re-implemented *)
+           mandatory overrode and re-implemented *)
 
         /// returns zero on success, according to original
         ///     description for SaveXmlssToEXML
@@ -67,32 +67,35 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
         procedure AfterConstruction; override;
         procedure BeforeDestruction; override;
 
-        /// Factory function. I \wish it could be default class property.
-        ///   Anscestors may chose to override it to return their instances.
-        class function From(const zxbook: TZEXMLSS): IzXMLSSave; virtual;
+        /// Factory function. I wish it could be default class property.
+        ///   Ancestors may chose to override it to return their instances.
+        class function From(const zxbook: TZEXMLSS): IZXMLSSave; virtual;
      protected
         constructor Create (const zxbook: TZEXMLSS); overload;
         constructor Create (const zxsaver: TZXMLSSave); overload; virtual;
 
-        function ExportFormat(const fmt: string): iZXMLSSave;
-        function As_(const fmt: string): iZXMLSSave; //inline;
+        function ExportFormat(const fmt: string): IZXMLSSave;
+        function As_(const fmt: string): IZXMLSSave; //inline;
 
-        function ExportTo(const fname: TFileName): iZXMLSSave;
-        function To_(const fname: TFileName): iZXMLSSave; //inline;
+        function ExportTo(const fname: TFileName): IZXMLSSave;
+        function To_(const fname: TFileName): IZXMLSSave; //inline;
 
-        function Pages(const APages: array of TZxPageInfo): iZXMLSSave; overload;
-        function Pages(const numbers: array of integer): iZXMLSSave; overload;
-        function Pages(const titles: array of string): iZXMLSSave; overload;
+        function Pages(const APages: array of TZxPageInfo): IZXMLSSave; overload;
+        function Pages(const numbers: array of integer): IZXMLSSave; overload;
+        function Pages(const titles: array of string): IZXMLSSave; overload;
 
-        function CharSet(const cs: AnsiString): iZXMLSSave; overload;
-        function CharSet(const converter: TAnsiToCPConverter): iZXMLSSave; overload;
-        function CharSet(const cs: AnsiString; const converter: TAnsiToCPConverter): iZXMLSSave; overload;
-        function CharSet(const codepage: word): iZXMLSSave; overload;
+        function CharSet(const cs: AnsiString): IZXMLSSave; overload;
+        function CharSet(const converter: TAnsiToCPConverter): IZXMLSSave; overload;
+        function CharSet(const cs: AnsiString; const converter: TAnsiToCPConverter): IZXMLSSave; overload;
+        function CharSet(const codepage: word): IZXMLSSave; overload;
 
-        function BOM(const Unicode_BOM: AnsiString): iZXMLSSave; // better rawbytestring ?
+        function BOM(const Unicode_BOM: AnsiString): IZXMLSSave; // better rawbytestring ?
 
-        function ZipWith(const ZipGenerator: CZxZipGens): iZXMLSSave;
-        function NoZip: iZXMLSSave;  // save to folder
+        function ZipWith(const ZipGenerator: CZxZipGens): IZXMLSSave;
+        function NoZip: IZXMLSSave;  // save to folder
+
+        function OnErrorRaise(): IZXMLSSave;
+        function OnErrorRetCode(): IZXMLSSave;
 
         /// returns zero on success, according to original
         ///     description for SaveXmlssToEXML
@@ -113,10 +116,12 @@ type TZXMLSSave = class; CZXMLSSaveClass = class of TZXMLSSave;
         FZipGen: CZxZipGens;
 
         FDoNotDestroyMe: Boolean; // guard in case the user loses reference unexpectedly
+        FRaiseOnError: Boolean;
 
         function GetPageNumbers: TIntegerDynArray;
         function GetPageTitles:  TStringDynArray;
         function CreateSaverForDescription(const desc: string): IZXMLSSave;
+        procedure CheckSaveRetCode (Result: integer);
 
         {$IfOpt D+}
         function _AddRef: Integer; stdcall;
@@ -194,37 +199,37 @@ end;
 
 { TZXMLSSave }
 
-class function TZXMLSSave.From(const zxbook: TZEXMLSS): IzXMLSSave;
+class function TZXMLSSave.From(const zxbook: TZEXMLSS): IZXMLSSave;
 begin
   Result := TZXMLSSave.Create(zxbook);
 end;
 
-function TZXMLSSave.BOM(const Unicode_BOM: AnsiString): iZXMLSSave;
+function TZXMLSSave.BOM(const Unicode_BOM: AnsiString): IZXMLSSave;
 begin
    fBOM := Unicode_BOM;
    Result := self;
 end;
 
 function TZXMLSSave.CharSet(const cs: AnsiString;
-  const converter: TAnsiToCPConverter): iZXMLSSave;
+  const converter: TAnsiToCPConverter): IZXMLSSave;
 begin
   Result := CharSet(cs);
   fConv := converter;
 end;
 
-function TZXMLSSave.CharSet(const codepage: word): iZXMLSSave;
+function TZXMLSSave.CharSet(const codepage: word): IZXMLSSave;
 begin
   fCharSet := ZxCharSetByCodePage(codepage);
   Result := Self;
 end;
 
-function TZXMLSSave.CharSet(const cs: AnsiString): iZXMLSSave;
+function TZXMLSSave.CharSet(const cs: AnsiString): IZXMLSSave;
 begin
   fCharSet := cs; // check that encoding is real ???
   Result := self;
 end;
 
-function TZXMLSSave.CharSet(const converter: TAnsiToCPConverter): iZXMLSSave;
+function TZXMLSSave.CharSet(const converter: TAnsiToCPConverter): IZXMLSSave;
 begin
   fConv := converter;
   Result := Self;
@@ -267,6 +272,7 @@ begin
   Self.FPath    := zxsaver.FPath;
   Self.fPages   := zxsaver.fPages;
   Self.FZipGen  := zxsaver.FZipGen;
+  Self.FRaiseOnError := zxsaver.FRaiseOnError;
 end;
 
 function TZXMLSSave.CreateSaverForDescription(const desc: String): IZXMLSSave;
@@ -295,23 +301,23 @@ begin
    raise EZXSaveException.Create('Doesn''t know how to save the workbook as '+desc);
 end;
 
-function TZXMLSSave.ExportFormat(const fmt: string): iZXMLSSave;
+function TZXMLSSave.ExportFormat(const fmt: string): IZXMLSSave;
 begin
   Result := CreateSaverForDescription(fmt);
 end;
 
 
-function TZXMLSSave.As_(const fmt: string): iZXMLSSave;
+function TZXMLSSave.As_(const fmt: string): IZXMLSSave;
 begin
   Result := ExportFormat(fmt);
 end;
 
-function TZXMLSSave.To_(const fname: TFileName): iZXMLSSave;
+function TZXMLSSave.To_(const fname: TFileName): IZXMLSSave;
 begin
   Result := ExportTo(fname);
 end;
 
-function TZXMLSSave.ExportTo(const fname: TFileName): iZXMLSSave;
+function TZXMLSSave.ExportTo(const fname: TFileName): IZXMLSSave;
 var fp: TFileName;
 begin
    fp := ExtractFileDir(fname);
@@ -343,7 +349,7 @@ begin
       Result[i] := fPages[i].name;
 end;
 
-function TZXMLSSave.Pages(const APages: array of TZxPageInfo): iZXMLSSave;
+function TZXMLSSave.Pages(const APages: array of TZxPageInfo): IZXMLSSave;
 var i, c: integer;
 begin
   c := fBook.Sheets.Count - 1;
@@ -359,7 +365,7 @@ begin
   Result := Self;
 end;
 
-function TZXMLSSave.Pages(const numbers: array of integer): iZXMLSSave;
+function TZXMLSSave.Pages(const numbers: array of integer): IZXMLSSave;
 var i, j, c: integer;
 begin
   c := fBook.Sheets.Count - 1;
@@ -380,7 +386,7 @@ begin
   Result := Self;
 end;
 
-function TZXMLSSave.Pages(const titles: array of string): iZXMLSSave;
+function TZXMLSSave.Pages(const titles: array of string): IZXMLSSave;
 var i: integer;
 begin
   if Length(fPages) <> Length(titles) then
@@ -392,9 +398,29 @@ begin
   Result := self;
 end;
 
+function TZXMLSSave.OnErrorRaise: IZXMLSSave;
+begin
+  Result := Self;
+  Self.FRaiseOnError := True;
+end;
+
+function TZXMLSSave.OnErrorRetCode: IZXMLSSave;
+begin
+  Result := Self;
+  Self.FRaiseOnError := False;
+end;
+
+procedure TZXMLSSave.CheckSaveRetCode(Result: integer);
+begin
+  if Result <> 0 then
+     if FRaiseOnError then
+        raise EZXSaveException.Create('Error #'+IntToStr(Result)+': cannot save ' + Self.FFile);
+end;
+
 function TZXMLSSave.Save(const FileName: TFileName): integer;
 begin
   Result := Self.ExportTo( FileName ).Save();
+  CheckSaveRetCode(Result);
 end;
 
 function TZXMLSSave.Save: integer;
@@ -414,6 +440,7 @@ begin
   end;
 
   Result := InternalSave;
+  CheckSaveRetCode(Result);
 end;
 
 function TZXMLSSave.InternalSave: integer;
@@ -450,13 +477,13 @@ begin
   SaveClasses.Add(sv);
 end;
 
-function TZXMLSSave.NoZip: iZXMLSSave;
+function TZXMLSSave.NoZip: IZXMLSSave;
 begin
   FZipGen := TZxZipGen.QueryDummyZipGen;
   Result := Self;
 end;
 
-function TZXMLSSave.ZipWith(const ZipGenerator: CZxZipGens): iZXMLSSave;
+function TZXMLSSave.ZipWith(const ZipGenerator: CZxZipGens): IZXMLSSave;
 begin
   FZipGen := ZipGenerator;
   Result := Self;
