@@ -807,6 +807,115 @@ begin
   end;
 end; //ZEXSLXReadSharedStrings
 
+{$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+//Получить условное форматирование и оператор из xlsx
+//INPUT
+//  const xlsxCfType: string              - xlsx тип условного форматирования
+//  const xlsxCFOperator: string          - xlsx оператор
+//  out CFCondition: TZCondition          - распознанное условие
+//  out CFOperator: TZConditionalOperator - распознанный оператор
+//RETURN
+//      boolean - true - условное форматирование и оператор успешно распознаны
+function ZEXLSX_getCFCondition(const xlsxCfType, xlsxCFOperator: string;
+                               out CFCondition: TZCondition;
+                               out CFOperator: TZConditionalOperator): boolean;
+var
+  isCheckOperator: boolean;
+
+  procedure _SetCFOperator(AOperator: TZConditionalOperator);
+  begin
+    CFOperator := AOperator;
+    CFCondition := ZCFCellContentOperator;
+  end;
+
+  //Проверить тип условного форматирования
+  //  out isNeddCheckOperator: boolean - возвращает, нужно ли проверять
+  //                                     оператор
+  //RETURN
+  //      boolean - true - всё ок, можно проверять далее
+  function _CheckXLSXCfType(out isNeddCheckOperator: boolean): boolean;
+  begin
+    result := true;
+    isNeddCheckOperator := true;
+    if (xlsxCfType = 'cellIs') then
+    begin
+    end else
+    if (xlsxCfType = 'containsText') then
+      CFCondition := ZCFContainsText
+    else
+    if (xlsxCfType = 'notContains') then
+      CFCondition := ZCFNotContainsText
+    else
+    if (xlsxCfType = 'beginsWith') then
+      CFCondition := ZCFBeginsWithText
+    else
+    if (xlsxCfType = 'endsWith') then
+      CFCondition := ZCFEndsWithText
+    else
+    if (xlsxCfType = 'containsBlanks') then
+      isNeddCheckOperator := false
+    else
+      result := false;
+  end; //_CheckXLSXCfType
+
+  //Проверить оператор
+  function _CheckCFoperator(): boolean;
+  begin
+    result := true;
+    if (xlsxCFOperator = 'lessThan') then
+      _SetCFOperator(ZCFOpLT)
+    else
+    if (xlsxCFOperator = 'equal') then
+      _SetCFOperator(ZCFOpEqual)
+    else
+    if (xlsxCFOperator = 'notEqual') then
+      _SetCFOperator(ZCFOpNotEqual)
+    else
+    if (xlsxCFOperator = 'greaterThanOrEqual') then
+      _SetCFOperator(ZCFOpGTE)
+    else
+    if (xlsxCFOperator = 'greaterThan') then
+      _SetCFOperator(ZCFOpGT)
+    else
+    if (xlsxCFOperator = 'lessThanOrEqual') then
+      _SetCFOperator(ZCFOpLTE)
+    else
+    if (xlsxCFOperator = 'between') then
+      CFCondition := ZCFCellContentIsBetween
+    else
+    if (xlsxCFOperator = 'notBetween') then
+      CFCondition := ZCFCellContentIsNotBetween
+    else
+    if (xlsxCFOperator = 'containsText') then
+      CFCondition := ZCFContainsText
+    else
+    if (xlsxCFOperator = 'notContains') then
+      CFCondition := ZCFNotContainsText
+    else
+    if (xlsxCFOperator = 'beginsWith') then
+      CFCondition := ZCFBeginsWithText
+    else
+    if (xlsxCFOperator = 'endsWith') then
+      CFCondition := ZCFEndsWithText
+    else
+      result := false;
+  end; //_CheckCFoperator
+
+begin
+  result := false;
+  CFCondition := ZCFNumberValue;
+  CFOperator := ZCFOpGT;
+
+  if (_CheckXLSXCfType(isCheckOperator)) then
+  begin
+    if (isCheckOperator) then
+      result := _CheckCFoperator()
+    else
+      result := true;
+  end;
+end; //ZEXLSX_getCFCondition
+{$ENDIF}
+
 //Читает страницу документа
 //INPUT
 //  var XMLSS: TZEXMLSS                 - хранилище
@@ -1270,94 +1379,205 @@ var
     _operator: string;
     _CFCondition: TZCondition;
     _CFOperator: TZConditionalOperator;
+    _Style: string;
+    _text: string;
+    _isCFAdded: boolean;
     _isOk: boolean;
+    //_priority: string;
+    t: double;
+    _CF: TZConditionalStyle;
 
-    //Получить условное форматирование и оператор из xlsx
-    //INPUT
-    //  const xlsxCfType: string              - xlsx тип условного форматирования
-    //  const xlsxCFOperator: string          - xlsx оператор
-    //  out CFCondition: TZCondition          - распознанное условие
-    //  out CFOperator: TZConditionalOperator - распознанный оператор
-    //RETURN
-    //      boolean - true - условное форматирование и оператор успешно распознаны
-    function ZEXLSX_getCFCondition(const xlsxCfType, xlsxCFOperator: string;
-                                   out CFCondition: TZCondition;
-                                   out CFOperator: TZConditionalOperator): boolean;
+    function _AddCF(): boolean;
+    var
+      s, ss: string;
+      _len, i, kol: integer;
+      a: array of array[0..5] of integer;
+      _maxx: integer;
+      ch: char;
+      b: boolean;
+      w, h: integer;
 
-      procedure _SetCFOperator(AOperator: TZConditionalOperator);
+      function _GetOneArea(st: string): boolean;
+      var
+        i, j: integer;
+        s: string;
+        ch: char;
+        _cnt: integer;
+        tmpArr: array [0..1, 0..1] of integer;
+        _isOk: boolean;
+        t: integer;
+
       begin
-        CFOperator := AOperator;
-        CFCondition := ZCFCellContentOperator;
-      end;
+        result := false;
+        if (st <> '') then
+        begin
+          st := st + ':';
+          s := '';
+          _cnt := 0;
+          _isOk := true;
+          for i := 1 to length(st) do
+          begin
+            ch := st[i];
+            if (ch = ':') then
+            begin
+              if (_cnt < 2) then
+                _isOk := _isOk and ZEGetCellCoords(s, tmpArr[_cnt][0], tmpArr[_cnt][1]);
+              inc(_cnt);
+            end else
+              s := s + ch;
+          end; //for
+
+          if (_isOk) then
+            if (_cnt > 0) then
+            begin
+              if (_cnt > 2) then
+                _cnt := 2;
+
+              a[kol][0] := _cnt;
+              t := 1;
+              for i := 0 to _cnt - 1 do
+                for j := 0 to 1 do
+                begin
+                  a[kol][t] := tmpArr[i][j];
+                  inc(t);
+                end;
+              result := true;
+            end;
+        end; //if
+      end; //_GetOneArea
 
     begin
       result := false;
-      CFCondition := ZCFNumberValue;
-      CFOperator := ZCFOpGT;
+      if (_sqref <> '') then
+      try
+        _maxx := 4;
+        SetLength(a, _maxx);
+        b := true;
+        ss := _sqref + ' ';
+        _len := Length(ss);
+        kol := 0;
+        s := '';
+        for i := 1 to _len do
+        begin
+          ch := ss[i];
+          if (ch = ' ') then
+          begin
+            if (_GetOneArea(s)) then
+            begin
+              inc(kol);
+              if (kol >= _maxx) then
+              begin
+                inc(_maxx, 4);
+                SetLength(a, _maxx);
+              end;
+            end;
+            s := '';
+          end else
+            s := s + ch;
+        end; //for
 
-      if (xlsxCfType = 'cellIs') then
-      begin
-      end else
-        exit;
+        if (b) then
+          if (kol > 0) then
+          begin
+            _currSheet.ConditionalFormatting.Add();
+            _CF := _currSheet.ConditionalFormatting[_currSheet.ConditionalFormatting.Count - 1];
+            for i := 0 to kol - 1 do
+            begin
+              w := 1;
+              h := 1;
+              if (a[kol][0] >= 2) then
+              begin
+                w := abs(a[kol][3] - a[kol][1]) + 1;
+                h := abs(a[kol][4] - a[kol][2]) + 1;
+              end;
+              _CF.Areas.Add(a[kol][1], a[kol][2], w, h);
+            end;
+            result := true;
+          end;
+      finally
+        SetLength(a, 0);
+      end;
+    end; //_AddCF
 
-      if (xlsxCFOperator = 'lessThan') then
-        _SetCFOperator(ZCFOpLT)
-      else
-      if (xlsxCFOperator = 'equal') then
-        _SetCFOperator(ZCFOpEqual)
-      else
-      if (xlsxCFOperator = 'notEqual') then
-        _SetCFOperator(ZCFOpNotEqual)
-      else
-      if (xlsxCFOperator = 'greaterThanOrEqual') then
-        _SetCFOperator(ZCFOpGTE)
-      else
-      if (xlsxCFOperator = 'greaterThan') then
-        _SetCFOperator(ZCFOpGT)
-      else
-      if (xlsxCFOperator = 'lessThanOrEqual') then
-        _SetCFOperator(ZCFOpLTE)
-      else
-      if (xlsxCFOperator = 'between') then
-        CFCondition := ZCFCellContentIsBetween
-      else
-      if (xlsxCFOperator = 'notBetween') then
-        CFCondition := ZCFCellContentIsNotBetween
-      else
-      if (xlsxCFOperator = 'containsText') then
-      begin
-        exit;
-      end else
-      if (xlsxCFOperator = 'notContains') then
-      begin
-        exit;
-      end else
-      if (xlsxCFOperator = 'beginsWith') then
-      begin
-        exit;
-      end else
-      if (xlsxCFOperator = 'endsWith') then
-      begin
-        exit;
-      end else
-        exit;
+    //Применяем условный стиль
+    procedure _TryApplyCF();
+    var
+      b: boolean;
+      num: integer;
+      _id: integer;
 
-      result := true;
-    end; //ZEXLSX_getCFCondition
+      procedure _CheckTextCondition();
+      begin
+        if (count = 1) then
+          if (_formulas[0] <> '') then
+            _isOk := true;
+      end;
+
+    begin
+      _isOk := false;
+      case (_CFCondition) of
+        ZCFIsTrueFormula:;
+        ZCFCellContentIsBetween, ZCFCellContentIsNotBetween:
+          begin
+            //только числа
+            if (count = 2) then
+            begin
+              ZETryStrToFloat(_formulas[0], b);
+              if (b) then
+                ZETryStrToFloat(_formulas[1], _isOk);
+            end;
+          end;
+        ZCFCellContentOperator:
+          begin
+            //только числа
+            if (count = 1) then
+              ZETryStrToFloat(_formulas[0], _isOk);
+          end;
+        ZCFNumberValue:;
+        ZCFString:;
+        ZCFBoolTrue:;
+        ZCFBoolFalse:;
+        ZCFFormula:;
+        ZCFContainsText: _CheckTextCondition();
+        ZCFNotContainsText: _CheckTextCondition();
+        ZCFBeginsWithText: _CheckTextCondition();
+        ZCFEndsWithText: _CheckTextCondition();
+      end; //case
+
+      if (_isOk) then
+      begin
+        if (not _isCFAdded) then
+          _isCFAdded := _AddCF();
+
+        if ((_isCFAdded) and (Assigned(_CF))) then
+        begin
+          _CF.Add();
+          num := _CF.Count - 1;
+          if (_Style <> '') then
+            if (TryStrToInt(_Style, _id)) then
+             _CF[num].ApplyStyleID := _id;
+          _CF[num].Condition := _CFCondition;
+          _CF[num].ConditionOperator := _CFOperator;
+
+          _cf[num].Value1 := _formulas[0];
+          if (count >= 2) then
+            _cf[num].Value2 := _formulas[1];
+        end;
+      end;
+    end; //_TryApplyCF
 
   begin
-    _isOk := true;
     try
       _sqref := xml.Attributes['sqref'];
       MaxFormulasCount := 2;
       SetLength(_formulas, MaxFormulasCount);
+      _isCFAdded := false;
+      _CF := nil;
       while (not ((xml.TagType = 6) and (xml.TagName = ZETag_conditionalFormatting))) do
       begin
         xml.ReadTag();
         if (xml.Eof()) then
           break;
-
-        //XMLSS.Sheets[0].ConditionalFormatting.Items[0].Items[0].Condition
 
         // cfRule = Conditional Formatting Rule
         if ((xml.TagType = 4) and (xml.TagName = ZETag_cfRule)) then
@@ -1410,6 +1630,10 @@ var
          *)
           _type := xml.Attributes['type'];
           _operator := xml.Attributes['operator'];
+          _Style := xml.Attributes['dxfId'];
+          _text := ZEReplaceEntity(xml.Attributes['text']);
+          //_priority := xml.Attributes['priority'];
+
           count := 0;
           while (not ((xml.TagType = 6) and (xml.TagName = ZETag_cfRule))) do
           begin
@@ -1424,32 +1648,13 @@ var
                   inc(MaxFormulasCount, 2);
                   SetLength(_formulas, MaxFormulasCount);
                 end;
-                _formulas[count] := xml.TextBeforeTag;
+                _formulas[count] := ZEReplaceEntity(xml.TextBeforeTag);
                 inc(count);
               end;
           end; //while
 
           if (ZEXLSX_getCFCondition(_type, _operator, _CFCondition, _CFOperator)) then
-          begin
-            case (_CFCondition) of
-              ZCFIsTrueFormula:;
-              ZCFCellContentIsBetween:
-                begin
-                  if (count = 2) then
-
-                  else
-                    _isOk := false;
-                end;
-              ZCFCellContentIsNotBetween:;
-              ZCFCellContentOperator:;
-              ZCFNumberValue:;
-              ZCFString:;
-              ZCFBoolTrue:;
-              ZCFBoolFalse:;
-              ZCFFormula:;
-            end; //case
-          end;
-
+            _TryApplyCF();
         end; //if
       end; //while
     finally

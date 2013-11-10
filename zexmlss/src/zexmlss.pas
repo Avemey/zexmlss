@@ -449,7 +449,12 @@ type
                  ZCFString,
                  ZCFBoolTrue,
                  ZCFBoolFalse,
-                 ZCFFormula
+                 ZCFFormula,
+                 ZCFContainsText,
+                 ZCFNotContainsText,
+                 ZCFBeginsWithText,
+                 ZCFEndsWithText,
+                 ZCFCellIsEmpty
                 );
 
   //Оператор для условного форматирования
