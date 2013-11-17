@@ -76,6 +76,115 @@ type
 
   TZXLSXRelationsArray = array of TZXLSXRelations;
 
+///Differential Formatting
+
+  TZXLSXDiffBorderItemStyle = class(TPersistent)
+  private
+    FUseStyle: boolean;             //заменять ли стиль
+    FUseColor: boolean;             //заменять ли цвет
+    FColor: TColor;                 //цвет линий
+    FLineStyle: TZBorderType;       //стиль линий
+    FWeight: byte;
+  protected
+  public
+    constructor Create();
+    procedure Clear();
+    procedure Assign(Source: TPersistent); override;
+    property UseStyle: boolean read FUseStyle write FUseStyle;
+    property UseColor: boolean read FUseColor write FUseColor;
+    property Color: TColor read FColor write FColor;
+    property LineStyle: TZBorderType read FLineStyle write FLineStyle;
+    property Weight: byte read FWeight write FWeight;
+  end;
+
+  TZXLSXDiffBorder = class(TPersistent)
+  private
+    FBorder: array [0..5] of TZXLSXDiffBorderItemStyle;
+    procedure SetBorder(Num: integer; Const Value: TZXLSXDiffBorderItemStyle);
+    function GetBorder(Num: integer): TZXLSXDiffBorderItemStyle;
+  public
+    constructor Create(); virtual;
+    destructor Destroy(); override;
+    procedure Clear();
+    procedure Assign(Source: TPersistent);override;
+    property Border[Num: integer]: TZXLSXDiffBorderItemStyle read GetBorder write SetBorder; default;
+  end;
+
+  //Итем для дифференцированного форматирования
+  //TODO:
+  //      возможно, для excel xml тоже понадобится
+  TZXLSXDiffFormattingItem = class(TPersistent)
+  private
+    FUseFont: boolean;              //заменять ли шрифт
+    FUseFontColor: boolean;         //заменять ли цвет шрифта
+    FUseFontStyles: boolean;        //заменять ли стиль шрифта
+    FFontColor: TColor;             //цвет шрифта
+    FFontStyles: TFontStyles;       //стиль шрифта
+    FUseBorder: boolean;            //заменять ли рамку
+    FBorders: TZXLSXDiffBorder;     //Что менять в рамке
+    FUseFill: boolean;              //заменять ли заливку
+    FUseCellPattern: boolean;       //Заменять ли тип заливки
+    FCellPattern: TZCellPattern;    //тип заливки
+    FUseBGColor: boolean;           //заменять ли цвет заливки
+    FBGColor: TColor;               //цвет заливки
+    FUsePatternColor: boolean;      //Заменять ли цвет шаблона заливки
+    FPatternColor: TColor;          //Цвет шаблона заливки
+  protected
+  public
+    constructor Create();
+    destructor Destroy(); override;
+    procedure Clear();
+    procedure Assign(Source: TPersistent); override;
+    property UseFont: boolean read FUseFont write FUseFont;
+    property UseFontColor: boolean read FUseFontColor write FUseFontColor;
+    property UseFontStyles: boolean read FUseFontStyles write FUseFontStyles;
+    property FontColor: TColor read FFontColor write FFontColor;
+    property FontStyles: TFontStyles read FFontStyles write FFontStyles;
+    property UseBorder: boolean read FUseBorder write FUseBorder;
+    property Borders: TZXLSXDiffBorder read FBorders write FBorders;
+    property UseFill: boolean read FUseFill write FUseFill;
+    property UseCellPattern: boolean read FUseCellPattern write FUseCellPattern;
+    property CellPattern: TZCellPattern read FCellPattern write FCellPattern;
+    property UseBGColor: boolean read FUseBGColor write FUseBGColor;
+    property BGColor: TColor read FBGColor write FBGColor;
+    property UsePatternColor: boolean read FUsePatternColor write FUsePatternColor;
+    property PatternColor: TColor read FPatternColor write FPatternColor;
+  end;
+
+  //Дифференцированное форматирование
+  TZXLSXDiffFormatting = class(TPersistent)
+  private
+    FCount: integer;
+    FMaxCount: integer;
+    FItems: array of TZXLSXDiffFormattingItem;
+  protected
+    function GetItem(num: integer): TZXLSXDiffFormattingItem;
+    procedure SetItem(num: integer; const Value: TZXLSXDiffFormattingItem);
+    procedure SetCount(ACount: integer);
+  public
+    constructor Create();
+    destructor Destroy(); override;
+    procedure Add();
+    procedure Assign(Source: TPersistent); override;
+    procedure Clear();
+    property Count: integer read FCount;
+    property Items[num: integer]: TZXLSXDiffFormattingItem read GetItem write SetItem; default;
+  end;
+
+///end Differential Formatting
+
+  TZEXLSXReadHelper = class
+  private
+    FDiffFormating: TZXLSXDiffFormatting;
+  protected
+    procedure SetDiffFormatting(const Value: TZXLSXDiffFormatting);
+  public
+    constructor Create();
+    destructor Destroy(); override;
+    property DiffFormating: TZXLSXDiffFormatting read FDiffFormating write SetDiffFormatting;
+  end;
+
+
 function ReadXSLXPath(var XMLSS: TZEXMLSS; DirName: string): integer; deprecated {$IFDEF FPC}'Use ReadXLSXPath!'{$ENDIF};
 function ReadXLSXPath(var XMLSS: TZEXMLSS; DirName: string): integer;
 
@@ -545,6 +654,277 @@ begin
   end;
 end;
 {$ENDIF}
+
+////////////////////////////////////////////////////////////////////////////////
+///                   Differential Formatting
+////////////////////////////////////////////////////////////////////////////////
+
+////:::::::::::::  TZXLSXDiffFormating :::::::::::::::::////
+
+constructor TZXLSXDiffFormatting.Create();
+var
+  i: integer;
+
+begin
+  FCount := 0;
+  FMaxCount := 20;
+  SetLength(FItems, FMaxCount);
+  for i := 0 to FMaxCount - 1 do
+    FItems[i] := TZXLSXDiffFormattingItem.Create();
+end;
+
+destructor TZXLSXDiffFormatting.Destroy();
+var
+  i: integer;
+
+begin
+  for i := 0 to FMaxCount - 1 do
+    if (Assigned(FItems[i])) then
+      FreeAndNil(FItems[i]);
+  inherited;
+end;
+
+procedure TZXLSXDiffFormatting.Add();
+begin
+  SetCount(FCount + 1);
+  FItems[FCount - 1].Clear();
+end;
+
+procedure TZXLSXDiffFormatting.Assign(Source: TPersistent);
+var
+  df: TZXLSXDiffFormatting;
+  i: integer;
+  b: boolean;
+
+begin
+  b := true;
+
+  if (Assigned(Source)) then
+    if (Source is TZXLSXDiffFormatting) then
+    begin
+      b := false;
+      df := Source as TZXLSXDiffFormatting;
+      SetCount(df.Count);
+      for i := 0 to Count - 1 do
+        FItems[i].Assign(df[i]);
+
+    end;
+
+  if (b) then
+    inherited;
+end; //Assign
+
+procedure TZXLSXDiffFormatting.SetCount(ACount: integer);
+var
+  i: integer;
+
+begin
+  if (ACount >= FMaxCount) then
+  begin
+    FMaxCount := ACount + 20;
+    SetLength(FItems, FMaxCount);
+    for i := FCount to FMaxCount - 1 do
+      FItems[i] := TZXLSXDiffFormattingItem.Create();
+  end;
+  FCount := ACount;
+end;
+
+procedure TZXLSXDiffFormatting.Clear();
+begin
+  FCount := 0;
+end;
+
+function TZXLSXDiffFormatting.GetItem(num: integer): TZXLSXDiffFormattingItem;
+begin
+  if ((num >= 0) and (num < Count)) then
+    result := FItems[num]
+  else
+    result := nil;
+end;
+
+procedure TZXLSXDiffFormatting.SetItem(num: integer; const Value: TZXLSXDiffFormattingItem);
+begin
+  if ((num >= 0) and (num < Count)) then
+    if (Assigned(Value)) then
+      FItems[num].Assign(Value);
+end;
+
+////:::::::::::::  TZXLSXDiffBorderItemStyle :::::::::::::::::////
+
+constructor TZXLSXDiffBorderItemStyle.Create();
+begin
+  Clear();
+end;
+
+procedure TZXLSXDiffBorderItemStyle.Assign(Source: TPersistent);
+var
+  bs: TZXLSXDiffBorderItemStyle;
+  b: boolean;
+
+begin
+  b := true;
+
+  if (Assigned(Source)) then
+    if (Source is TZXLSXDiffBorderItemStyle) then
+    begin
+      b := false;
+      bs := Source as TZXLSXDiffBorderItemStyle;
+
+      FUseStyle := bs.UseStyle;
+      FUseColor := bs.UseColor;
+      FColor := bs.Color;
+      FWeight := bs.Weight;
+      FLineStyle := bs.LineStyle;
+    end;
+
+  if (b) then
+    inherited;
+end; //Assign
+
+procedure TZXLSXDiffBorderItemStyle.Clear();
+begin
+  FUseStyle := false;
+  FUseColor := false;
+  FColor := clBlack;
+  FWeight := 1;
+  FLineStyle := ZENone;
+end;
+
+////::::::::::::: TZXLSXDiffBorder :::::::::::::::::////
+
+constructor TZXLSXDiffBorder.Create();
+var
+  i: integer;
+
+begin
+  for i := 0 to 5 do
+    FBorder[i] := TZXLSXDiffBorderItemStyle.Create();
+  Clear();
+end;
+
+destructor TZXLSXDiffBorder.Destroy();
+var
+  i: integer;
+
+begin
+  for i := 0 to 5 do
+    FreeAndNil(FBorder[i]);
+
+  inherited;
+end;
+
+procedure TZXLSXDiffBorder.Assign(Source: TPersistent);
+var
+  brd: TZXLSXDiffBorder;
+  b: boolean;
+  i: integer;
+
+begin
+  b := true;
+
+  if (Assigned(Source)) then
+    if (Source is TZXLSXDiffBorder) then
+    begin
+      b := false;
+      brd := Source as TZXLSXDiffBorder;
+      for i := 0 to 5 do
+        FBorder[i].Assign(brd[i]);
+    end;
+
+  if (b) then
+    inherited;
+end; //Assign
+
+procedure TZXLSXDiffBorder.Clear();
+var
+  i: integer;
+
+begin
+  for i := 0 to 5 do
+    FBorder[i].Clear();
+end;
+
+function TZXLSXDiffBorder.GetBorder(Num: integer): TZXLSXDiffBorderItemStyle;
+begin
+  result := nil;
+  if ((num >= 0 ) and (num < 6)) then
+    result := FBorder[num];
+end;
+
+procedure TZXLSXDiffBorder.SetBorder(Num: integer; const Value: TZXLSXDiffBorderItemStyle);
+begin
+  if ((num >= 0) and (num < 6)) then
+    if (Assigned(Value)) then
+      FBorder[num].Assign(Value);
+end;
+
+////::::::::::::: TZXLSXDiffFormatingItem :::::::::::::::::////
+
+constructor TZXLSXDiffFormattingItem.Create();
+begin
+  FBorders := TZXLSXDiffBorder.Create();
+  Clear();
+end;
+
+destructor TZXLSXDiffFormattingItem.Destroy();
+begin
+  FreeAndNil(FBorders);
+  inherited;
+end;
+
+procedure TZXLSXDiffFormattingItem.Assign(Source: TPersistent);
+var
+  dxfItem: TZXLSXDiffFormattingItem;
+  b: boolean;
+
+begin
+  b := true;
+  if (Assigned(Source)) then
+    if (Source is TZXLSXDiffFormattingItem) then
+    begin
+      b := false;
+      dxfItem := Source as TZXLSXDiffFormattingItem;
+
+      FUseFont := dxfItem.UseFont;
+      FUseFontColor := dxfItem.UseFontColor;
+      FUseFontStyles := dxfItem.UseFontStyles;
+      FFontColor := dxfItem.FontColor;
+      FFontStyles := dxfItem.FontStyles;
+      FUseBorder := dxfItem.UseBorder;
+      FBorders.Assign(dxfItem.Borders);
+      FUseFill := dxfItem.UseFill;
+      FUseCellPattern := dxfItem.UseCellPattern;
+      FCellPattern := dxfItem.CellPattern;
+      FUseBGColor := dxfItem.UseBGColor;
+      FBGColor := dxfItem.BGColor;
+      FUsePatternColor := dxfItem.UsePatternColor;
+      FPatternColor := dxfItem.PatternColor;
+    end;
+
+  if (b) then
+    inherited;
+end; //Assign
+
+procedure TZXLSXDiffFormattingItem.Clear();
+begin
+  FUseFont := false;
+  FUseFontColor := false;
+  FUseFontStyles := false;
+  FFontColor := clBlack;
+  FFontStyles := [];
+  FUseBorder := false;
+  FBorders.Clear();
+  FUseFill := false;
+  FUseCellPattern := false;
+  FCellPattern := ZPNone;
+  FUseBGColor := false;
+  FBGColor := clWindow;
+  FUsePatternColor := false;
+  FPatternColor := clWindow;
+end; //Clear
+
+// END Differential Formatting
+////////////////////////////////////////////////////////////////////////////////
 
 //Возвращает номер Relations из rels
 //INPUT
@@ -1858,7 +2238,8 @@ type
     bgcolor: TColor;
     patterncolor: TColor;
     patternColorType: byte;
-    lumFactor: double;
+    lumFactorBG: double;
+    lumFactorPattern: double;
   end;
 
   TZXLSXFillArray = array of TZXLSXFill;
@@ -2239,7 +2620,8 @@ var
         FillArray[_currFill].patterncolor := clWindow;
         FillArray[_currFill].bgColorType := 0;
         FillArray[_currFill].patternColorType := 0;
-        FillArray[_currFill].lumFactor := 0.0;
+        FillArray[_currFill].lumFactorBG := 0.0;
+        FillArray[_currFill].lumFactorPattern := 0.0;
       end else
       if ((xml.TagName = 'patternFill') and (xml.TagType in [4, 5])) then
       begin
@@ -2356,12 +2738,19 @@ var
             end;
           end;
 
+          s := xml.Attributes.ItemsByName['tint'];
+          if (s <> '') then
+            FillArray[_currFill].lumFactorPattern := ZETryStrToFloat(s, 0);
+
           //если не сплошная заливка - нужно поменять местами цвета (bgColor <-> fgColor)
           if (not (FillArray[_currFill].patternfill in [ZPNone, ZPSolid])) then
           begin
             _t := FillArray[_currFill].patterncolor;
             FillArray[_currFill].patterncolor := FillArray[_currFill].bgcolor;
             FillArray[_currFill].bgColor := _t;
+            l1 := FillArray[_currFill].lumFactorPattern;
+            FillArray[_currFill].lumFactorPattern := FillArray[_currFill].lumFactorBG;
+            FillArray[_currFill].lumFactorBG := l1;
 
             _b := FillArray[_currFill].patternColorType;
             FillArray[_currFill].patternColorType := FillArray[_currFill].bgColorType;
@@ -2391,8 +2780,8 @@ var
             end;
           end;
           s := xml.Attributes.ItemsByName['tint'];
-          if (length(s) > 0) then
-            FillArray[_currFill].lumFactor := ZETryStrToFloat(s, 0);
+          if (s <> '') then
+            FillArray[_currFill].lumFactorBG := ZETryStrToFloat(s, 0);
         end;
       end; //fgColor
     end; //while
@@ -2851,6 +3240,26 @@ var
     result := (b shl 16) or (g shl 8) or r;
   end; //ZHSLToColor
 
+  //Применить tint к цвету
+  // Thanks Tomasz Wieckowski!
+  //   http://msdn.microsoft.com/en-us/library/ff532470%28v=office.12%29.aspx
+  procedure ApplyLumFactor(var Color: TColor; var lumFactor: double);
+  begin
+    //+delta?
+    if (lumFactor <> 0.0) then
+    begin
+      ZColorToHSL(Color, h1, s1, l1);
+      lumFactor := 1 - lumFactor;
+
+      if (l1 = 1) then
+        l1 := l1 * (1 - lumFactor)
+      else
+        l1 := l1 * lumFactor + (1 - lumFactor);
+
+      Color := ZHSLtoColor(h1, s1, l1);
+    end;
+  end; //ApplyLumFactor
+
 begin
   result := false;
   xml := nil;
@@ -2908,22 +3317,6 @@ begin
         t := FillArray[i].bgcolor;
         if ((t >= 0) and (t < ThemaColorCount)) then
           FillArray[i].bgcolor := ThemaFillsColors[t];
-
-        //Thanks Tomasz Wieckowski!
-        //  http://msdn.microsoft.com/en-us/library/ff532470%28v=office.12%29.aspx
-        //TODO: проверить, нужно ли tint применять для patterncolor
-        if (FillArray[i].lumFactor > 0.0) then
-        begin
-          ZColorToHSL(FillArray[i].bgcolor, h1, s1, l1);
-          FillArray[i].lumFactor := 1 - FillArray[i].lumFactor;
-
-          if (l1 = 1) then
-            l1 := l1 * (1 - FillArray[i].lumFactor)
-          else
-            l1 := l1 * FillArray[i].lumFactor + (1 - FillArray[i].lumFactor);
-
-          FillArray[i].bgcolor:= ZHSLtoColor(h1, s1, l1);
-        end;
       end; //if
       if (FillArray[i].patternColorType = 2) then
       begin
@@ -2931,6 +3324,11 @@ begin
         if ((t >= 0) and (t < ThemaColorCount)) then
           FillArray[i].patterncolor := ThemaFillsColors[t];
       end;
+
+      //lumFactor
+      //TODO: проверить, нужно ли tint применять для patterncolor
+      ApplyLumFactor(FillArray[i].bgcolor, FillArray[i].lumFactorBG);
+      ApplyLumFactor(FillArray[i].patterncolor, FillArray[i].lumFactorPattern);
     end; //for
 
     //{tut}
