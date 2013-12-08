@@ -111,6 +111,11 @@ type
     FReadHelper: TZEODFReadHelper;
   protected
     procedure AddToLine(const CellNum: integer; const AStyleCFNumber: integer; const ACount: integer);
+    function ODFReadGetConditional(const ConditionalValue: string;
+                                out Condition: TZCondition;
+                                out ConditionOperator: TZConditionalOperator;
+                                out Value1: string;
+                                out Value2: string): boolean;
   public
     constructor Create(XMLSS: TZEXMLSS);
     destructor Destroy(); override;
@@ -123,6 +128,7 @@ type
     procedure Clear();
     procedure ClearLine();
     procedure ProgressLine(RowNumber: integer; RepeatCount: integer = 1);
+    procedure ReadCalcextTag(var xml: TZsspXMLReaderH; SheetNum: integer);
     property ColumnsCount: integer read FColumnsCount;
     property LineItemWidth: integer read FLineItemWidth write FLineItemWidth;
     property LineItemStartCell: integer read FLineItemStartCell write FLineItemStartCell;
@@ -224,7 +230,8 @@ const
   ZETag_StyleStyle          = 'style:style';
 
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-  const_ConditionalStylePrefix = 'ConditionalStyle_f';
+  const_ConditionalStylePrefix      = 'ConditionalStyle_f';
+  const_calcext_conditional_formats = 'calcext:conditional-formats';
   {$ENDIF}
 
 type
@@ -863,6 +870,293 @@ begin
   FCurrentLine[t].Count := ACount;
 end; //AddToLine
 
+//Получить из текста условия (style:condition) уловие, оператор и значения
+//INPUT
+//  const ConditionalValue: string
+//  out Condition: TZCondition
+//  out ConditionOperator: TZConditionalOperator
+//  out Value1: string
+//  out Value2: string
+//RETURN
+//      boolean - true - уловие успешно определено
+function TZODFConditionalReadHelper.ODFReadGetConditional(const ConditionalValue: string;
+                                out Condition: TZCondition;
+                                out ConditionOperator: TZConditionalOperator;
+                                out Value1: string;
+                                out Value2: string): boolean;
+var
+  i: integer;
+  len: integer;
+  s: string;
+  ch: char;
+  kol: integer;
+  _OCount: integer;
+  _strArr: array of string;
+  _maxKol: integer;
+  _isFirstOperator: boolean;
+
+  //Заполняет строку retStr до тех пор, пока не встретит символ=ch или не дойдёт до конца
+  //INPUT
+  //  var retStr: string  - результирующая строка
+  //  var num: integer    - позиция текущего символа в исходной строке
+  //      ch: char        - до кокого символа просматривать
+  procedure _ReadWhileNotChar(var retStr: string; var num: integer; ch: char);
+  begin
+    while (num < len - 1) do
+    begin
+      inc(num);
+      if (ConditionalValue[num] = ch) then
+        break
+      else
+        retStr := retStr + ConditionalValue[num];
+    end; //while
+  end; //_ReadWhileNotChar
+
+  procedure _ProcessBeforeDelimiter();
+  begin
+    if (length(trim(s)) > 0) then
+    begin
+      _strArr[kol] := s;
+      inc(kol);
+      if (kol >= _maxKol) then
+      begin
+        inc(_maxKol, 5);
+        SetLength(_strArr, _maxKol);
+      end;
+      s := '';
+    end;
+  end; //_ProcessBeforeDelimiter
+
+  //Определить оператор (для ODF)
+  //INPUT
+  //  const st: string                             - текст оператора
+  //  var ConditionOperator: TZConditionalOperator - возвращаемый оператор
+  //RETURN
+  //      boolean - true - оператор успешно определён
+  function ODFGetOperatorByStr(const st: string; var ConditionOperator: TZConditionalOperator): boolean;
+  begin
+    result := true;
+    if (st = '<') then
+       ConditionOperator := ZCFOpLT
+    else
+    if (st = '>') then
+       ConditionOperator := ZCFOpGT
+    else
+    if (st = '<=') then
+       ConditionOperator := ZCFOpLTE
+    else
+    if (st = '>=') then
+       ConditionOperator := ZCFOpGTE
+    else
+    if (st = '=') then
+       ConditionOperator := ZCFOpEqual
+    else
+    if (st = '!=') then
+       ConditionOperator := ZCFOpNotEqual
+    else
+      result := false;
+  end; //ODFGetOperatorByStr
+
+  //Определение условия
+  function _CheckCondition(): boolean;
+  var
+    v1, v2: double;
+    FS: TFormatSettings;
+
+    function _CheckBetween(val: TZCondition): boolean;
+    begin
+      result := false;
+      if (kol = 3) then
+        if (TryStrToFloat(_strArr[1], v1 , FS)) then
+          if (TryStrToFloat(_strArr[2], v2 , FS)) then
+          begin
+            result := true;
+            Condition := val;
+            Value1 := _strArr[1];
+            Value2 := _strArr[2];
+          end;
+    end; //_CheckBetween
+
+    function _CheckOperator(): boolean;
+    begin
+      result := false;
+      if (kol >= 2) then
+        if (ODFGetOperatorByStr(_strArr[0], ConditionOperator)) then
+          if (TryStrToFloat(_strArr[1], v1, FS)) then
+          begin
+            result := true;
+            Condition := ZCFCellContentOperator;
+            Value1 := _strArr[1];
+          end;
+    end; //_CheckOperator
+
+  begin
+    result := false;
+    s := _strArr[0];
+    FS.DecimalSeparator := '.';
+
+    //TODO: не забыть добавить все остальные условия
+    //Для условных стилей из ODF (без расширения в LibreOffice):
+    //  cell-content-is-between
+    //  cell-content-is-not-between
+    //  cell-content
+    //  value
+    //
+    //Для LibreOffice (<calcext:conditional-formats>):
+    //  between()
+    //  not-between()
+    //  begins-with()
+    //  ends-with()
+    //  contains-text()
+    //  not-contains-text()
+    //  operator value (>10 etc)
+
+    if (_isFirstOperator or (s = 'cell-content')) then
+    begin
+      result := _CheckOperator();
+    end else
+    if ((s = 'cell-content-is-between') or (s = 'between')) then
+    begin
+      result := _CheckBetween(ZCFCellContentIsBetween);
+    end else
+    if ((s = 'cell-content-is-not-between') or (s = 'not-between')) then
+    begin
+      result := _CheckBetween(ZCFCellContentIsNotBetween);
+    end else
+    if (s = 'value') then
+    begin
+    end else
+    if (s = 'begins-with') then
+    begin
+    end else
+    if (s = 'ends-with') then
+    begin
+    end else
+    if (s = 'contains-text') then
+    begin
+    end else
+    if (s = 'not-contains-text') then
+    begin
+    end;
+  end; //_CheckCondition
+
+  //Читает оператор
+  //INPUT
+  //  var retStr: string  - результирующая строка
+  //  var num: integer    - позиция текущего символа в исходной строке
+  procedure _ReadOperator(var retStr: string; var num: integer);
+  var
+    ch: char;
+
+  begin
+    if (num + 1 <= len) then
+    begin
+      ch := ConditionalValue[num + 1];
+      // >, >=, <, <=, !=, =
+      case (ch) of
+        '>', '<', '=':
+          begin
+            retStr := retStr + ch;
+            inc(num);
+          end;
+        //'!':;
+      end;
+    end;
+    _ProcessBeforeDelimiter();
+    if (kol = 1) then
+      _isFirstOperator := true;
+  end; //_ReadOperator
+
+begin
+  result := false;
+  Value1 := '';
+  Value2 := '';
+  Condition := ZCFNumberValue;
+  ConditionOperator := ZCFOpGT;
+  len := length(ConditionalValue);
+  _isFirstOperator := false;
+
+  //TODO: нужно потом на досуге подумать более приличный способ разбора формул
+  //      (перевести в обратную польскую запись и всё такое)
+  {
+  is-true-formula()                             (??)
+  cell-content-is-between(value1, value2)
+  cell-content-is-not-between(value1, value2)
+  cell-content() operator value1
+  string                                        (??)
+  formula                                       (??)
+  value() operator n                            (??)
+  bool (true/false)                             (??)
+
+  Example:
+  cell-content-is-between(0,3)
+  }
+
+  if (len > 0) then
+  try
+    _maxKol := 4;
+    SetLength(_strArr, _maxKol);
+    result := true;
+    s := '';
+    kol := 0;
+    _OCount := 0;
+    i := 0;
+    while (i < len) do
+    begin
+      inc(i);
+      ch := ConditionalValue[i];
+      case (ch) of
+        ' ':
+          begin
+            _ProcessBeforeDelimiter();
+          end;
+        '''', '"':
+          begin
+            _ProcessBeforeDelimiter();
+            _ReadWhileNotChar(s, i, ch);
+          end;
+        '(':
+          begin
+            _ProcessBeforeDelimiter();
+            inc(_OCount);
+          end;
+        ')':
+          begin
+            _ProcessBeforeDelimiter();
+            dec(_OCount);
+            if (_OCount < 0) then
+            begin
+              result := false;
+              break;
+            end;
+          end;
+        ',':
+          begin
+            _ProcessBeforeDelimiter();
+          end;
+        '>', '<', '=', '!':
+          begin
+            _ProcessBeforeDelimiter();
+            s := ch;
+            _ReadOperator(s, i);
+          end;
+        else
+          s := s + ch;
+      end; //case
+    end; //while
+
+    _ProcessBeforeDelimiter();
+    if (_OCount <> 0) then
+      result := false;
+    if (kol > 0) then
+      result := _CheckCondition()
+    else
+      result := false;
+  finally
+    SetLength(_strArr, 0);
+  end; //if
+end; //ODFReadGetConditional
+
 //Применить условные форматирования к листу
 //INPUT
 //      SheetNumber: integer            - номер листа
@@ -880,220 +1174,6 @@ var
   t: integer;
   _StartIDX: integer;
   _CF: TZConditionalFormatting;
-
-  //Получить из текста условия (style:condition) уловие, оператор и значения
-  //INPUT
-  //  const ConditionalValue: string
-  //  out Condition: TZCondition
-  //  out ConditionOperator: TZConditionalOperator
-  //  out Value1: string
-  //  out Value2: string
-  //RETURN
-  //      boolean - true - уловие успешно определено
-  function ODFReadGetConditional(const ConditionalValue: string;
-                                  out Condition: TZCondition;
-                                  out ConditionOperator: TZConditionalOperator;
-                                  out Value1: string;
-                                  out Value2: string): boolean;
-  var
-    i: integer;
-    len: integer;
-    s: string;
-    ch: char;
-    kol: integer;
-    _OCount: integer;
-    _strArr: array of string;
-    _maxKol: integer;
-
-    //Заполняет строку retStr до тех пор, пока не встретит символ=ch или не дойдёт до конца
-    //INPUT
-    //  var retStr: string  - результирующая строка
-    //  var num: integer    - позиция текущего символа в исходной строке
-    //      ch: char        - до кокого символа просматривать
-    procedure _ReadWhileNotChar(var retStr: string; var num: integer; ch: char);
-    begin
-      while (num < len - 1) do
-      begin
-        inc(num);
-        if (ConditionalValue[num] = ch) then
-          break
-        else
-          retStr := retStr + ConditionalValue[num];
-      end; //while
-    end; //_ReadWhileNotChar
-
-    procedure _ProcessBeforeDelimiter();
-    begin
-      if (length(trim(s)) > 0) then
-      begin
-        _strArr[kol] := s;
-        inc(kol);
-        if (kol >= _maxKol) then
-        begin
-          inc(_maxKol, 5);
-          SetLength(_strArr, _maxKol);
-        end;
-        s := '';
-      end;
-    end; //_ProcessBeforeDelimiter
-
-    //Определить оператор (для ODF)
-    //INPUT
-    //  const st: string                             - текст оператора
-    //  var ConditionOperator: TZConditionalOperator - возвращаемый оператор
-    //RETURN
-    //      boolean - true - оператор успешно определён
-    function ODFGetOperatorByStr(const st: string; var ConditionOperator: TZConditionalOperator): boolean;
-    begin
-      result := true;
-      if (st = '<') then
-         ConditionOperator := ZCFOpLT
-      else
-      if (st = '>') then
-         ConditionOperator := ZCFOpGT
-      else
-      if (st = '<=') then
-         ConditionOperator := ZCFOpLTE
-      else
-      if (st = '>=') then
-         ConditionOperator := ZCFOpGTE
-      else
-      if (st = '=') then
-         ConditionOperator := ZCFOpEqual
-      else
-      if (st = '!=') then
-         ConditionOperator := ZCFOpNotEqual
-      else
-        result := false;
-    end; //ODFGetOperatorByStr
-
-    //Определение условия
-    function _CheckCondition(): boolean;
-    var
-      t: integer;
-      v1, v2: double;
-      FS: TFormatSettings;
-
-      function _CheckBetween(val: TZCondition): boolean;
-      begin
-        result := false;
-        if (kol = 3) then
-          if (TryStrToFloat(_strArr[1], v1 , FS)) then
-            if (TryStrToFloat(_strArr[2], v2 , FS)) then
-            begin
-              result := true;
-              Condition := val;
-              Value1 := _strArr[1];
-              Value2 := _strArr[2];
-            end;
-      end; //_CheckBetween
-
-    begin
-      result := false;
-      s := _strArr[0];
-      FS.DecimalSeparator := '.';
-
-      //TODO: не забыть добавить все остальные условия
-
-      if (s = 'cell-content-is-between') then
-      begin
-        result := _CheckBetween(ZCFCellContentIsBetween);
-      end else
-      if (s = 'cell-content-is-not-between') then
-      begin
-        result := _CheckBetween(ZCFCellContentIsNotBetween);
-      end else
-      if (s = 'cell-content') then
-      begin
-      end else
-      if (s = 'value') then
-      begin
-      end;
-
-    end; //_CheckCondition
-
-  begin
-    result := false;
-    Value1 := '';
-    Value2 := '';
-    Condition := ZCFNumberValue;
-    ConditionOperator := ZCFOpGT;
-    len := length(ConditionalValue);
-
-    //TODO: нужно потом на досуге подумать более приличный способ разбора формул
-    //      (перевести в обратную польскую запись и всё такое)
-    {
-    is-true-formula()                             (??)
-    cell-content-is-between(value1, value2)
-    cell-content-is-not-between(value1, value2)
-    cell-content() operator value1
-    string                                        (??)
-    formula                                       (??)
-    value() operator n                            (??)
-    bool (true/false)                             (??)
-
-    Example:
-    cell-content-is-between(0,3)
-    }
-
-    if (len > 0) then
-    try
-      _maxKol := 4;
-      SetLength(_strArr, _maxKol);
-      result := true;
-      s := '';
-      kol := 0;
-      _OCount := 0;
-      i := 0;
-      while (i < len) do
-      begin
-        inc(i);
-        ch := ConditionalValue[i];
-        case (ch) of
-          ' ':
-            begin
-              _ProcessBeforeDelimiter();
-            end;
-          '''', '"':
-            begin
-              _ProcessBeforeDelimiter();
-              _ReadWhileNotChar(s, i, ch);
-            end;
-          '(':
-            begin
-              _ProcessBeforeDelimiter();
-              inc(_OCount);
-            end;
-          ')':
-            begin
-              _ProcessBeforeDelimiter();
-              dec(_OCount);
-              if (_OCount < 0) then
-              begin
-                result := false;
-                break;
-              end;
-            end;
-          ',':
-            begin
-              _ProcessBeforeDelimiter();
-            end;
-          else
-            s := s + ch;
-        end; //case
-      end; //while
-
-      _ProcessBeforeDelimiter();
-      if (_OCount <> 0) then
-        result := false;
-      if (kol > 0) then
-        result := _CheckCondition()
-      else
-        result := false;
-    finally
-      SetLength(_strArr, 0);
-    end; //if
-  end; //ODFReadGetConditional
 
   //заменить в условных стилях индексы на нужный
   //INPUT
@@ -1321,6 +1401,163 @@ begin
     end;
   end;
 end; //ProgressLine
+
+//Читает <calcext:conditional-formats> .. </calcext:conditional-formats> - условное
+//  форатирование для LibreOffice
+//INPUT
+//  var xml: TZsspXMLReaderH  - читатеь (<> nil !!!)
+//      SheetNum: integer     - номер страницы
+procedure TZODFConditionalReadHelper.ReadCalcextTag(var xml: TZsspXMLReaderH; SheetNum: integer);
+var
+  _Range: string;
+  _isCFItem: boolean;
+  _CF: TZConditionalFormatting;
+  _CFItem: TZConditionalStyle;
+  s: string;
+  tmpRec: array [0..1] of array [0..1] of integer;  //0 - c, 1 - r
+  b: boolean;
+  i: integer;
+
+  procedure _AddAreas();
+  var
+    i: integer;
+    ss: string;
+    ch: char;
+    _isQuote: boolean;
+    kol: integer;
+
+    procedure _addSubArea(var str: string);
+    begin
+      if (str <> '') then
+        if (kol < 2) then
+        begin
+          ZEGetCellCoords(str, tmpRec[kol][0], tmpRec[kol][1]);
+          inc(kol);
+        end;
+      s := '';
+    end; //_addSubArea
+
+    procedure _PrepareAreaAndAdd(var RangeItem: string);
+    var
+      i: integer;
+      s: string;
+      _isQuote: boolean;
+
+    begin
+      if (RangeItem <> '') then
+      begin
+        kol := 0;
+        RangeItem := RangeItem + ':';
+        s := '';
+        _isQuote := false;
+        for i := 1 to Length(RangeItem) do
+        begin
+          ch := RangeItem[i];
+          case ch of
+            '.': s := '';
+            '"': _isQuote := not _isQuote;
+            ':':
+              begin
+                if (not _isQuote) then
+                  _addSubArea(s);
+              end;
+            else
+              s := s + ch;
+          end;
+        end;
+      end; //if
+
+      if (kol > 0) then
+      begin
+      end;
+
+      RangeItem := '';
+    end; //_PrepareArea
+
+  begin
+    _CFItem.Areas.Count := 0;
+    s := ZEReplaceEntity(xml.Attributes['calcext:target-range-address']);
+    if (s <>  '') then
+    begin
+      s := s + ' ';
+      ss := '';
+      _isQuote := false;
+      for i := 1 to Length(s) do
+        case s[i] of
+          '"': _isQuote := not _isQuote;
+          ' ':
+            if (_isQuote) then
+              ss := ss + ' '
+            else
+              _PrepareAreaAndAdd(ss)
+          else
+            ss := ss + s[i];
+        end;
+    end;
+  end; //_AddAreas
+
+  procedure _GetCondition();
+  begin
+  end; //_GetCondition
+
+begin
+  _Range := '';
+  _isCFItem := false;
+  _CF := FXMLSS.Sheets[SheetNum].ConditionalFormatting;
+  (*
+   <calcext:conditional-format calcext:target-range-address="Лист1.A1:Лист1.D17 Лист1.E1:Лист1.F17">
+      <calcext:condition calcext:apply-style-name="Безымянный1" calcext:value="begins-with(&quot;as&quot;)" calcext:base-cell-address="Лист1.A1"/>
+      <calcext:condition calcext:apply-style-name="Безымянный2" calcext:value="ends-with(&quot;ey&quot;)" calcext:base-cell-address="Лист1.A1"/>
+      <calcext:condition calcext:apply-style-name="Безымянный3" calcext:value="contains-text(&quot;et&quot;)" calcext:base-cell-address="Лист1.A1"/>
+      <calcext:condition calcext:apply-style-name="Безымянный4" calcext:value="not-contains-text(&quot;rt&quot;)" calcext:base-cell-address="Лист1.A1"/>
+      <calcext:condition calcext:apply-style-name="Безымянный5" calcext:value="between(1,20)" calcext:base-cell-address="Лист1.A1"/>
+   </calcext:conditional-format>
+  *)
+  _CFItem := TZConditionalStyle.Create();
+  try
+    while ((xml.TagType <> 6) or (xml.TagName <> const_calcext_conditional_formats)) do
+    begin
+      xml.ReadTag();
+      if (xml.Eof()) then
+        break;
+
+      if (xml.TagName = 'calcext:conditional-format') then
+      begin
+        if (xml.TagType = 4) then
+        begin
+          _isCFItem := true;
+          _CFItem.Count := 0;
+          _AddAreas();
+        end else
+        begin
+          if (_isCFItem) then
+            if (_CFItem.Count > 0) then
+            begin
+              b := true;
+              //TODO: потом переделать сравнение условных форматирований
+              //      (пересечение областей и др.)
+              for i := 0 to _CF.Count - 1 do
+                if (_CF[i].Equals(_CFItem)) then
+                begin
+                  b := false;
+                  break;
+                end;
+
+              if (b) then
+                _CF.Add(_CFItem);
+            end;
+          _isCFItem := false;
+        end;
+      end; //if
+
+      if ((xml.TagType = 5) and (xml.TagName = 'calcext:condition')) then
+        if (_isCFItem) then
+          _GetCondition();
+    end; //while
+  finally
+    FreeAndNil(_CFItem);
+  end;
+end; //ReadCalcextTag
 
 //Добавить для указанного столбца индекс условного форматирования
 //INPUT
@@ -3568,7 +3805,7 @@ begin
     end;
     {$ENDIF}
   end; //while
-end;
+end; //ZEReadODFCellStyleItem
 
 //Чтение стилей документа и автоматических стилей (составная часть стилей)
 //INPUT
@@ -4271,6 +4508,7 @@ var
         end;
         _CurrentCol := 0;
       end; //if
+
       if (IfTag('table:table-row', 6)) then
       begin
         inc(_CurrentRow);
@@ -4324,11 +4562,16 @@ var
             end;
 
         inc(_MaxCol);
-      end;
+      end; //if
 
       //ячейка
       _ReadCell();
 
+      // для LibreOffice >= 4.0 условное форматирование
+      {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+      if (ifTag(const_calcext_conditional_formats, 4)) then
+        ReadHelper.ConditionReader.ReadCalcextTag(xml, 1);
+      {$ENDIF}
     end; //while
 
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
@@ -4356,14 +4599,6 @@ var
 
       if (ifTag('table:table', 4)) then
         _ReadTable();
-
-      //TODO: для LibreOffice >= 4.0 условное форматирование
-      {
-      if (ifTag('calcext:conditional-formats', 4)) then
-      begin
-
-      end;
-      }
     end;
   end; //_ReadDocument
 

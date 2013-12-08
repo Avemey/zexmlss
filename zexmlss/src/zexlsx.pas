@@ -1389,6 +1389,7 @@ var
           end;
 
         _type := xml.Attributes.ItemsByName['t']; //тип
+
         //s := xml.Attributes.ItemsByName['cm'];
         //s := xml.Attributes.ItemsByName['ph'];
         //s := xml.Attributes.ItemsByName['vm'];
@@ -1420,12 +1421,17 @@ var
 
         end; //while
 
-        //s - sharedstring
-        //b - boolean
-        //n - number
-        //e - error
-        //str - string
-        //inlineStr - inline string ??
+        //Возможные типы:
+        //  s - sharedstring
+        //  b - boolean
+        //  n - number
+        //  e - error
+        //  str - string
+        //  inlineStr - inline string ??
+        //По-умолчанию - number
+        if ((_type = 'n') or (_type = '')) then
+          _currCell.CellType := ZENumber
+        else
         if (_type = 's') then
         begin
           _currCell.CellType := ZEString;
@@ -1796,7 +1802,6 @@ var
       a: array of array[0..5] of integer;
       _maxx: integer;
       ch: char;
-      b: boolean;
       w, h: integer;
 
       function _GetOneArea(st: string): boolean;
@@ -1808,6 +1813,7 @@ var
         tmpArr: array [0..1, 0..1] of integer;
         _isOk: boolean;
         t: integer;
+        tmpB: boolean;
 
       begin
         result := false;
@@ -1823,7 +1829,11 @@ var
             if (ch = ':') then
             begin
               if (_cnt < 2) then
-                _isOk := _isOk and ZEGetCellCoords(s, tmpArr[_cnt][0], tmpArr[_cnt][1]);
+              begin
+                tmpB := ZEGetCellCoords(s, tmpArr[_cnt][0], tmpArr[_cnt][1]);
+                _isOk := _isOk and tmpB;
+              end;
+              s := '';
               inc(_cnt);
             end else
               s := s + ch;
@@ -1854,7 +1864,6 @@ var
       try
         _maxx := 4;
         SetLength(a, _maxx);
-        b := true;
         ss := _sqref + ' ';
         _len := Length(ss);
         kol := 0;
@@ -1878,24 +1887,23 @@ var
             s := s + ch;
         end; //for
 
-        if (b) then
-          if (kol > 0) then
+        if (kol > 0) then
+        begin
+          _currSheet.ConditionalFormatting.Add();
+          _CF := _currSheet.ConditionalFormatting[_currSheet.ConditionalFormatting.Count - 1];
+          for i := 0 to kol - 1 do
           begin
-            _currSheet.ConditionalFormatting.Add();
-            _CF := _currSheet.ConditionalFormatting[_currSheet.ConditionalFormatting.Count - 1];
-            for i := 0 to kol - 1 do
+            w := 1;
+            h := 1;
+            if (a[i][0] >= 2) then
             begin
-              w := 1;
-              h := 1;
-              if (a[kol][0] >= 2) then
-              begin
-                w := abs(a[kol][3] - a[kol][1]) + 1;
-                h := abs(a[kol][4] - a[kol][2]) + 1;
-              end;
-              _CF.Areas.Add(a[kol][1], a[kol][2], w, h);
+              w := abs(a[i][3] - a[i][1]) + 1;
+              h := abs(a[i][4] - a[i][2]) + 1;
             end;
-            result := true;
+            _CF.Areas.Add(a[i][1], a[i][2], w, h);
           end;
+          result := true;
+        end;
       finally
         SetLength(a, 0);
       end;
@@ -1928,7 +1936,6 @@ var
       function _getStyleIdxForDF(dfNum: integer): integer;
       var
         _df: TZXLSXDiffFormattingItem;
-        _stNum: integer;
         _r, _c: integer;
         _t: integer;
         i: integer;
@@ -1955,7 +1962,7 @@ var
           if (_df.UseFont) then
           begin
             if (_df.UseFontStyles) then
-              _tmpStyle.Font.Style = _df.FontStyles;
+              _tmpStyle.Font.Style := _df.FontStyles;
             if (_df.UseFontColor) then
               _tmpStyle.Font.Color := _df.FontColor;
           end;
@@ -1979,6 +1986,8 @@ var
               if (_df.Borders[i].UseColor) then
                 _tmpStyle.Border[i].Color := _df.Borders[i].Color;
             end; //for
+
+          result := XMLSS.Styles.Add(_tmpStyle, true);
         end; //if
       end; //_getStyleIdxForDF
 
@@ -3449,14 +3458,14 @@ var
               _df.CellPattern := _GetPatternFillByStr(s);
             end;
           end else
-          if (xml.TagName = 'fgColor') then
+          if (xml.TagName = 'bgColor') then
           begin
             _df.UseBGColor := true;
             ZXLSXGetColor(_dfFills[_dfIndex].bgcolor,
                           _dfFills[_dfIndex].bgColorType,
                           _dfFills[_dfIndex].lumFactorBG)
           end else
-          if (xml.TagName = 'bgColor') then
+          if (xml.TagName = 'fgColor') then
           begin
             _df.UsePatternColor := true;
             ZXLSXGetColor(_dfFills[_dfIndex].patterncolor,
@@ -3667,6 +3676,16 @@ begin
       begin
         XLSXApplyColor(_dfFonts[i].Color, _dfFonts[i].ColorType, _dfFonts[i].LumFactor);
         ReadHelper.DiffFormatting[i].FontColor := _dfFonts[i].Color;
+      end;
+      if (ReadHelper.DiffFormatting[i].UseBGColor) then
+      begin
+        XLSXApplyColor(_dfFills[i].bgcolor, _dfFills[i].bgColorType, _dfFills[i].lumFactorBG);
+        ReadHelper.DiffFormatting[i].BGColor := _dfFills[i].bgcolor;
+      end;
+      if (ReadHelper.DiffFormatting[i].UsePatternColor) then
+      begin
+        XLSXApplyColor(_dfFills[i].patterncolor, _dfFills[i].patternColorType, _dfFills[i].lumFactorPattern);
+        ReadHelper.DiffFormatting[i].PatternColor := _dfFills[i].patterncolor;
       end;
     end;
 
