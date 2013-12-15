@@ -232,6 +232,11 @@ const
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   const_ConditionalStylePrefix      = 'ConditionalStyle_f';
   const_calcext_conditional_formats = 'calcext:conditional-formats';
+  const_calcext_conditional_format  = 'calcext:conditional-format';
+  const_calcext_value               = 'calcext:value';
+  const_calcext_apply_style_name    = 'calcext:apply-style-name';
+  const_calcext_base_cell_address   = 'calcext:base-cell-address';
+  const_calcext_condition           = 'calcext:condition';
   {$ENDIF}
 
 type
@@ -990,6 +995,19 @@ var
           end;
     end; //_CheckOperator
 
+    function _CheckTextCondition(val: TZCondition): boolean;
+    begin
+      result := false;
+      if (kol >= 2) then
+        if (_strArr[1] <> '') then
+        begin
+          //TODO: потом проверить, нужно ли убирать кавычки и всё такое
+          result := true;
+          Condition := val;
+          Value1 := _strArr[1];
+        end;
+    end; //_CheckTextCondition
+
   begin
     result := false;
     s := _strArr[0];
@@ -1028,15 +1046,19 @@ var
     end else
     if (s = 'begins-with') then
     begin
+      result := _CheckTextCondition(ZCFBeginsWithText);
     end else
     if (s = 'ends-with') then
     begin
+      result := _CheckTextCondition(ZCFEndsWithText);
     end else
     if (s = 'contains-text') then
     begin
+      result := _CheckTextCondition(ZCFContainsText);
     end else
     if (s = 'not-contains-text') then
     begin
+      result := _CheckTextCondition(ZCFNotContainsText);
     end;
   end; //_CheckCondition
 
@@ -1322,18 +1344,20 @@ var
 begin
   if (FAreasCount > 0) then
     if (Assigned(FXMLSS)) then
-    try
-      _CheckAreas();
-      for i := 0 to FAreasCount - 1 do
-      for j := 0 to _CFCount - 1 do
-        if (FAreas[i].CFStyleNumber = _CFArray[j]) then
-        begin
-          _AddArea(i, j + _StartIDX);
-          break;
-        end;
-    finally
-      SetLength(_CFArray, 0);
-    end;
+      //если уже есть условное форматирование, то дополнительно не добавляем
+      if (FXMLSS.Sheets[SheetNumber].ConditionalFormatting.Count = 0) then
+      try
+        _CheckAreas();
+        for i := 0 to FAreasCount - 1 do
+        for j := 0 to _CFCount - 1 do
+          if (FAreas[i].CFStyleNumber = _CFArray[j]) then
+          begin
+            _AddArea(i, j + _StartIDX);
+            break;
+          end;
+      finally
+        SetLength(_CFArray, 0);
+      end;
 end; //ApplyConditionStylesToSheet
 
 //Очистка всех условных форматирований (выполняется перед началом нового листа)
@@ -1417,6 +1441,9 @@ var
   tmpRec: array [0..1] of array [0..1] of integer;  //0 - c, 1 - r
   b: boolean;
   i: integer;
+  _CFvalue: string;
+  _stylename: string;
+  _basecelladdr: string;
 
   procedure _AddAreas();
   var
@@ -1442,6 +1469,7 @@ var
       i: integer;
       s: string;
       _isQuote: boolean;
+      w, h: integer;
 
     begin
       if (RangeItem <> '') then
@@ -1469,6 +1497,14 @@ var
 
       if (kol > 0) then
       begin
+        w := 1;
+        h := 1;
+        if (kol = 2) then
+        begin
+          w := tmpRec[1][0] - tmpRec[0][0];
+          h := tmpRec[1][1] - tmpRec[0][1];
+        end;
+        _CFItem.Areas.Add(tmpRec[0][0], tmpRec[0][1], w, h);
       end;
 
       RangeItem := '';
@@ -1497,7 +1533,45 @@ var
   end; //_AddAreas
 
   procedure _GetCondition();
+  var
+    _Condition: TZCondition;
+    _ConditionOperator: TZConditionalOperator;
+    _Value1: string;
+    _Value2: string;
+    num: integer;
+    i: integer;
+    _styleID: integer;
+
   begin
+    _CFvalue := xml.Attributes[const_calcext_value];
+    _stylename := xml.Attributes[const_calcext_apply_style_name];
+    _basecelladdr := xml.Attributes[const_calcext_base_cell_address];
+    if (_CFvalue <> '') then
+      if (ODFReadGetConditional(_CFvalue,
+                                _Condition,
+                                _ConditionOperator,
+                                _Value1,
+                                _Value2)) then
+      begin
+        num := _CFItem.Count;
+        _CFItem.Add();
+        _CFItem[num].Condition := _Condition;
+        _CFItem[num].ConditionOperator := _ConditionOperator;
+        _CFItem[num].Value1 := _Value1;
+        _CFItem[num].Value2 := _Value2;
+
+        _styleID := -1;
+        for i := 0 to ReadHelper.StylesCount - 1 do
+          if (ReadHelper.StylesProperties[i].name = _stylename) then
+          begin
+            if (ReadHelper.StylesProperties[i].index < 0) then
+              ReadHelper.StylesProperties[i].index := FXMLSS.Styles.Add(ReadHelper.Style[i]);
+            _styleID := ReadHelper.StylesProperties[i].index;
+            break;
+          end;
+
+        _CFItem[num].ApplyStyleID := _styleID;
+      end;
   end; //_GetCondition
 
 begin
@@ -1521,7 +1595,7 @@ begin
       if (xml.Eof()) then
         break;
 
-      if (xml.TagName = 'calcext:conditional-format') then
+      if (xml.TagName = const_calcext_conditional_format) then
       begin
         if (xml.TagType = 4) then
         begin
@@ -1550,7 +1624,7 @@ begin
         end;
       end; //if
 
-      if ((xml.TagType = 5) and (xml.TagName = 'calcext:condition')) then
+      if ((xml.TagType = 5) and (xml.TagName = const_calcext_condition)) then
         if (_isCFItem) then
           _GetCondition();
     end; //while
@@ -4570,7 +4644,7 @@ var
       // для LibreOffice >= 4.0 условное форматирование
       {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
       if (ifTag(const_calcext_conditional_formats, 4)) then
-        ReadHelper.ConditionReader.ReadCalcextTag(xml, 1);
+        ReadHelper.ConditionReader.ReadCalcextTag(xml, _CurrentPage);
       {$ENDIF}
     end; //while
 
