@@ -3166,12 +3166,16 @@ end; //Destroy
 procedure TZConditionalStyle.Assign(Source: TPersistent);
 var
   t: TZConditionalStyle;
+  i: integer;
 
 begin
   if (Source is TZConditionalStyle) then
   begin
     t := Source as TZConditionalStyle;
-    FCount := t.Count;
+    Count := t.Count;
+    FAreas.Assign(t.Areas);
+    for i := 0 to Count - 1 do
+      FConditions[i].Assign(t.Items[i]);
   end else
     inherited Assign(Source);
 end; //Assign

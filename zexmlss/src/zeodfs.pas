@@ -237,6 +237,7 @@ const
   const_calcext_apply_style_name    = 'calcext:apply-style-name';
   const_calcext_base_cell_address   = 'calcext:base-cell-address';
   const_calcext_condition           = 'calcext:condition';
+  const_calcext_target_range_address= 'calcext:target-range-address';
   {$ENDIF}
 
 type
@@ -302,6 +303,7 @@ type
                        const _names: TStringDynArray;
                        PageCount: integer);
     procedure WriteCFStyles(xml: TZsspXMLWriterH);
+    procedure WriteCalcextCF(xml: TZsspXMLWriterH; PageIndex: integer);
     function GetStyleNum(const PageIndex, Col, Row: integer): integer;
     destructor Destroy(); override;
     property StylesCount: integer read FStylesCount;
@@ -754,6 +756,79 @@ begin
    CFMaps := nil;
   end;
 end; //WriteCFStyles
+
+//Пишет условное форматирование <calcext:conditional-formats> </calcext:conditional-formats>
+// для LibreOffice
+//INPUT
+//      xml: TZsspXMLWriterH  - писатель
+//      PageIndex: integer    - номер страницы
+procedure TZODFConditionalWriteHelper.WriteCalcextCF(xml: TZsspXMLWriterH; PageIndex: integer);
+var
+  i: integer;
+  _cfCount: integer;
+  _CF: TZConditionalFormatting;
+
+  procedure _WriteFormat(Num: integer);
+  var
+    i: integer;
+    _StyleItem: TZConditionalStyle;
+    kol: integer;
+
+    procedure _WriteFormatItem(StyleItem: TZConditionalStyleItem);
+
+      function _GetCondition(): string;
+      begin
+        result := '';
+      end; //_GetCondition
+
+    begin
+      xml.Attributes.Clear();
+      xml.Attributes.Add(const_calcext_apply_style_name, '');
+      xml.Attributes.Add(const_calcext_value, _GetCondition());
+      xml.Attributes.Add(const_calcext_base_cell_address, '');
+
+      xml.WriteEmptyTag(const_calcext_condition, true);
+
+       {
+       const_calcext_value               = 'calcext:value';
+       const_calcext_apply_style_name    = 'calcext:apply-style-name';
+       const_calcext_base_cell_address   = 'calcext:base-cell-address';
+       const_calcext_condition           = 'calcext:condition';
+       }
+    end; //_WriteFormatItem
+
+  begin
+    _StyleItem := _CF.Items[Num];
+    kol := _StyleItem.Count;
+    if (kol > 0) then
+    begin
+      xml.Attributes.Clear();
+      xml.WriteTagNode(const_calcext_conditional_format, true, true, false);
+      for i := 0 to kol - 1 do
+        _WriteFormatItem(_StyleItem.Items[i]);
+
+      xml.WriteEndTagNode(); //calcext:conditional-format
+    end;
+  end; //_WriteFormat
+
+begin
+  if (PageIndex >= 0) and (PageIndex < FXMLSS.Sheets.Count) then
+  begin
+    _CF := FXMLSS.Sheets[PageIndex].ConditionalFormatting;
+    _cfCount := _CF.Count;
+    if (_cfCount > 0) then
+    begin
+       xml.Attributes.Clear();
+       //const_calcext_target_range_address
+       xml.WriteTagNode(const_calcext_conditional_formats, true, true, false);
+
+       for i := 0 to _cfCount - 1 do
+         _WriteFormat(i);
+
+       xml.WriteEndTagNode(); //calcext:conditional-formats
+    end;
+  end;
+end; //WriteCalcextCF
 
 //Получить номер стиля (с условным форматированием или без) ячейки
 //  подразумевается, что индекс страницы и координаты ячейки правильные и
@@ -1451,6 +1526,7 @@ var
     ss: string;
     ch: char;
     _isQuote: boolean;
+    _isApos: boolean;
     kol: integer;
 
     procedure _addSubArea(var str: string);
@@ -1461,7 +1537,7 @@ var
           ZEGetCellCoords(str, tmpRec[kol][0], tmpRec[kol][1]);
           inc(kol);
         end;
-      s := '';
+      str := '';
     end; //_addSubArea
 
     procedure _PrepareAreaAndAdd(var RangeItem: string);
@@ -1469,6 +1545,7 @@ var
       i: integer;
       s: string;
       _isQuote: boolean;
+      _isApos: boolean;
       w, h: integer;
 
     begin
@@ -1478,51 +1555,63 @@ var
         RangeItem := RangeItem + ':';
         s := '';
         _isQuote := false;
+        _isApos := false;
         for i := 1 to Length(RangeItem) do
         begin
           ch := RangeItem[i];
           case ch of
             '.': s := '';
-            '"': _isQuote := not _isQuote;
+            '"': if (not _isApos) then _isQuote := not _isQuote;
+            '''': if (not _isQuote) then _isApos := not _isApos;
             ':':
               begin
-                if (not _isQuote) then
+                if (not (_isQuote or _isApos)) then
                   _addSubArea(s);
               end;
             else
               s := s + ch;
           end;
         end;
-      end; //if
 
-      if (kol > 0) then
-      begin
-        w := 1;
-        h := 1;
-        if (kol = 2) then
+        if (kol > 0) then
         begin
-          w := tmpRec[1][0] - tmpRec[0][0];
-          h := tmpRec[1][1] - tmpRec[0][1];
+          w := 1;
+          h := 1;
+          if (kol = 2) then
+          begin
+            w := tmpRec[1][0] - tmpRec[0][0];
+            h := tmpRec[1][1] - tmpRec[0][1];
+          end;
+          _CFItem.Areas.Add(tmpRec[0][0], tmpRec[0][1], w, h);
         end;
-        _CFItem.Areas.Add(tmpRec[0][0], tmpRec[0][1], w, h);
-      end;
+      end; //if
 
       RangeItem := '';
     end; //_PrepareArea
 
   begin
     _CFItem.Areas.Count := 0;
-    s := ZEReplaceEntity(xml.Attributes['calcext:target-range-address']);
+    s := ZEReplaceEntity(xml.Attributes[const_calcext_target_range_address]);
     if (s <>  '') then
     begin
       s := s + ' ';
       ss := '';
       _isQuote := false;
+      _isApos := false;
       for i := 1 to Length(s) do
         case s[i] of
-          '"': _isQuote := not _isQuote;
+          '"': if (not _isApos) then
+               begin
+                 _isQuote := not _isQuote;
+                 ss := ss + s[i];
+               end;
+          '''': if (not _isQuote) then
+                begin
+                 _isApos := not _isApos;
+                 ss := ss + s[i];
+                end;
           ' ':
-            if (_isQuote) then
+            if (_isQuote or _isApos) then
               ss := ss + ' '
             else
               _PrepareAreaAndAdd(ss)
@@ -1543,7 +1632,7 @@ var
     _styleID: integer;
 
   begin
-    _CFvalue := xml.Attributes[const_calcext_value];
+    _CFvalue := ZEReplaceEntity(xml.Attributes[const_calcext_value]);
     _stylename := xml.Attributes[const_calcext_apply_style_name];
     _basecelladdr := xml.Attributes[const_calcext_base_cell_address];
     if (_CFvalue <> '') then
@@ -3100,6 +3189,10 @@ var
     end;
     if DivedIntoHeader then // может кто-то уменьшил RowCount после установки RowsToRepeat ?
        _xml.WriteEndTagNode;//  TagNode('table:table-header-rows', []);
+
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    _cfwriter.WriteCalcextCF(_xml, PageNum);
+    {$ENDIF}
 
     _xml.WriteEndTagNode(); //table:table
   end; //WriteODFTable
