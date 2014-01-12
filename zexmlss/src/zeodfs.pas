@@ -294,9 +294,13 @@ type
     FPageIndex: TIntegerDynArray;
     FPageNames: TStringDynArray;
     FPageCF: array of TODFCFWriterArray;
+    FFirstCFIdInPage: TIntegerDynArray;
     FXMLSS: TZEXMLSS;
     FStylesCount: integer;
   protected
+    function GetBaseCellAddr(const StCondition: TZConditionalStyleItem;
+                             const CurrPageName: string): string;
+    function AddBetweenCond(const ConditName, Value1, Value2: string; out retCondition: string): boolean;
   public
     constructor Create(ZEXMLSS: TZEXMLSS;
                        const _pages: TIntegerDynArray;
@@ -304,6 +308,7 @@ type
                        PageCount: integer);
     procedure WriteCFStyles(xml: TZsspXMLWriterH);
     procedure WriteCalcextCF(xml: TZsspXMLWriterH; PageIndex: integer);
+    function ODSGetOperatorStr(AOperator: TZConditionalOperator): string;
     function GetStyleNum(const PageIndex, Col, Row: integer): integer;
     destructor Destroy(); override;
     property StylesCount: integer read FStylesCount;
@@ -412,12 +417,14 @@ begin
   SetLength(FPageIndex, PageCount);
   Setlength(FPageNames, PageCount);
   SetLength(FPageCF, PageCount);
+  SetLength(FFirstCFIdInPage, PageCount);
   FCount := PageCount;
   for i := 0 to FCount - 1 do
   begin
     FPageindex[i] := _pages[i];
     FPageNames[i] := _names[i];
     FPageCF[i].CountCF := 0;
+    FFirstCFIdInPage[i] := 0;
   end;
   FXMLSS := ZEXMLSS;
 end; //Create
@@ -448,8 +455,82 @@ begin
 
   SetLength(FPageCF, 0);
   FPageCF := nil;
+  SetLength(FFirstCFIdInPage, 0);
   inherited
 end; //Destroy
+
+//Получить текст оператора
+function TZODFConditionalWriteHelper.ODSGetOperatorStr(AOperator: TZConditionalOperator): string;
+begin
+  case (AOperator) of
+    ZCFOpGT: result := '>';
+    ZCFOpLT: result := '<';
+    ZCFOpGTE: result := '>=';
+    ZCFOpLTE: result := '<=';
+    ZCFOpEqual: result := '=';
+    ZCFOpNotEqual: result := '!=';
+    else
+      result := '';
+  end;
+end; //ODSGetOperatorStr
+
+//style:base-cell-address / calcext:base-cell-address
+//INPUT
+//  const StCondition: TZConditionalStyleItem - условие
+//  const CurrPageName: string                - название листа по дефолту
+//RETURN
+//      string - текст базовой ячейки
+function TZODFConditionalWriteHelper.GetBaseCellAddr(const StCondition: TZConditionalStyleItem;
+                                                     const CurrPageName: string): string;
+var
+  s: string;
+  b: boolean;
+  i: integer;
+
+begin
+  if ((StCondition.BaseCellPageIndex < 0) or (StCondition.BaseCellPageIndex >= FCount)) then
+    s := CurrPageName
+  else
+  begin
+    b := false;
+    for i := 0 to FCount - 1 do
+      if (FPageIndex[i] = StCondition.BaseCellPageIndex) then
+      begin
+        s := FPageNames[i];
+        b := true;
+        break;
+      end;
+    if (not b) then
+      s := currPageName;
+  end;
+  if (pos(' ', s) <> 0) then
+    s := '''' + s + '''';
+  //listname.ColRow
+  s := s + '.' + ZEGetA1byCol(StCondition.BaseCellColumnIndex) + IntToStr(StCondition.BaseCellRowIndex + 1);
+  result := s;
+end; //GetBaseCellAddr
+
+function TZODFConditionalWriteHelper.AddBetweenCond(const ConditName, Value1, Value2: string; out retCondition: string): boolean;
+var
+  t1, t2: double;
+  b: boolean;
+
+begin
+  result := false;
+  retCondition := '';
+  t1 := ZETryStrToFloat(Value1, b);
+  if (b) then
+  begin
+    t2 := ZETryStrToFloat(Value2, b);
+    if (b and (t1 <= t2)) then
+    begin
+      result := true;
+      retCondition := ConditName + '(' +
+           ZEFloatSeparator(FormatFloat('', t1)) + ',' +
+           ZEFloatSeparator(FormatFloat('', t2)) + ')'
+    end;
+  end;
+end; //AddBetweenCond
 
 //Запись стилей с условным форматированием
 //INPUT
@@ -486,6 +567,7 @@ var
   var
     i: integer;
 
+    {
     function _AddBetweenCond(const ConditName: string): boolean;
     begin
       result := false;
@@ -502,20 +584,7 @@ var
         end;
       end;
     end; //_AddBetweenCond
-
-    function _getOpStr(_op: TZConditionalOperator): string;
-    begin
-      case _op of
-        ZCFOpGT: result := '>';
-        ZCFOpLT: result := '<';
-        ZCFOpGTE: result := '>=';
-        ZCFOpLTE: result := '<=';
-        ZCFOpEqual: result := '=';
-        ZCFOpNotEqual: result := '!=';
-        else
-          result := '';
-      end;
-    end; //_getOpStr
+    }
 
     function _AddContentOperator(): boolean;
     begin
@@ -526,7 +595,7 @@ var
       else
         //TODO: на случай, если ввели v1 с кавычками, нужно будет потом сделать проверку
         s := '''' + v1 + '''';
-      s := 'cell-content()' + _getOpStr(_StCondition.ConditionOperator) + s;
+      s := 'cell-content()' + ODSGetOperatorStr(_StCondition.ConditionOperator) + s;
     end; //_AddContentOperator()
 
   begin
@@ -541,9 +610,9 @@ var
     case _StCondition.Condition of
       ZCFIsTrueFormula:;
       ZCFCellContentIsBetween:
-        result := _AddBetweenCond('cell-content-is-between');
+        result := AddBetweenCond('cell-content-is-between', v1, v2, s);
       ZCFCellContentIsNotBetween:
-        result := _AddBetweenCond('cell-content-is-not-between');
+        result := AddBetweenCond('cell-content-is-not-between', v1, v2, s);
       ZCFCellContentOperator: result := _AddContentOperator();
       ZCFNumberValue:;
       ZCFString:;
@@ -562,30 +631,8 @@ var
       CFMaps[CFMapsCount][0] := s;
       if ((_StCondition.ApplyStyleID >= 0) and (_StCondition.ApplyStyleID < FXMLSS.Styles.Count)) then
       begin
-        s := const_ConditionalStylePrefix + IntToStr(num);
-       CFMaps[CFMapsCount][1] := s;
-
-        if ((_StCondition.BaseCellPageIndex < 0) or (_StCondition.BaseCellPageIndex >= FCount)) then
-          s := _currPageName
-        else
-        begin
-          b := false;
-          for i := 0 to FCount - 1 do
-            if (FPageIndex[i] = _StCondition.BaseCellPageIndex) then
-            begin
-              s := FPageNames[i];
-              b := true;
-              break;
-            end;
-          if (not b) then
-            s := _currPageName;
-        end;
-        if (pos(' ', s) <> 0) then
-          s := '''' + s + '''';
-        //listname.ColRow
-        s := s + '.' + ZEGetA1byCol(_StCondition.BaseCellColumnIndex) + IntToStr(_StCondition.BaseCellRowIndex + 1);
-
-        CFMaps[CFMapsCount][2] := s;
+        CFMaps[CFMapsCount][1] := const_ConditionalStylePrefix + IntToStr(num);
+        CFMaps[CFMapsCount][2] := GetBaseCellAddr(_StCondition, _currPageName);
         inc(CFMapsCount);
       end else
         result := false;
@@ -738,6 +785,7 @@ begin
     begin
       _sheet := FXMLSS.Sheets[FPageIndex[i]];
       _currPageName := FPageNames[i];
+      FFirstCFIdInPage[i] := num;
       if (_sheet.ConditionalFormatting.Count > 0) then
         for j := 0 to _sheet.ConditionalFormatting.Count - 1 do
         begin
@@ -767,6 +815,8 @@ var
   i: integer;
   _cfCount: integer;
   _CF: TZConditionalFormatting;
+  StartStyleNum: integer;
+  _PageName: string;
 
   procedure _WriteFormat(Num: integer);
   var
@@ -775,19 +825,76 @@ var
     kol: integer;
 
     procedure _WriteFormatItem(StyleItem: TZConditionalStyleItem);
+    var
+      _condition: string;
 
-      function _GetCondition(): string;
+      function _GetTextCondition(const CName: string; out retCondition: string): boolean;
+      var
+        l: integer;
+        s: string;
+        b: boolean;
+
       begin
-        result := '';
+        result := true;
+        s := StyleItem.Value1;
+        l := Length(s);
+        b := true;
+        if (l >= 2) then
+          if ((s[1] = '"') and (s[l] = '"')) then
+            b := false;
+        if (b) then
+          s := '"' + s + '"';
+        retCondition := CName + '(' + s + ')';
+      end; //_GetTextCondition
+
+      function _GetContentOperator(out retCondition: string): boolean;
+      var
+        t: double;
+        b: boolean;
+
+      begin
+        result := true;
+        t := ZETryStrToFloat(StyleItem.Value1, b);
+        if (b) then
+          retCondition := ZEFloatSeparator(FormatFloat('', t))
+        else
+          retCondition := '''' + StyleItem.Value1 + '''';
+
+        retCondition := ODSGetOperatorStr(StyleItem.ConditionOperator) + retCondition;
+      end; //_GetContentOperator
+
+      function isGetCondition(out retCondition: string): boolean;
+      begin
+        result := false;
+
+        case (Styleitem.Condition) of
+          ZCFIsTrueFormula:;
+          ZCFCellContentIsBetween:    result := AddBetweenCond('between', StyleItem.Value1, StyleItem.Value2, retCondition);
+          ZCFCellContentIsNotBetween: result := AddBetweenCond('not-between', StyleItem.Value1, StyleItem.Value2, retCondition);
+          ZCFCellContentOperator:     result := _GetContentOperator(retCondition);
+          ZCFNumberValue:;
+          ZCFString:;
+          ZCFBoolTrue:;
+          ZCFBoolFalse:;
+          ZCFFormula:;
+          ZCFContainsText:    result := _GetTextCondition('contains-text', retCondition);
+          ZCFNotContainsText: result := _GetTextCondition('not-contains-text', retCondition);
+          ZCFBeginsWithText:  result := _GetTextCondition('begins-with', retCondition);
+          ZCFEndsWithText:    result := _GetTextCondition('ends-with', retCondition);
+          ZCFCellIsEmpty:;  //a ds
+        end;
       end; //_GetCondition
 
     begin
-      xml.Attributes.Clear();
-      xml.Attributes.Add(const_calcext_apply_style_name, '');
-      xml.Attributes.Add(const_calcext_value, _GetCondition());
-      xml.Attributes.Add(const_calcext_base_cell_address, '');
-
-      xml.WriteEmptyTag(const_calcext_condition, true);
+      if (isGetCondition(_condition)) then
+      begin
+        inc(StartStyleNum);
+        xml.Attributes.Clear();
+        xml.Attributes.Add(const_calcext_apply_style_name, const_ConditionalStylePrefix + IntToStr(StartStyleNum));
+        xml.Attributes.Add(const_calcext_value, _condition);
+        xml.Attributes.Add(const_calcext_base_cell_address, GetBaseCellAddr(StyleItem, _PageName));
+        xml.WriteEmptyTag(const_calcext_condition, true);
+      end;
 
        {
        const_calcext_value               = 'calcext:value';
@@ -812,9 +919,11 @@ var
   end; //_WriteFormat
 
 begin
-  if (PageIndex >= 0) and (PageIndex < FXMLSS.Sheets.Count) then
+  if (PageIndex >= 0) and (PageIndex < FCount) then
   begin
-    _CF := FXMLSS.Sheets[PageIndex].ConditionalFormatting;
+    _PageName := FPageNames[PageIndex];
+    _CF := FXMLSS.Sheets[FPageIndex[PageIndex]].ConditionalFormatting;
+    StartStyleNum := FFirstCFIdInPage[PageIndex];
     _cfCount := _CF.Count;
     if (_cfCount > 0) then
     begin
@@ -2500,7 +2609,7 @@ var
     num := 1;
     for i := 0 to PageCount - 1 do
     begin
-      _cf := XMLSS.Sheets[i].ConditionalFormatting;
+      _cf := XMLSS.Sheets[_pages[i]].ConditionalFormatting;
       for j := 0 to _cf.Count - 1 do
       for k := 0 to _cf[j].Count - 1 do
       begin
@@ -3191,7 +3300,7 @@ var
        _xml.WriteEndTagNode;//  TagNode('table:table-header-rows', []);
 
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-    _cfwriter.WriteCalcextCF(_xml, PageNum);
+    _cfwriter.WriteCalcextCF(_xml, PageIndex);
     {$ENDIF}
 
     _xml.WriteEndTagNode(); //table:table
