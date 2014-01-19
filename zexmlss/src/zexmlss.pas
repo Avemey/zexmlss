@@ -454,7 +454,19 @@ type
                  ZCFNotContainsText,
                  ZCFBeginsWithText,
                  ZCFEndsWithText,
-                 ZCFCellIsEmpty
+                 ZCFCellIsEmpty,
+                 ZCFDuplicate,
+                 ZCFUnique,
+                 ZCFAboveAverage,
+                 ZCFBellowAverrage,
+                 ZCFAboveEqualAverage,
+                 ZCFBelowEqualAverage,
+                 ZCFTopElements,
+                 ZCFBottomElements,
+                 ZCFTopPercent,
+                 ZCFBottomPercent,
+                 ZCFIsError,
+                 ZCFIsNoError
                 );
 
   //Оператор для условного форматирования

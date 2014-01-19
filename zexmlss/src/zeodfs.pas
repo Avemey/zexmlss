@@ -863,6 +863,31 @@ var
         retCondition := ODSGetOperatorStr(StyleItem.ConditionOperator) + retCondition;
       end; //_GetContentOperator
 
+      function _GetSimpleText(const ConditName: string; out retCondition: string): boolean;
+      begin
+        result := true;
+        retCondition := ConditName;
+      end; //_GetSimpleText
+
+      function _GetConditionOneNumber(const ConditName: string; out retCondition: string; isFloat: boolean = false): boolean;
+      var
+        tI: integer;
+        tF: double;
+
+      begin
+        if (isFloat) then
+        begin
+          tF := ZETryStrToFloat(StyleItem.Value1, result);
+          if (result) then
+            retCondition := ConditName + '(' + ZEFloatSeparator(FormatFloat('', tF)) + ')';
+        end else
+        begin
+          result := TryStrToInt(StyleItem.Value1, tI);
+          if (result) then
+            retCondition := ConditName + '(' + StyleItem.Value1 + ')';
+        end;
+      end; //_GetConditionOneNumber
+
       function isGetCondition(out retCondition: string): boolean;
       begin
         result := false;
@@ -881,7 +906,19 @@ var
           ZCFNotContainsText: result := _GetTextCondition('not-contains-text', retCondition);
           ZCFBeginsWithText:  result := _GetTextCondition('begins-with', retCondition);
           ZCFEndsWithText:    result := _GetTextCondition('ends-with', retCondition);
-          ZCFCellIsEmpty:;  //a ds
+          ZCFCellIsEmpty:;
+          ZCFDuplicate:       result := _GetSimpleText('duplicate', retCondition);
+          ZCFUnique:          result := _GetSimpleText('unique', retCondition);
+          ZCFAboveAverage:    result := _GetSimpleText('above-average', retCondition);
+          ZCFBellowAverrage:  result := _GetSimpleText('below-average', retCondition);
+          ZCFAboveEqualAverage: result := _GetSimpleText('above-equal-average', retCondition);
+          ZCFBelowEqualAverage: result := _GetSimpleText('below-equal-average', retCondition);
+          ZCFTopElements:     result := _GetConditionOneNumber('top-elements', retCondition);
+          ZCFBottomElements:  result := _GetConditionOneNumber('bottom-elements', retCondition);
+          ZCFTopPercent:      result := _GetConditionOneNumber('top-percent', retCondition, true);
+          ZCFBottomPercent:   result := _GetConditionOneNumber('bottom-percent', retCondition, true);
+          ZCFIsError:         result := _GetSimpleText('is-error', retCondition);
+          ZCFIsNoError:       result := _GetSimpleText('is-no-error', retCondition);
         end;
       end; //_GetCondition
 
@@ -904,13 +941,37 @@ var
        }
     end; //_WriteFormatItem
 
+    function _GetRanges(): string;
+    var
+      i: integer;
+      s: string;
+      n: integer;
+
+    begin
+      result := '';
+      s :=  _PageName;
+      if (pos(' ', s) <> 0) then
+        s := '''' + s + '''';
+      n := _StyleItem.Areas.Count - 1;
+      for i := 0 to n do
+      begin
+        result := result +
+                  s + '.' + ZEGetA1byCol(_StyleItem.Areas[i].Column) + IntToStr(_StyleItem.Areas[i].Row + 1) +
+                  ':' +
+                  s + '.' + ZEGetA1byCol(_StyleItem.Areas[i].Column + _StyleItem.Areas[i].Width) + IntToStr(_StyleItem.Areas[i].Row + _StyleItem.Areas[i].Height + 1);
+        if (i <> n) then
+          result := result + ' ';
+      end;
+    end; //_GetRanges
+
   begin
     _StyleItem := _CF.Items[Num];
     kol := _StyleItem.Count;
     if (kol > 0) then
     begin
       xml.Attributes.Clear();
-      xml.WriteTagNode(const_calcext_conditional_format, true, true, false);
+      xml.Attributes.Add(const_calcext_target_range_address, _GetRanges());
+      xml.WriteTagNode(const_calcext_conditional_format, true, true, true);
       for i := 0 to kol - 1 do
         _WriteFormatItem(_StyleItem.Items[i]);
 
@@ -928,7 +989,6 @@ begin
     if (_cfCount > 0) then
     begin
        xml.Attributes.Clear();
-       //const_calcext_target_range_address
        xml.WriteTagNode(const_calcext_conditional_formats, true, true, false);
 
        for i := 0 to _cfCount - 1 do
@@ -1192,6 +1252,12 @@ var
         end;
     end; //_CheckTextCondition
 
+    function _getSimpleCondition(val: TZCondition): boolean;
+    begin
+      result := true;
+      Condition := val;
+    end; //_getSimpleCondition
+
   begin
     result := false;
     s := _strArr[0];
@@ -1214,36 +1280,60 @@ var
     //  operator value (>10 etc)
 
     if (_isFirstOperator or (s = 'cell-content')) then
-    begin
-      result := _CheckOperator();
-    end else
+      result := _CheckOperator()
+    else
     if ((s = 'cell-content-is-between') or (s = 'between')) then
-    begin
-      result := _CheckBetween(ZCFCellContentIsBetween);
-    end else
+      result := _CheckBetween(ZCFCellContentIsBetween)
+    else
     if ((s = 'cell-content-is-not-between') or (s = 'not-between')) then
-    begin
-      result := _CheckBetween(ZCFCellContentIsNotBetween);
-    end else
+      result := _CheckBetween(ZCFCellContentIsNotBetween)
+    else
     if (s = 'value') then
     begin
     end else
     if (s = 'begins-with') then
-    begin
-      result := _CheckTextCondition(ZCFBeginsWithText);
-    end else
+      result := _CheckTextCondition(ZCFBeginsWithText)
+    else
     if (s = 'ends-with') then
-    begin
-      result := _CheckTextCondition(ZCFEndsWithText);
-    end else
+      result := _CheckTextCondition(ZCFEndsWithText)
+    else
     if (s = 'contains-text') then
-    begin
-      result := _CheckTextCondition(ZCFContainsText);
-    end else
+      result := _CheckTextCondition(ZCFContainsText)
+    else
     if (s = 'not-contains-text') then
-    begin
-      result := _CheckTextCondition(ZCFNotContainsText);
-    end;
+      result := _CheckTextCondition(ZCFNotContainsText)
+    else
+    if (s = 'duplicate') then
+      result := _getSimpleCondition(ZCFDuplicate)
+    else
+    if (s = 'unique') then
+      result := _getSimpleCondition(ZCFUnique)
+    else
+    if (s = 'above-average') then
+      result := _getSimpleCondition(ZCFAboveAverage)
+    else
+    if (s = 'below-average') then
+      result := _getSimpleCondition(ZCFBellowAverrage)
+    else
+    if (s = 'above-equal-average') then
+      result := _getSimpleCondition(ZCFAboveEqualAverage)
+    else
+    if (s = 'below-equal-average') then
+      result := _getSimpleCondition(ZCFBelowEqualAverage)
+    else
+    if (s = 'top-elements') then
+    else
+    if (s = 'bottom-elements') then
+    else
+    if (s = 'top-percent') then
+    else
+    if (s = 'bottom-percent') then
+    else
+    if (s = 'is-error') then
+      result := _getSimpleCondition(ZCFIsError)
+    else
+    if (s = 'is-no-error') then
+      result := _getSimpleCondition(ZCFIsNoError) ;
   end; //_CheckCondition
 
   //Читает оператор
@@ -2022,6 +2112,10 @@ begin
   Attr.Add('xmlns:tableooo', 'http://openoffice.org/2009/table', false);
   Attr.Add('xmlns:field', 'urn:openoffice:names:experimental:ooo-ms-interop:xmlns:field:1.0', false);
   Attr.Add('xmlns:formx', 'urn:openoffice:names:experimental:ooxml-odf-interop:xmlns:form:1.0', false);
+
+  Attr.Add('xmlns:drawooo', 'http://openoffice.org/2010/draw');
+  Attr.Add('xmlns:calcext', 'urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0', false);
+
   Attr.Add('xmlns:css3t', 'http://www.w3.org/TR/css3-text/', false);
   Attr.Add('office:version', '1.2', false);
 end; //GenODContentAttr
