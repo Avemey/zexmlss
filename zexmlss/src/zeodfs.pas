@@ -125,6 +125,7 @@ type
                                           var StylesArray: TZODFStyleArray; StylesCount: integer);
     procedure AddColumnCF(ColumnNumber: integer; StyleCFNumber: integer);
     function GetColumnCF(ColumnNumber: integer): integer;
+    procedure ApplyBaseCellAddr(const BaseCellTxt: string; const ACFStyle: TZConditionalStyleItem; PageNum: integer);
     procedure Clear();
     procedure ClearLine();
     procedure ProgressLine(RowNumber: integer; RepeatCount: integer = 1);
@@ -135,138 +136,9 @@ type
     property LineItemStyleID: integer read FLineItemStyleCFNumber write FLineItemStyleCFNumber;
     property ReadHelper: TZEODFReadHelper read FReadHelper write FReadHelper;
   end;
-{$ENDIF}
+{$ENDIF} //ZUSE_CONDITIONAL_FORMATTING read
 
-  //Для чтения стилей и всего такого
-  TZEODFReadHelper = class
-  private
-    FXMLSS: TZEXMLSS;
-    FStylesCount: integer;                //Кол-во стилей
-    FStyles: array of TZStyle;            //Стили из styles.xml
-    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-    FConditionReader: TZODFConditionalReadHelper; //Для чтения условного форматирования
-    {$ENDIF}
-    function GetStyle(num: integer): TZStyle;
-  protected
-  public
-    StylesProperties: TZODFStyleArray;
-    constructor Create(XMLSS: TZEXMLSS);
-    destructor Destroy(); override;
-    procedure AddStyle();
-    property StylesCount: integer read FStylesCount;
-    property Style[num: integer]: TZStyle read GetStyle;
-    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-    property ConditionReader: TZODFConditionalReadHelper read FConditionReader;
-    {$ENDIF}
-  end;
-
-//Сохраняет незапакованный документ в формате Open Document
-function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
-//Сохраняет незапакованный документ в формате Open Document
-function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
-                         const SheetsNames: array of string): integer; overload;
-//Сохраняет незапакованный документ в формате Open Document
-function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string): integer; overload;
-
-{$IFDEF FPC}
-function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
-function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
-                         const SheetsNames: array of string): integer; overload;
-function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
-{$ENDIF}
-
-function ExportXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
-                           const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: String;
-                           BOM: ansistring = '';
-                           AllowUnzippedFolder: boolean = false; ZipGenerator: CZxZipGens = nil): integer; overload;
-
-
-function ReadODFSPath(var XMLSS: TZEXMLSS; DirName: string): integer;
-
-{$IFDEF FPC}
-function ReadODFS(var XMLSS: TZEXMLSS; FileName: string): integer;
-{$ENDIF}
-
-{$IFNDEF FPC}
-{$I odszipfunc.inc}
-{$ENDIF}
-
-//////////////////// Дополнительные функции, если понадобится читать/писать отдельные файлы или ещё для чего
-{для записи}
-//Записывает в поток стили документа (styles.xml)
-function ODFCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
-                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
-
-//Записывает в поток настройки (settings.xml)
-function ODFCreateSettings(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
-                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
-
-//Записывает в поток документ + автоматические стили (content.xml)
-function ODFCreateContent(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
-                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
-
-//Записывает в поток метаинформацию (meta.xml)
-function ODFCreateMeta(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
-
-{для чтения}
-//Чтение содержимого документа ODS (content.xml)
-function ReadODFContent(var XMLSS: TZEXMLSS; stream: TStream; var ReadHelper: TZEODFReadHelper): boolean;
-
-//Чтение настроек документа ODS (settings.xml)
-function ReadODFSettings(var XMLSS: TZEXMLSS; stream: TStream): boolean;
-
-implementation
-
-uses
-   StrUtils
-   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}, zeformula {$ENDIF} //пока формулы нужны только для условного форматирования
-   ;
-
-const
-  ZETag_StyleFontFace       = 'style:font-face';      //style:font-face
-  ZETag_Attr_StyleName      = 'style:name';           //style:name
-  ZETag_StyleStyle          = 'style:style';
-
-  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-  const_ConditionalStylePrefix      = 'ConditionalStyle_f';
-  const_calcext_conditional_formats = 'calcext:conditional-formats';
-  const_calcext_conditional_format  = 'calcext:conditional-format';
-  const_calcext_value               = 'calcext:value';
-  const_calcext_apply_style_name    = 'calcext:apply-style-name';
-  const_calcext_base_cell_address   = 'calcext:base-cell-address';
-  const_calcext_condition           = 'calcext:condition';
-  const_calcext_target_range_address= 'calcext:target-range-address';
-  {$ENDIF}
-
-type
-  TZODFColumnStyle = record
-    name: string;     //имя стиля строки
-    width: real;      //ширина
-    breaked: boolean; //разрыв
-  end;
-
-  TZODFColumnStyleArray = array of TZODFColumnStyle;
-
-  TZODFRowStyle = record
-    name: string;
-    height: real;
-    breaked: boolean;
-    color: TColor;
-  end;
-
-  TZODFRowStyleArray = array of TZODFRowStyle;
-
-  TZODFTableStyle = record
-    name: string;
-    isColor: boolean;
-    Color: TColor;
-  end;
-
-  TZODFTableArray = array of TZODFTableStyle;
-
-  //Условное форматирование
+  //Условное форматирование (для записи)
 {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
 
   TODFCFAreas = array of TZConditionalAreas;
@@ -314,7 +186,167 @@ type
     property StylesCount: integer read FStylesCount;
   end;
 
-{$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
+{$ENDIF} //ZUSE_CONDITIONAL_FORMATTING write
+
+  //предок для помошников чтения/записи
+  TZEODFReadWriteHelperParent = class
+  private
+    FXMLSS: TZEXMLSS;
+  protected
+    property XMLSS: TZEXMLSS read FXMLSS;
+  public
+    constructor Create(AXMLSS: TZEXMLSS); virtual;
+  end;
+
+  //Для чтения стилей и всего такого
+  TZEODFReadHelper = class(TZEODFReadWriteHelperParent)
+  private
+    FStylesCount: integer;                //Кол-во стилей
+    FStyles: array of TZStyle;            //Стили из styles.xml
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    FConditionReader: TZODFConditionalReadHelper; //Для чтения условного форматирования
+    {$ENDIF}
+    function GetStyle(num: integer): TZStyle;
+  protected
+  public
+    StylesProperties: TZODFStyleArray;
+    constructor Create(AXMLSS: TZEXMLSS); override;
+    destructor Destroy(); override;
+    procedure AddStyle();
+    property StylesCount: integer read FStylesCount;
+    property Style[num: integer]: TZStyle read GetStyle;
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    property ConditionReader: TZODFConditionalReadHelper read FConditionReader;
+    {$ENDIF}
+  end;
+
+  //Для записи (пока нужно только условное форматирование)
+  TZEODFWriteHelper = class(TZEODFReadWriteHelperParent)
+  private
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    FConditionWriter: TZODFConditionalWriteHelper;
+    {$ENDIF}
+  protected
+  public
+    constructor Create(AXMLSS: TZEXMLSS;
+                       const _pages: TIntegerDynArray;
+                       const _names: TStringDynArray;
+                       PageCount: integer); reintroduce; overload; virtual;
+    destructor Destroy(); override;
+    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    property ConditionWriter: TZODFConditionalWriteHelper read FConditionWriter;
+    {$ENDIF}
+  end;
+
+//Сохраняет незапакованный документ в формате Open Document
+function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
+//Сохраняет незапакованный документ в формате Open Document
+function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string): integer; overload;
+//Сохраняет незапакованный документ в формате Open Document
+function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string): integer; overload;
+
+{$IFDEF FPC}
+function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
+function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string): integer; overload;
+function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
+{$ENDIF}
+
+function ExportXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
+                           const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: String;
+                           BOM: ansistring = '';
+                           AllowUnzippedFolder: boolean = false; ZipGenerator: CZxZipGens = nil): integer; overload;
+
+
+function ReadODFSPath(var XMLSS: TZEXMLSS; DirName: string): integer;
+
+{$IFDEF FPC}
+function ReadODFS(var XMLSS: TZEXMLSS; FileName: string): integer;
+{$ENDIF}
+
+{$IFNDEF FPC}
+{$I odszipfunc.inc}
+{$ENDIF}
+
+//////////////////// Дополнительные функции, если понадобится читать/писать отдельные файлы или ещё для чего
+{для записи}
+//Записывает в поток стили документа (styles.xml)
+function ODFCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
+                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring;
+                          const WriteHelper: TZEODFWriteHelper): integer;
+
+//Записывает в поток настройки (settings.xml)
+function ODFCreateSettings(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
+                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
+
+//Записывает в поток документ + автоматические стили (content.xml)
+function ODFCreateContent(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
+                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring;
+                          const WriteHelper: TZEODFWriteHelper): integer;
+
+//Записывает в поток метаинформацию (meta.xml)
+function ODFCreateMeta(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
+
+{для чтения}
+//Чтение содержимого документа ODS (content.xml)
+function ReadODFContent(var XMLSS: TZEXMLSS; stream: TStream; var ReadHelper: TZEODFReadHelper): boolean;
+
+//Чтение настроек документа ODS (settings.xml)
+function ReadODFSettings(var XMLSS: TZEXMLSS; stream: TStream): boolean;
+
+implementation
+
+uses
+   StrUtils
+   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}, zeformula {$ENDIF} //пока формулы нужны только для условного форматирования
+   ;
+
+const
+  ZETag_StyleFontFace       = 'style:font-face';      //style:font-face
+  ZETag_Attr_StyleName      = 'style:name';           //style:name
+  ZETag_StyleStyle          = 'style:style';
+  ZETag_config_name         = 'config:name';
+  ZETag_config_config_item_map_named = 'config:config-item-map-named';
+
+  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+  const_ConditionalStylePrefix      = 'ConditionalStyle_f';
+  const_calcext_conditional_formats = 'calcext:conditional-formats';
+  const_calcext_conditional_format  = 'calcext:conditional-format';
+  const_calcext_value               = 'calcext:value';
+  const_calcext_apply_style_name    = 'calcext:apply-style-name';
+  const_calcext_base_cell_address   = 'calcext:base-cell-address';
+  const_calcext_condition           = 'calcext:condition';
+  const_calcext_target_range_address= 'calcext:target-range-address';
+  {$ENDIF}
+
+type
+  TZODFColumnStyle = record
+    name: string;     //имя стиля строки
+    width: real;      //ширина
+    breaked: boolean; //разрыв
+  end;
+
+  TZODFColumnStyleArray = array of TZODFColumnStyle;
+
+  TZODFRowStyle = record
+    name: string;
+    height: real;
+    breaked: boolean;
+    color: TColor;
+  end;
+
+  TZODFRowStyleArray = array of TZODFRowStyle;
+
+  TZODFTableStyle = record
+    name: string;
+    isColor: boolean;
+    Color: TColor;
+  end;
+
+  TZODFTableArray = array of TZODFTableStyle;
 
 {$IFDEF FPC}
   function ReadODFStyles(var XMLSS: TZEXMLSS; stream: TStream; var ReadHelper: TZEODFReadHelper): boolean; forward;
@@ -545,7 +577,7 @@ var
   _StCondition: TZConditionalStyleItem;
   _att: TZAttributesH;
   v1, v2: string;
-  d1, d2: Double;
+  d1: Double;
   b: boolean;
   _currPageName: string;
   s: string;
@@ -564,27 +596,6 @@ var
   //RETURN
   //      boolean - true - условие адекватное, добавляем
   function _AddMapCondition(mapnum: integer): boolean;
-  var
-    i: integer;
-
-    {
-    function _AddBetweenCond(const ConditName: string): boolean;
-    begin
-      result := false;
-      d1 := ZETryStrToFloat(v1, b);
-      if (b) then
-      begin
-        d2 := ZETryStrToFloat(v2, b);
-        if (b and (d1 <= d2)) then
-        begin
-          result := true;
-          s := ConditName + '(' +
-               ZEFloatSeparator(FormatFloat('', d1)) + ',' +
-               ZEFloatSeparator(FormatFloat('', d2)) + ')'
-        end;
-      end;
-    end; //_AddBetweenCond
-    }
 
     function _AddContentOperator(): boolean;
     begin
@@ -598,6 +609,17 @@ var
       s := 'cell-content()' + ODSGetOperatorStr(_StCondition.ConditionOperator) + s;
     end; //_AddContentOperator()
 
+    function _AddIsFormula(): boolean;
+    begin
+      result := false;
+      //TODO: добавить проверку на валидность формулы!!!
+      if (length(v1) > 0) then
+      begin
+        s := 'is-true-formula(' + v1 + ')';
+        result := true;
+      end;
+    end; //_AddIsFormula
+
   begin
     result := false;
     _StCondition := _CFStyle[mapnum];
@@ -608,7 +630,8 @@ var
 
     s := '';
     case _StCondition.Condition of
-      ZCFIsTrueFormula:;
+      ZCFIsTrueFormula:
+        result := _AddIsFormula();
       ZCFCellContentIsBetween:
         result := AddBetweenCond('cell-content-is-between', v1, v2, s);
       ZCFCellContentIsNotBetween:
@@ -888,12 +911,23 @@ var
         end;
       end; //_GetConditionOneNumber
 
+      function _GetIsTrueFormula(out retCondition: string): boolean;
+      begin
+        //TODO: добавить проверку на валидность формулы!
+        if (Length(StyleItem.Value1) > 0) then
+        begin
+          result := true;
+          retCondition := 'formula-is(' + StyleItem.Value1 + ')';
+        end else
+          result := false;
+      end; //_GetIsTrueFormula
+
       function isGetCondition(out retCondition: string): boolean;
       begin
         result := false;
 
         case (Styleitem.Condition) of
-          ZCFIsTrueFormula:;
+          ZCFIsTrueFormula:           result := _GetIsTrueFormula(retCondition);
           ZCFCellContentIsBetween:    result := AddBetweenCond('between', StyleItem.Value1, StyleItem.Value2, retCondition);
           ZCFCellContentIsNotBetween: result := AddBetweenCond('not-between', StyleItem.Value1, StyleItem.Value2, retCondition);
           ZCFCellContentOperator:     result := _GetContentOperator(retCondition);
@@ -1211,6 +1245,7 @@ var
   var
     v1, v2: double;
     FS: TFormatSettings;
+    t: integer;
 
     function _CheckBetween(val: TZCondition): boolean;
     begin
@@ -1258,6 +1293,50 @@ var
       Condition := val;
     end; //_getSimpleCondition
 
+    function _getOneParamNumberCondition(val: TZCondition; isFloat: boolean = false): boolean;
+    begin
+      result := false;
+      if (kol = 2) then
+      begin
+        if (isFloat) then
+          result := TryStrToFloat(_strArr[1], v1, FS)
+        else
+          result := TryStrToInt(_strArr[1], t);
+        if (result) then
+        begin
+          Condition := val;
+          Value1 := _strArr[1];
+        end;
+      end;
+    end; //_getOneParamNumberCondition
+
+    function _CheckFormula(): boolean;
+    var
+      i: integer;
+      _f, _l: integer;
+
+    begin
+      //Будем считать, что при чтении формула всегда валидная
+      _f := 0;
+      _l := 0;
+      result := true;
+      for i := 1 to len - 1 do
+        if (ConditionalValue[i] = '(') then
+        begin
+          _f := i + 1;
+          break;
+        end;
+
+      for i := len downto 2 do
+        if (ConditionalValue[i] = ')') then
+        begin
+          _l := i;
+          break;
+        end;
+     Condition := ZCFIsTrueFormula;
+     Value1 := copy(ConditionalValue, _f, _l - _f);
+    end; //_CheckFormula
+
   begin
     result := false;
     s := _strArr[0];
@@ -1278,6 +1357,23 @@ var
     //  contains-text()
     //  not-contains-text()
     //  operator value (>10 etc)
+    //  begins-with
+    //  ends-with
+    //  contains-text
+    //  not-contains-text
+    //  duplicate
+    //  unique
+    //  above-average
+    //  below-average
+    //  above-equal-average
+    //  below-equal-average
+    //  top-elements
+    //  bottom-elements
+    //  top-percent
+    //  bottom-percent
+    //  is-error
+    //  is-no-error
+    //  formula-is
 
     if (_isFirstOperator or (s = 'cell-content')) then
       result := _CheckOperator()
@@ -1322,18 +1418,25 @@ var
       result := _getSimpleCondition(ZCFBelowEqualAverage)
     else
     if (s = 'top-elements') then
+      result := _getOneParamNumberCondition(ZCFTopElements)
     else
     if (s = 'bottom-elements') then
+      result := _getOneParamNumberCondition(ZCFBottomElements)
     else
     if (s = 'top-percent') then
+      result := _getOneParamNumberCondition(ZCFTopPercent, true)
     else
     if (s = 'bottom-percent') then
+      result := _getOneParamNumberCondition(ZCFBottomPercent, true)
     else
     if (s = 'is-error') then
       result := _getSimpleCondition(ZCFIsError)
     else
     if (s = 'is-no-error') then
-      result := _getSimpleCondition(ZCFIsNoError) ;
+      result := _getSimpleCondition(ZCFIsNoError)
+    else
+    if ((s = 'is-true-formula') or (s = 'formula-is')) then
+      result := _CheckFormula();
   end; //_CheckCondition
 
   //Читает оператор
@@ -1700,6 +1803,60 @@ begin
   end;
 end; //ProgressLine
 
+//Применить адрес базовой ячейки
+//INPUT
+//  const BaseCellTxt: string         - текст базовой ячейки
+//  const ACFStyle: TZConditionalStyle  - условный стиль
+//      PageNum: integer              - номер текущей страницы
+procedure TZODFConditionalReadHelper.ApplyBaseCellAddr(const BaseCellTxt: string; const ACFStyle: TZConditionalStyleItem; PageNum: integer);
+var
+  i: integer;
+  _l: integer;
+  _len: integer;
+  s: string;
+  _c, _r: integer;
+
+begin
+  if (Assigned(ACFStyle)) then
+  begin
+    _len := length(BaseCellTxt);
+    _l := -1;
+    for i := _len downto 1 do
+      if (BaseCellTxt[i] = '.') then
+      begin
+        _l := i;
+        break;
+      end;
+    if (_l > 0) then
+    begin
+      s := copy(BaseCellTxt, _l + 1, _len - _l);
+      ZEGetCellCoords(s, _c, _r);
+      ACFStyle.BaseCellColumnIndex := _c;
+      ACFStyle.BaseCellRowIndex := _r;
+      s := ZEReplaceEntity(copy(BaseCellTxt, 1, _l - 1));
+      _l := Length(s);
+      if (_l >= 2) then
+        if ((s[1] = '''') and (s[1] = s[_l])) then
+        begin
+          delete(s, 1, 1);
+          dec(_l);
+          delete(s, _l, 1);
+        end;
+
+      _l := -1;
+      for i := 0 to FXMLSS.Sheets.Count - 1 do
+        if (FXMLSS.Sheets[i].Title = s) then
+        begin
+          _l := i;
+          break;
+        end;
+      if (PageNum = _l) then
+        _l := -1;
+      ACFStyle.BaseCellPageIndex := _l;
+    end;
+  end;
+end; //ApplyBaseCellAddr
+
 //Читает <calcext:conditional-formats> .. </calcext:conditional-formats> - условное
 //  форатирование для LibreOffice
 //INPUT
@@ -1848,6 +2005,8 @@ var
         _CFItem[num].Value1 := _Value1;
         _CFItem[num].Value2 := _Value2;
 
+        ApplyBaseCellAddr(_basecelladdr, _CFItem[num], SheetNum);
+
         _styleID := -1;
         for i := 0 to ReadHelper.StylesCount - 1 do
           if (ReadHelper.StylesProperties[i].name = _stylename) then
@@ -1977,15 +2136,24 @@ begin
 end; //ODFClearStyleProperties
 
 ///////////////////////////////////////////////////////////////////
+////::::::::::::: TZEODFReadWriteHelperParent::::::::::::::::::////
+///////////////////////////////////////////////////////////////////
+
+constructor TZEODFReadWriteHelperParent.Create(AXMLSS: TZEXMLSS);
+begin
+  FXMLSS := AXMLSS;
+end;
+
+///////////////////////////////////////////////////////////////////
 ////::::::::::::::::::: TZEODFReadHelper ::::::::::::::::::::::////
 ///////////////////////////////////////////////////////////////////
 
-constructor TZEODFReadHelper.Create(XMLSS: TZEXMLSS);
+constructor TZEODFReadHelper.Create(AXMLSS: TZEXMLSS);
 begin
-  FXMLSS := XMLSS;
+  inherited Create(AXMLSS);
   FStylesCount := 0;
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-  FConditionReader := TZODFConditionalReadHelper.Create(XMLSS);
+  FConditionReader := TZODFConditionalReadHelper.Create(AXMLSS);
   FConditionReader.ReadHelper := self;
   {$ENDIF}
 end; //Create
@@ -2028,14 +2196,39 @@ begin
   SetLength(FStyles, FStylesCount);
   SetLength(StylesProperties, FStylesCount);
   FStyles[num] := TZStyle.Create();
-  if (Assigned(FXMLSS)) then
-    FStyles[num].Assign(FXMLSS.Styles.DefaultStyle);
+  if (Assigned(XMLSS)) then
+    FStyles[num].Assign(XMLSS.Styles.DefaultStyle);
   ODFClearStyleProperties(StylesProperties[num]);
 end; //AddStyle
 
 ///////////////////////////////////////////////////////////////////
 ////::::::::::::::::: END TZEODFReadHelper ::::::::::::::::::::////
 ///////////////////////////////////////////////////////////////////
+
+
+///////////////////////////////////////////////////////////////////
+////:::::::::::::::::: TZEODFWriteHelper ::::::::::::::::::::::////
+///////////////////////////////////////////////////////////////////
+
+constructor TZEODFWriteHelper.Create(AXMLSS: TZEXMLSS;
+                       const _pages: TIntegerDynArray;
+                       const _names: TStringDynArray;
+                       PageCount: integer);
+begin
+  inherited Create(AXMLSS);
+  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+  FConditionWriter := TZODFConditionalWriteHelper.Create(AXMLSS, _pages, _names, PageCount);
+  {$ENDIF}
+end;
+
+destructor TZEODFWriteHelper.Destroy();
+begin
+  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+  if (Assigned(FConditionWriter)) then
+    FreeAndNil(FConditionWriter);
+  {$ENDIF}
+  inherited;
+end;
 
 //BooleanToStr для ODF //TODO: потом заменить
 function ODFBoolToStr(value: boolean): string;
@@ -2684,10 +2877,12 @@ end; //ODFWriteTableStyle
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
 //    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
+//  const WriteHelper: TZEODFWriteHelper- помошник для записи
 //RETURN
 //      integer
 function ODFCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
-                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
+                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String;
+                          BOM: ansistring; const WriteHelper: TZEODFWriteHelper): integer;
 var
   _xml: TZsspXMLWriterH;
 
@@ -2781,12 +2976,13 @@ function ODFCreateSettings(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: T
 var
   _xml: TZsspXMLWriterH;
   i: integer;
+  _PageNum: integer;
 
   //<config:config-item config:name="ConfigName" config:type="ConfigType">ConfigValue</config:config-item>
   procedure _AddConfigItem(const ConfigName, ConfigType, ConfigValue: string);
   begin
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('config:name', ConfigName);
+    _xml.Attributes.Add(ZETag_config_name, ConfigName);
     _xml.Attributes.Add('config:type', ConfigType);
     _xml.WriteTag('config:config-item', ConfigValue, true, false, true);
   end; //_AddConfigItem
@@ -2810,14 +3006,13 @@ var
 
   procedure _WritePageSettings(const num: integer);
   var
-    _PageNum: integer;
     _SheetOptions: TZSheetOptions;
     b: boolean;
 
   begin
     _PageNum := _pages[num];
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('config:name', _names[num]);
+    _xml.Attributes.Add(ZETag_config_name, _names[num]);
     _xml.WriteTagNode('config:config-item-map-entry', true, true, true);
     _SheetOptions := XMLSS.Sheets[_PageNum].SheetOptions;
 
@@ -2838,6 +3033,20 @@ var
 
     _xml.WriteEndTagNode(); //config:config-item-map-entry
   end; //_WritePageSettings
+
+  procedure _WriteOtherSettings();
+  var
+    i: integer;
+
+  begin
+    //Выделенный лист (ActiveTable). В OO только 1 шт.
+    for i := 0 to PageCount - 1 do
+      if (XMLSS.Sheets[_pages[i]].Selected) then
+      begin
+        _AddConfigItem('ActiveTable', 'string', _names[i]);
+        break;
+      end;
+  end; //_WriteOtherSettings
 
 begin
   result := 0;
@@ -2863,7 +3072,7 @@ begin
     _xml.Attributes.Clear();
     _xml.WriteTagNode('office:settings', true, true, true);
 
-    _xml.Attributes.Add('config:name', 'ooo:view-settings');
+    _xml.Attributes.Add(ZETag_config_name, 'ooo:view-settings');
     _xml.WriteTagNode('config:config-item-set', true, true, false);
 
     _AddConfigItem('VisibleAreaTop', 'int', '0');
@@ -2872,19 +3081,22 @@ begin
     _AddConfigItem('VisibleAreaHeight', 'int', '1813');
 
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('config:name', 'Views');
+    _xml.Attributes.Add(ZETag_config_name, 'Views');
     _xml.WriteTagNode('config:config-item-map-indexed', true, true, false);
 
     _xml.Attributes.Clear();
     _xml.WriteTagNode('config:config-item-map-entry', true, true, false);
 
-    _xml.Attributes.Add('config:name', 'Tables');
-    _xml.WriteTagNode('config:config-item-map-named', true, true, false);
+    _xml.Attributes.Add(ZETag_config_name, 'Tables');
+    _xml.WriteTagNode(ZETag_config_config_item_map_named, true, true, false);
 
     for i := 0 to PageCount - 1 do
       _WritePageSettings(i);
 
     _xml.WriteEndTagNode(); //config:config-item-map-named
+
+    _WriteOtherSettings();
+
     _xml.WriteEndTagNode(); //config:config-item-map-entry
     _xml.WriteEndTagNode(); //config:config-item-map-indexed
     _xml.WriteEndTagNode(); //config:config-item-set
@@ -2900,16 +3112,18 @@ end; //ODFCreateSettings
 //INPUT
 //  var XMLSS: TZEXMLSS                 - хранилище
 //    Stream: TStream                   - поток для записи
-//  const _pages: TIntegerDynArray       - массив страниц
+//  const _pages: TIntegerDynArray      - массив страниц
 //  const _names: TStringDynArray       - массив имён страниц
 //    PageCount: integer                - кол-во страниц
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
 //    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
+//  const WriteHelper: TZEODFWriteHelper- помошник для записи
 //RETURN
 //      integer
 function ODFCreateContent(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
-                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
+                          const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String;
+                          BOM: ansistring; const WriteHelper: TZEODFWriteHelper): integer;
 var
   _xml: TZsspXMLWriterH;
   ColumnStyle, RowStyle: array of array of integer;  //стили столбцов/строк
@@ -3179,7 +3393,7 @@ var
     b := ProcessedSheet.Protect;
     if (b) then
       _xml.Attributes.Add('table:protected', ODFBoolToStr(b), false);
-    _xml.WriteTagNode('table:table', true, true, false);
+    _xml.WriteTagNode('table:table', true, true, true);
 
     //::::::: колонки :::::::::
     //table:table-column - описание колонок
@@ -3418,9 +3632,7 @@ var
 begin
   result := 0;
   _xml := nil;
-  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-  _cfwriter := nil;
-  {$ENDIF}
+
   try
     _xml := TZsspXMLWriterH.Create();
     _xml.TabLength := 1;
@@ -3431,9 +3643,11 @@ begin
       result := 2;
       exit;
     end;
+
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-    _cfwriter := TZODFConditionalWriteHelper.Create(XMLSS, _pages, _names, PageCount);
+    _cfwriter := WriteHelper.ConditionWriter;
     {$ENDIF}
+
     WriteHeader();
     WriteBody();
     _xml.EndSaveTo();
@@ -3452,10 +3666,6 @@ begin
       RowStyle[i] := nil;
     end;
     RowStyle := nil;
-    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-    if Assigned(_cfwriter) then
-      FreeAndNil(_cfwriter);
-    {$ENDIF}
   end;
 end; //ODFCreateContent
 
@@ -3628,10 +3838,12 @@ var
   kol: integer;
   Stream: TStream;
   s: string;
+  _WriteHelper: TZEODFWriteHelper;
 
 begin
   result := 0;
   Stream := nil;
+  _WriteHelper := nil;
   try
     if (not ZE_CheckDirExist(PathName)) then
     begin
@@ -3645,8 +3857,14 @@ begin
       exit;
     end;
 
+    _WriteHelper := TZEODFWriteHelper.Create(XMLSS, _pages, _names, kol);
+
+    Stream := TFileStream.Create(PathName + 'styles.xml', fmCreate);
+    ODFCreateStyles(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM, _WriteHelper);
+    FreeAndNil(Stream);
+
     Stream := TFileStream.Create(PathName + 'content.xml', fmCreate);
-    ODFCreateContent(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM);
+    ODFCreateContent(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM, _WriteHelper);
     FreeAndNil(Stream);
 
     Stream := TFileStream.Create(PathName + 'meta.xml', fmCreate);
@@ -3655,10 +3873,6 @@ begin
 
     Stream := TFileStream.Create(PathName + 'settings.xml', fmCreate);
     ODFCreateSettings(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM);
-    FreeAndNil(Stream);
-
-    Stream := TFileStream.Create(PathName + 'styles.xml', fmCreate);
-    ODFCreateStyles(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM);
     FreeAndNil(Stream);
 
     s := PathName + 'META-INF' + PathDelim;
@@ -3673,6 +3887,8 @@ begin
     ZESClearArrays(_pages, _names);
     if (Assigned(Stream)) then
       FreeAndNil(Stream);
+    if (Assigned(_WriteHelper)) then
+      FreeAndNil(_WriteHelper);
   end;
 end; //SaveXmlssToODFSPath
 
@@ -3723,6 +3939,7 @@ var
   kol: integer;
   zip: TZipper;
   StreamC, StreamME, StreamS, StreamST, StreamMA: TStream;
+  _WriteHelper: TZEODFWriteHelper;
 
 begin
   zip := nil;
@@ -3731,6 +3948,7 @@ begin
   StreamS := nil;
   StreamST := nil;
   StreamMA := nil;
+  _WriteHelper := nil;
   result := 0;
   try
 
@@ -3740,19 +3958,21 @@ begin
       exit;
     end;
 
+    _WriteHelper := TZEODFWriteHelper.Create(XMLSS, _pages, _names, kol);
+
     zip := TZipper.Create();
 
+    StreamST := TMemoryStream.Create();
+    ODFCreateStyles(XMLSS, StreamST, _pages, _names, kol, TextConverter, CodePageName, BOM, _WriteHelper);
+
     StreamC := TMemoryStream.Create();
-    ODFCreateContent(XMLSS, StreamC, _pages, _names, kol, TextConverter, CodePageName, BOM);
+    ODFCreateContent(XMLSS, StreamC, _pages, _names, kol, TextConverter, CodePageName, BOM, _WriteHelper);
 
     StreamME := TMemoryStream.Create();
     ODFCreateMeta(XMLSS, StreamME, TextConverter, CodePageName, BOM);
 
     StreamS := TMemoryStream.Create();
     ODFCreateSettings(XMLSS, StreamS, _pages, _names, kol, TextConverter, CodePageName, BOM);
-
-    StreamST := TMemoryStream.Create();
-    ODFCreateStyles(XMLSS, StreamST, _pages, _names, kol, TextConverter, CodePageName, BOM);
 
     StreamMA := TMemoryStream.Create();
     ODFCreateManifest(StreamMA, TextConverter, CodePageName, BOM);
@@ -3774,6 +3994,9 @@ begin
 
   finally
     ZESClearArrays(_pages, _names);
+    if (Assigned(_WriteHelper)) then
+      FreeAndNil(_WriteHelper);
+
     if (Assigned(zip)) then
       FreeAndNil(zip);
     if (Assigned(StreamC)) then
@@ -3829,9 +4052,11 @@ var
   Stream: TStream;
   azg: TZxZipGen; // Actual Zip Generator
   mime: AnsiString;
+  _WriteHelper: TZEODFWriteHelper;
 
 begin
   azg := nil;
+  _WriteHelper := nil;
   try
 
     if (not ZECheckTablesTitle(XMLSS, SheetsNumbers, SheetsNames, _pages, _names, kol)) then
@@ -3839,6 +4064,8 @@ begin
       result := 2;
       exit;
     end;
+
+    _WriteHelper := TZEODFWriteHelper.Create(XMLSS, _pages, _names, kol);
 
     // Todo - common block and exception const with XLSX output in zexlsx unit => need merge
     if nil = ZipGenerator then begin
@@ -3858,8 +4085,12 @@ begin
     Stream.WriteBuffer(mime[1], Length(mime));
     azg.SealStream(Stream);
 
+    Stream := azg.NewStream('styles.xml');
+    ODFCreateStyles(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM, _WriteHelper);
+    azg.SealStream(Stream);
+
     Stream := azg.NewStream('content.xml');
-    ODFCreateContent(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM);
+    ODFCreateContent(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM, _WriteHelper);
     azg.SealStream(Stream);
 
     Stream := azg.NewStream('meta.xml');
@@ -3870,10 +4101,6 @@ begin
     ODFCreateSettings(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM);
     azg.SealStream(Stream);
 
-    Stream := azg.NewStream('styles.xml');
-    ODFCreateStyles(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM);
-    azg.SealStream(Stream);
-
     Stream := azg.NewStream('META-INF/manifest.xml');
     ODFCreateManifest(Stream, TextConverter, CodePageName, BOM);
     azg.SealStream(Stream);
@@ -3882,6 +4109,9 @@ begin
   finally
     ZESClearArrays(_pages, _names);
     azg.Free;
+
+    if (Assigned(_WriteHelper)) then
+      FreeAndNil(_WriteHelper);
   end;
   Result := 0;
 end; //ExportXmlssToODFS
@@ -4576,7 +4806,7 @@ var
           with XMLSS.Sheets[_CurrentPage] do
             Cell[j, _CurrentRow].Assign(Cell[j, z]);
         end;
-        inc(_CurrentRow);
+        inc(_CurrentRow, _RepeatRowCount - 1);
       end; //if
     end; //_RepeatRow
 
@@ -4808,7 +5038,7 @@ var
     _CurrentPage := XMLSS.Sheets.Count;
     XMLSS.Sheets.Count := _CurrentPage + 1;
     XMLSS.Sheets[_CurrentPage].RowCount := 1;
-    XMLSS.Sheets[_CurrentPage].Title := xml.Attributes.ItemsByName['table:name'];
+    XMLSS.Sheets[_CurrentPage].Title := ZEReplaceEntity(xml.Attributes.ItemsByName['table:name']);
     XMLSS.Sheets[_CurrentPage].Protect := ZEStrToBoolean(xml.Attributes.ItemsByName['table:protected']);
 
     s := xml.Attributes.ItemsByName['table:style-name'];
@@ -5020,6 +5250,10 @@ end; //ReadODFContent
 function ReadODFSettings(var XMLSS: TZEXMLSS; stream: TStream): boolean;
 var
   xml: TZsspXMLReaderH;
+  _ConfigName: string;
+  _ConfigType: string;
+  _ConfigValue: string;
+  _Sheet: TZSheet;
 
   function _GetSplitModeByNum(const num: integer): TZSplitMode;
   begin
@@ -5030,15 +5264,30 @@ var
     end;
   end; //_GetSplitModeByNum
 
+  procedure _GetConfigTypeAndValue();
+  begin
+    _ConfigName := xml.Attributes.ItemsByName[ZETag_config_name];
+    _ConfigType := xml.Attributes.ItemsByName['config:type'];
+  end; //_GetConfigTypeAndValue
+
+  function _FindSheetByName(const ASheetName: string; out retSheet: TZSheet): boolean;
+  var
+    i: integer;
+
+  begin
+    result := false;
+    for i := 0 to XMLSS.Sheets.Count - 1 do
+    if (XMLSS.Sheets[i].Title = ASheetName) then
+    begin
+      retSheet := XMLSS.Sheets[i];
+      result := true;
+      break;
+    end;
+  end; //_FindSheetByName
+
   procedure _ReadSettingsPage();
   var
-    _ConfigName: string;
-    _ConfigType: string;
-    _ConfigValue: string;
-    _Sheet: TZSheet;
     s: string;
-    i: integer;
-    b: boolean;
     _intValue: integer;
 
     procedure _FindParam();
@@ -5073,54 +5322,68 @@ var
     end; //_FindParam
 
   begin
-    b := true;
-    s := xml.Attributes.ItemsByName['config:name'];
-    if (s = '') then
-      exit;
-
-    for i := 0 to XMLSS.Sheets.Count - 1 do
-      if (XMLSS.Sheets[i].Title = s) then
-      begin
-        _Sheet := XMLSS.Sheets[i];
-        b := false;
-        break;
-      end;
-    if (b) then
-      exit;
-
-    while not ((xml.TagName = 'config:config-item-map-entry') and (xml.TagType = 6)) do
-    begin
-      if (xml.Eof()) then
-        break;
-
-      if (xml.TagName = 'config:config-item') then
-      begin
-        if (xml.TagType = 4) then
+    s := ZEReplaceEntity(xml.Attributes.ItemsByName[ZETag_config_name]);
+    if (s <> '') then
+      if (_FindSheetByName(s, _Sheet)) then
+        while not ((xml.TagType = 6) and (xml.TagName = 'config:config-item-map-entry')) do
         begin
-          _ConfigName := xml.Attributes.ItemsByName['config:name'];
-          _ConfigType := xml.Attributes.ItemsByName['config:type'];
-        end else
-        begin
-          _ConfigValue := xml.TextBeforeTag;
-          if (TryStrToInt(_ConfigValue, _intValue)) then
-            _FindParam();
-        end; //if
-      end; //if
-      xml.ReadTag();
-    end; //while
+          if (xml.Eof()) then
+            break;
+
+          if (xml.TagName = 'config:config-item') then
+          begin
+            if (xml.TagType = 4) then
+              _GetConfigTypeAndValue()
+            else
+            begin
+              _ConfigValue := xml.TextBeforeTag;
+              if (TryStrToInt(_ConfigValue, _intValue)) then
+                _FindParam();
+            end; //if
+          end; //if
+          xml.ReadTag();
+        end; //while
   end; //_ReadSettingsPage
 
   procedure _ReadSettings();
   begin
-    while not ((xml.TagName = 'config:config-item-map-named') and (xml.TagType = 6)) do
+    while not ((xml.TagName = ZETag_config_config_item_map_named) and (xml.TagType = 6)) do
     begin
       if (xml.Eof) then
         break;
 
       xml.ReadTag();
-      _ReadSettingsPage();
+      if ((xml.TagType = 4) and (xml.TagName = 'config:config-item-map-entry')) then
+        _ReadSettingsPage();
     end; //while
   end; //_ReadSettings
+
+  //Проверка итема (не для листа)
+  procedure _CheckConfigValue();
+  begin
+    _ConfigValue := ZEReplaceEntity(xml.TextBeforeTag);
+    if (_ConfigName = 'ActiveTable') then
+    begin
+      if (_FindSheetByName(_ConfigValue, _Sheet)) then
+        _Sheet.Selected := true;
+    end;
+  end; //_CheckOtherParams()
+
+  //<config:config-item>...</config:config-item> вне настроек листа
+  procedure _ReadConfigItem();
+  begin
+    _GetConfigTypeAndValue();
+
+    while not ((xml.TagName = 'config:config-item') and (xml.TagType = 6)) do
+    begin
+      if (xml.Eof) then
+        break;
+
+      xml.ReadTag();
+      if ((xml.TagType = 6) and (xml.TagName = 'config:config-item')) then
+        _CheckConfigValue();
+    end; //while
+  end; //_ReadConfigItem
 
 begin
   result := false;
@@ -5134,9 +5397,13 @@ begin
     while (not xml.Eof()) do
     begin
       xml.ReadTag();
-      if ((xml.TagName = 'config:config-item-map-named') and (xml.TagType = 4)) then
-        if (xml.Attributes.ItemsByName['config:name'] = 'Tables') then
+      if ((xml.TagName = ZETag_config_config_item_map_named) and (xml.TagType = 4)) then
+      begin
+        if (xml.Attributes.ItemsByName[ZETag_config_name] = 'Tables') then
           _ReadSettings();
+      end else
+      if (xml.TagType = 4) and (xml.TagName = 'config:config-item') then
+        _ReadConfigItem();
     end; //while
 
     result := true;
