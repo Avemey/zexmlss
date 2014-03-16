@@ -162,13 +162,16 @@ type
   //Помошник для записи условного форматирования
   TZODFConditionalWriteHelper = class
   private
-    FCount: integer;
+    FPagesCount: integer;                 //кол-во страниц
     FPageIndex: TIntegerDynArray;
     FPageNames: TStringDynArray;
     FPageCF: array of TODFCFWriterArray;
     FFirstCFIdInPage: TIntegerDynArray;
     FXMLSS: TZEXMLSS;
-    FStylesCount: integer;
+    FStylesCount: integer;                //кол-во стилей (которые с style:map)
+    FApplyCFStylesCount: integer;         //кол-во стилей ConditionalStyle_f (в styles.xml)
+    FMaxApplyCFStylesCount: integer;
+    FApplyCFStyles: array of integer;     //массив с применяемымы стилями
   protected
     function GetBaseCellAddr(const StCondition: TZConditionalStyleItem;
                              const CurrPageName: string): string;
@@ -178,6 +181,8 @@ type
                        const _pages: TIntegerDynArray;
                        const _names: TStringDynArray;
                        PageCount: integer);
+    function TryAddApplyCFStyle(AStyleIndex: integer; out retCFIndex: integer): boolean;
+    function GetApplyCFStyle(AStyleIndex: integer): integer;
     procedure WriteCFStyles(xml: TZsspXMLWriterH);
     procedure WriteCalcextCF(xml: TZsspXMLWriterH; PageIndex: integer);
     function ODSGetOperatorStr(AOperator: TZConditionalOperator): string;
@@ -450,8 +455,8 @@ begin
   Setlength(FPageNames, PageCount);
   SetLength(FPageCF, PageCount);
   SetLength(FFirstCFIdInPage, PageCount);
-  FCount := PageCount;
-  for i := 0 to FCount - 1 do
+  FPagesCount := PageCount;
+  for i := 0 to FPagesCount - 1 do
   begin
     FPageindex[i] := _pages[i];
     FPageNames[i] := _names[i];
@@ -459,6 +464,9 @@ begin
     FFirstCFIdInPage[i] := 0;
   end;
   FXMLSS := ZEXMLSS;
+  FApplyCFStylesCount := 0;
+  FMaxApplyCFStylesCount := 20;
+  SetLength(FApplyCFStyles, FMaxApplyCFStylesCount);
 end; //Create
 
 destructor TZODFConditionalWriteHelper.Destroy();
@@ -471,7 +479,7 @@ begin
   SetLength(FPageNames, 0);
   FPageNames := nil;
 
-  for i := 0 to FCount - 1 do
+  for i := 0 to FPagesCount - 1 do
   begin
     for j := 0 to FPageCF[i].CountCF - 1 do
     begin
@@ -488,6 +496,7 @@ begin
   SetLength(FPageCF, 0);
   FPageCF := nil;
   SetLength(FFirstCFIdInPage, 0);
+  SetLength(FApplyCFStyles, 0);
   inherited
 end; //Destroy
 
@@ -520,12 +529,12 @@ var
   i: integer;
 
 begin
-  if ((StCondition.BaseCellPageIndex < 0) or (StCondition.BaseCellPageIndex >= FCount)) then
+  if ((StCondition.BaseCellPageIndex < 0) or (StCondition.BaseCellPageIndex >= FPagesCount)) then
     s := CurrPageName
   else
   begin
     b := false;
-    for i := 0 to FCount - 1 do
+    for i := 0 to FPagesCount - 1 do
       if (FPageIndex[i] = StCondition.BaseCellPageIndex) then
       begin
         s := FPageNames[i];
@@ -564,7 +573,57 @@ begin
   end;
 end; //AddBetweenCond
 
-//Запись стилей с условным форматированием
+//Получить применяемый стиль для условного форматирования по индексу
+function TZODFConditionalWriteHelper.GetApplyCFStyle(AStyleIndex: integer): integer;
+var
+  i: integer;
+
+begin
+  result := -1;
+  for i := 0 to FApplyCFStylesCount - 1 do
+    if (FApplyCFStyles[i] = AStyleIndex) then
+    begin
+      result := i;
+      break;
+    end;
+end; //GetApplyCfStyle
+
+//Добавить в массив FApplyCFStyles (уникальные CF в styles.xml) стиль
+//INPUT
+//      AStyleIndex: integer  - применяемый стиль
+//  out retCFIndex: integer   - возвращаемый индекс условного стиля в styles.xml
+//                              (ConditionalStyle_f + IntToStr(retCFIndex))
+//RETURN
+//      boolean - true - стиль успешно добавился, можно писать в xml
+function TZODFConditionalWriteHelper.TryAddApplyCFStyle(AStyleIndex: integer; out retCFIndex: integer): boolean;
+var
+  i: integer;
+
+begin
+  result := true;
+  retCFIndex := -1;
+  for i := 0 to FApplyCFStylesCount - 1 do
+    if (FApplyCFStyles[i] = AStyleIndex) then
+    begin
+      result := false;
+      break;
+    end;
+
+  if (result) then
+  begin
+    retCFIndex := FApplyCFStylesCount;
+    inc(FApplyCFStylesCount);
+    if (FApplyCFStylesCount >= FMaxApplyCFStylesCount) then
+    begin
+      inc(FMaxApplyCFStylesCount, 20);
+      SetLength(FApplyCFStyles, FMaxApplyCFStylesCount);
+    end;
+    FApplyCFStyles[retCFIndex] := AStyleIndex;
+  end;
+end; //AddApplyCFStyle
+
+//Запись стилей с условным форматированием в content.xml
+// (тэги <style:style ...>...<style:map .../>...</style:style>)
 //INPUT
 //      xml: TZsspXMLWriterH - куда записывать
 procedure TZODFConditionalWriteHelper.WriteCFStyles(xml: TZsspXMLWriterH);
@@ -654,7 +713,7 @@ var
       CFMaps[CFMapsCount][0] := s;
       if ((_StCondition.ApplyStyleID >= 0) and (_StCondition.ApplyStyleID < FXMLSS.Styles.Count)) then
       begin
-        CFMaps[CFMapsCount][1] := const_ConditionalStylePrefix + IntToStr(num);
+        CFMaps[CFMapsCount][1] := const_ConditionalStylePrefix + IntToStr(GetApplyCFStyle(_StCondition.ApplyStyleID));
         CFMaps[CFMapsCount][2] := GetBaseCellAddr(_StCondition, _currPageName);
         inc(CFMapsCount);
       end else
@@ -804,7 +863,7 @@ begin
   try
     _att := TZAttributesH.Create();
     _StyleID := FXMLSS.Styles.Count;
-    for i := 0 to FCount - 1 do
+    for i := 0 to FPagesCount - 1 do
     begin
       _sheet := FXMLSS.Sheets[FPageIndex[i]];
       _currPageName := FPageNames[i];
@@ -961,7 +1020,7 @@ var
       begin
         inc(StartStyleNum);
         xml.Attributes.Clear();
-        xml.Attributes.Add(const_calcext_apply_style_name, const_ConditionalStylePrefix + IntToStr(StartStyleNum));
+        xml.Attributes.Add(const_calcext_apply_style_name, const_ConditionalStylePrefix + IntToStr(GetApplyCFStyle(StyleItem.ApplyStyleID)));
         xml.Attributes.Add(const_calcext_value, _condition);
         xml.Attributes.Add(const_calcext_base_cell_address, GetBaseCellAddr(StyleItem, _PageName));
         xml.WriteEmptyTag(const_calcext_condition, true);
@@ -1014,7 +1073,7 @@ var
   end; //_WriteFormat
 
 begin
-  if (PageIndex >= 0) and (PageIndex < FCount) then
+  if (PageIndex >= 0) and (PageIndex < FPagesCount) then
   begin
     _PageName := FPageNames[PageIndex];
     _CF := FXMLSS.Sheets[FPageIndex[PageIndex]].ConditionalFormatting;
@@ -2892,24 +2951,25 @@ var
   var
     i, j, k: integer;
     _cf: TZConditionalFormatting;
+    _cfHelper: TZODFConditionalWriteHelper;
     num: integer;
 
   begin
-    num := 1;
+    _cfHelper := WriteHelper.ConditionWriter;
     for i := 0 to PageCount - 1 do
     begin
       _cf := XMLSS.Sheets[_pages[i]].ConditionalFormatting;
       for j := 0 to _cf.Count - 1 do
       for k := 0 to _cf[j].Count - 1 do
-      begin
-        _xml.Attributes.Clear();
-        _xml.Attributes.Add(ZETag_Attr_StyleName, const_ConditionalStylePrefix + IntToStr(num));
-        _xml.Attributes.Add('style:family', 'table-cell', false);
-        _xml.WriteTagNode(ZETag_StyleStyle, true, true, true);
-        ODFWriteTableStyle(XMLSS, _xml, _cf[j][k].ApplyStyleID, false);
-        _xml.WriteEndTagNode();
-        inc(num);
-      end; //for k
+        if (_cfHelper.TryAddApplyCFStyle(_cf[j][k].ApplyStyleID, num)) then
+        begin
+          _xml.Attributes.Clear();
+          _xml.Attributes.Add(ZETag_Attr_StyleName, const_ConditionalStylePrefix + IntToStr(num));
+          _xml.Attributes.Add('style:family', 'table-cell', false);
+          _xml.WriteTagNode(ZETag_StyleStyle, true, true, true);
+          ODFWriteTableStyle(XMLSS, _xml, _cf[j][k].ApplyStyleID, false);
+          _xml.WriteEndTagNode();
+        end; //for k
     end; //for i
   end; //_AddConditionalStyles
   {$ENDIF}
