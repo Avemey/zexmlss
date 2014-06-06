@@ -1051,7 +1051,7 @@ var
         result := result +
                   s + '.' + ZEGetA1byCol(_StyleItem.Areas[i].Column) + IntToStr(_StyleItem.Areas[i].Row + 1) +
                   ':' +
-                  s + '.' + ZEGetA1byCol(_StyleItem.Areas[i].Column + _StyleItem.Areas[i].Width) + IntToStr(_StyleItem.Areas[i].Row + _StyleItem.Areas[i].Height + 1);
+                  s + '.' + ZEGetA1byCol(_StyleItem.Areas[i].Column + _StyleItem.Areas[i].Width - 1) + IntToStr(_StyleItem.Areas[i].Row + _StyleItem.Areas[i].Height);
         if (i <> n) then
           result := result + ' ';
       end;

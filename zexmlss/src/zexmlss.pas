@@ -568,8 +568,8 @@ type
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
-    procedure Add(); overload;
-    procedure Add(StyleItem: TZConditionalStyleItem); overload;
+    function Add(): TZConditionalStyleItem; overload;
+    function Add(StyleItem: TZConditionalStyleItem): TZConditionalStyleItem; overload;
     procedure Delete(num: integer);
     procedure Insert(num: integer); overload;
     procedure Insert(num: integer; StyleItem: TZConditionalStyleItem); overload;
@@ -591,9 +591,9 @@ type
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
-    procedure Add(); overload;
-    procedure Add(Style: TZConditionalStyle); overload;
-    procedure Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer); overload;
+    function Add(): TZConditionalStyle; overload;
+    function Add(Style: TZConditionalStyle): TZConditionalStyle; overload;
+    function Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer): TZConditionalStyle; overload;
     procedure Assign(Source: TPersistent); override;
     function IsEqual(Source: TPersistent): boolean; virtual;
     property Count: integer read FCount write SetCount;
@@ -659,7 +659,7 @@ type
     property RowHeights[num: integer]: real read GetRowHeight write SetRowHeight;
     property DefaultColWidth: real read FDefaultColwidth write SetDefaultColWidth;// default 48;
     property DefaultRowHeight: real read FDefaultRowHeight write SetDefaultRowHeight;// default 12.75;
-    property Cell[ACol, ARow: integer]: TZCell read GetCell write SetCell;
+    property Cell[ACol, ARow: integer]: TZCell read GetCell write SetCell; default;
     property Protect: boolean read FProtect write FProtect default false; //защищён ли лист от изменения
     property TabColor: TColor read FTabColor write FTabColor default ClWindow;
     property Title: string read FTitle write FTitle;
@@ -3255,16 +3255,17 @@ begin
     FAreas.Assign(Value);
 end;
 
-procedure TZConditionalStyle.Add();
+function TZConditionalStyle.Add(): TZConditionalStyleItem;
 begin
   Count := Count + 1;
+  result := FConditions[Count - 1];
 end; //Add
 
-procedure TZConditionalStyle.Add(StyleItem: TZConditionalStyleItem);
+function TZConditionalStyle.Add(StyleItem: TZConditionalStyleItem): TZConditionalStyleItem;
 begin
-  Count := Count + 1;
+  result := Add();
   if (Assigned(StyleItem)) then
-    FConditions[Count - 1].Assign(StyleItem);
+    result.Assign(StyleItem);
 end; //Add
 
 procedure TZConditionalStyle.Delete(num: integer);
@@ -3510,8 +3511,8 @@ begin
     y := FItems[i].Row;
     xx := x + FItems[i].Width;
     yy := y + FItems[i].Height;
-    if ((ColumnNum >= x) and (ColumnNum <= xx) and
-        (RowNum >= y) and (RowNum <= yy))  then
+    if ((ColumnNum >= x) and (ColumnNum < xx) and
+        (RowNum >= y) and (RowNum < yy))  then
     begin
       result := true;
       break;
@@ -3582,9 +3583,9 @@ begin
   end;
 end; //SetCount
 
-procedure TZConditionalFormatting.Add();
+function TZConditionalFormatting.Add(): TZConditionalStyle;
 begin
-  Add(nil);
+  result := Add(nil);
 end; //Add
 
 function TZConditionalFormatting.GetItem(num: integer): TZConditionalStyle;
@@ -3601,11 +3602,12 @@ begin
       FStyles[num].Assign(Value);
 end; //SetItem
 
-procedure TZConditionalFormatting.Add(Style: TZConditionalStyle);
+function TZConditionalFormatting.Add(Style: TZConditionalStyle): TZConditionalStyle;
 begin
   Count := Count + 1;
+  result := FStyles[Count - 1];
   if (Assigned(Style)) then
-    FStyles[Count - 1].Assign(Style);
+    result.Assign(Style);
 end; //Add
 
 //Добавить условное форматирование с областью
@@ -3614,13 +3616,15 @@ end; //Add
 //      RowNum: integer     - номер строки
 //      AreaWidth: integer  - ширина области
 //      AreaHeight: integer - высота области
-procedure TZConditionalFormatting.Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer);
+//RETURN
+//      TZConditionalStyle - добавленный стиль
+function TZConditionalFormatting.Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer): TZConditionalStyle;
 var
   t: TZConditionalAreaItem;
 
 begin
-  Add(nil);
-  t := FStyles[FCount - 1].Areas[0];
+  result := Add(nil);
+  t := result.Areas[0];
   t.Row := RowNum;
   t.Column := ColumnNum;
   t.Width := AreaWidth;
