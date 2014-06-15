@@ -1919,7 +1919,7 @@ end; //ApplyBaseCellAddr
 //Читает <calcext:conditional-formats> .. </calcext:conditional-formats> - условное
 //  форатирование для LibreOffice
 //INPUT
-//  var xml: TZsspXMLReaderH  - читатеь (<> nil !!!)
+//  var xml: TZsspXMLReaderH  - читатель (<> nil !!!)
 //      SheetNum: integer     - номер страницы
 procedure TZODFConditionalReadHelper.ReadCalcextTag(var xml: TZsspXMLReaderH; SheetNum: integer);
 var
@@ -1994,8 +1994,8 @@ var
           h := 1;
           if (kol = 2) then
           begin
-            w := tmpRec[1][0] - tmpRec[0][0];
-            h := tmpRec[1][1] - tmpRec[0][1];
+            w := tmpRec[1][0] - tmpRec[0][0] + 1;
+            h := tmpRec[1][1] - tmpRec[0][1] + 1;
           end;
           _CFItem.Areas.Add(tmpRec[0][0], tmpRec[0][1], w, h);
         end;
