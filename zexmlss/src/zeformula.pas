@@ -61,7 +61,7 @@ function ZEGetColByA1(AA: string; StartZero: boolean = true): integer;
 function ZER1C1ToA1(const formula: string; CurCol, CurRow: integer; options: integer; StartZero: boolean = true): string;
 function ZEA1ToR1C1(const formula: string; CurCol, CurRow: integer; options: integer; StartZero: boolean = true): string;
 
-function ZEGetCellCoords(const cell: string; var column, row: integer; StartZero: boolean = true): boolean;
+function ZEGetCellCoords(const cell: string; out column, row: integer; StartZero: boolean = true): boolean;
 
 implementation
 
@@ -71,12 +71,12 @@ const
 //Получает номер строки и столбца по строковому значению (для A1 стилей)
 //INPUT
 //  const cell: string      - номер ячейки в A1 стиле
-//  var column: integer     - возвращаемый номер столбца
-//  var row: integer        - возвращаемый номер строки
+//  out column: integer     - возвращаемый номер столбца
+//  out row: integer        - возвращаемый номер строки
 //      StartZero: boolean  - признак нумерации с нуля
 //RETURN
 //      boolean - true - координаты успешно определены
-function ZEGetCellCoords(const cell: string; var column, row: integer; StartZero: boolean = true): boolean;
+function ZEGetCellCoords(const cell: string; out column, row: integer; StartZero: boolean = true): boolean;
 var
   i: integer;
   s1, s2: string;

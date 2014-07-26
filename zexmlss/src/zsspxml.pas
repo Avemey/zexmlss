@@ -4,9 +4,9 @@
 // Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
 // e-mail: avemey(мяу)tut(точка)by
 // URL:    http://avemey.com
-// Ver:    0.0.5
+// Ver:    0.0.7
 // Лицензия: zlib
-// Last update: 2012.08.12
+// Last update: 2014.07.20
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -83,7 +83,7 @@ type
     function ToString(quote: ansichar; CheckEntity: boolean): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
     function ToString(quote: ansichar): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
     function ToString(CheckEntity: boolean): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
-    function ToString(): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
+    function ToString(): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload;  {$IFDEF Z_FPC_USE_TOSTRING} override; {$ELSE} virtual; {$ENDIF}
     property Count: integer read FCount;
     property Items[num: integer]: TZAttrArray read GetAttr write SetAttr;
     property ItemsByName[const Att: ansistring]: ansistring read GetAttrS write SetAttrS; default;
@@ -610,7 +610,9 @@ begin
     ReadCPChar(s, _eof);
     text := text + s;
     if _eof then exit;
+    {$HINTS OFF}
     num := num + (ord(s[1]) shl 8);
+    {$HINTS ON}
     if num >= $d800 then
     for i := 1 to 2 do
     begin

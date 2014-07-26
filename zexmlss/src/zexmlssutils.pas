@@ -5,9 +5,9 @@
 // Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
 // e-mail: avemey(мяу)tut(точка)by
 // URL:    http://avemey.com
-// Ver:    0.0.6
+// Ver:    0.0.7
 // Лицензия: zlib
-// Last update: 2013.11.05
+// Last update: 2014.07.20
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -121,6 +121,46 @@ begin
    Result := StrUtils.SplitString(buffer, delimeter); // implicit typecast
 end;
 {$Else}
+var
+  i, from, till: integer;
+  L: array of integer;
+  _count, _maxcount: integer;
+
+  procedure _add(num: integer);
+  begin
+    if (_count + 1 >= _maxcount) then
+    begin
+      inc(_maxcount, 10);
+      setlength(L, _maxcount)
+    end;
+    L[_count] := num;
+    inc(_count);
+  end;
+
+begin
+  _maxcount := 20;
+  _count := 0;
+  SetLength(L, _maxcount);
+  try
+    for i := 1 to length(buffer) do
+      if delimeter = buffer[i] then
+        _add(i);
+    _add(length(buffer) + 1);
+
+    SetLength(Result, _count);
+
+    from := 1;
+    for i := 0 to _count - 1 do
+    begin
+      till := L[i];
+      Result[i] := Copy(buffer, from, till - from);
+      from := till + 1;
+    end;
+  finally
+    setlength(L, 0);
+  end;
+end;
+(* //FPC: warnings on pointer(i)
 var i, from, till: integer; L: TList;
 begin
   L := TList.Create;
@@ -141,6 +181,7 @@ begin
     L.Free;
   end;
 end;
+*)
 {$EndIf}
 
 

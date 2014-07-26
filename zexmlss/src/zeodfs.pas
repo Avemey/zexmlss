@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2013.11.05
+// Last update: 2014.07.20
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - added uniform save API
 //     to create ODS in Delphi/Windows
@@ -1889,7 +1889,9 @@ begin
     if (_l > 0) then
     begin
       s := copy(BaseCellTxt, _l + 1, _len - _l);
+      {$HINTS OFF} //It's ok
       ZEGetCellCoords(s, _c, _r);
+      {$HINTS ON}
       ACFStyle.BaseCellColumnIndex := _c;
       ACFStyle.BaseCellRowIndex := _r;
       s := ZEReplaceEntity(copy(BaseCellTxt, 1, _l - 1));
@@ -1923,7 +1925,6 @@ end; //ApplyBaseCellAddr
 //      SheetNum: integer     - номер страницы
 procedure TZODFConditionalReadHelper.ReadCalcextTag(var xml: TZsspXMLReaderH; SheetNum: integer);
 var
-  _Range: string;
   _isCFItem: boolean;
   _CF: TZConditionalFormatting;
   _CFItem: TZConditionalStyle;
@@ -2081,7 +2082,6 @@ var
   end; //_GetCondition
 
 begin
-  _Range := '';
   _isCFItem := false;
   _CF := FXMLSS.Sheets[SheetNum].ConditionalFormatting;
   (*
@@ -3201,7 +3201,7 @@ var
     ColStyleNumber, RowStyleNumber: integer;
     
     //Стили для колонок
-    procedure WriteColumnStyle(now_i, now_j, now_StyleNumber, count_i, count_j: integer);
+    procedure WriteColumnStyle(now_i, now_j, now_StyleNumber, count_i{, count_j}: integer);
     var
       i, j: integer;
       start_j: integer;
@@ -3251,7 +3251,7 @@ var
     end; //WriteColumnStyle
 
     //Стили для строк
-    procedure WriteRowStyle(now_i, now_j, now_StyleNumber, count_i, count_j: integer);
+    procedure WriteRowStyle(now_i, now_j, now_StyleNumber, count_i{, count_j}: integer);
     var
       i, j, k: integer;
       start_j: integer;
@@ -3338,7 +3338,7 @@ var
       n := XMLSS.Sheets[_pages[i]].ColCount;
       for j := 0 to n - 1 do
       begin
-        WriteColumnStyle(i, j, ColStyleNumber, kol, n - 1);
+        WriteColumnStyle(i, j, ColStyleNumber, kol{, n - 1});
         inc(ColStyleNumber);
       end;
     end;
@@ -3358,7 +3358,7 @@ var
       n := XMLSS.Sheets[_pages[i]].RowCount - 1;
       for j := 0 to n - 1 do
       begin
-        WriteRowStyle(i, j, RowStyleNumber, kol, n);
+        WriteRowStyle(i, j, RowStyleNumber, kol{, n});
         inc(RowStyleNumber);
       end;
     end;
@@ -4218,7 +4218,11 @@ begin
             {$IFDEF DELPHI_UNICODE}
             sv := sv + FormatSettings.DecimalSeparator
             {$ELSE}
+              {$IFDEF Z_FPC_USE_FORMATSETTINGS}
+            sv := sv + FormatSettings.DecimalSeparator
+              {$ELSE}
             sv := sv + DecimalSeparator
+              {$ENDIF}
             {$ENDIF}
         end;
       else

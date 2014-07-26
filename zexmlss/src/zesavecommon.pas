@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2013.11.05
+// Last update: 2014.07.20
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -85,7 +85,9 @@ implementation
 function ZELibraryName: string;
 begin   // todo: compiler version and date ?
   Result := 'ZEXMLSSlib/' + ZELibraryVersion;
+  {$WARNINGS OFF}
   if ZELibraryFork <> '' then Result := Result + '@' + ZELibraryFork;
+  {$WARNINGS ON}
 
   Result := Result + '$' +
     {$IFDEF FPC}
@@ -292,7 +294,11 @@ begin
         {$IFDEF DELPHI_UNICODE}
         s := s + FormatSettings.DecimalSeparator
         {$ELSE}
+          {$IFDEF Z_FPC_USE_FORMATSETTINGS}
+        s := s + FormatSettings.DecimalSeparator
+          {$ELSE}
         s := s + DecimalSeparator
+          {$ENDIF}
         {$ENDIF}
       else if (st[i] <> ' ') then
         s := s + st[i];
@@ -326,7 +332,11 @@ begin
         {$IFDEF DELPHI_UNICODE}
         s := s + FormatSettings.DecimalSeparator
         {$ELSE}
+          {$IFDEF Z_FPC_USE_FORMATSETTINGS}
+        s := s + FormatSettings.DecimalSeparator
+          {$ELSE}
         s := s + DecimalSeparator
+          {$ENDIF}
         {$ENDIF}
       else if (st[i] <> ' ') then
         s := s + st[i];

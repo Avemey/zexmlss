@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2013.11.05
+// Last update: 2014.07.20
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - uniform save API for creating
 //     XLSX files in Delphi/Windows
@@ -112,7 +112,7 @@ type
 
   //Итем для дифференцированного форматирования
   //TODO:
-  //      возможно, для excel xml тоже понадобится
+  //      возможно, для excel xml тоже понадобится (перенести?)
   TZXLSXDiffFormattingItem = class(TPersistent)
   private
     FUseFont: boolean;              //заменять ли шрифт
@@ -233,7 +233,6 @@ function ZEXLSXCreateWorkBook(var XMLSS: TZEXMLSS; Stream: TStream; const _pages
                               const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
 function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring; out isHaveComments: boolean): integer;
 function ZEXLSXCreateContentTypes(var XMLSS: TZEXMLSS; Stream: TStream; PageCount: integer; CommentCount: integer; const PagesComments: TIntegerDynArray;
-
                                   TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateRelsMain(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;

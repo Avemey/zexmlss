@@ -5,9 +5,9 @@
 // Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
 // e-mail: avemey(мяу)tut(точка)by
 // URL:    http://avemey.com
-// Ver:    0.0.6
+// Ver:    0.0.7
 // Лицензия: zlib
-// Last update: 2013.11.05
+// Last update: 2014.07.20
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -376,7 +376,7 @@ type
     procedure Assign(Source: TPersistent); override;
     constructor Create(const owner: TZSheet; const ForColumns: boolean);
 
-    function ToString: string; {$IfDef Delphi_Unicode} override; {$EndIf}
+    function ToString: string; {$IfDef Delphi_Unicode} override; {$EndIf} {$IFDEF Z_FPC_USE_TOSTRING} override; {$ENDIF}
 // introduced in D2009 according to http://blog.marcocantu.com/blog/6hidden_delphi2009.html
 // introduced don't know when in FPC
   published
@@ -1120,7 +1120,9 @@ begin
   if (value > '') then
   begin
     value := UpperCase(value);
+    {$HINTS OFF}
     FillChar(a, sizeof(a), 0);
+    {$HINTS ON}
     n := 0;
     if value[1] = '#' then delete(value, 1, 1);
     //А что, если будут цвета типа "black"?  {tut}

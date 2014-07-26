@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <Package Version="4">
     <PathDelim Value="\"/>
@@ -24,7 +24,7 @@
     <Description Value="Работа с документами ODS, Excel XML SpreadSheet (excel xml) и XLSX
 (Write and read ODS, xlsx and excel xml spreadsheet formats). More info: http://avemey.com/zexmlss/index.php "/>
     <License Value="zlib"/>
-    <Version Release="6"/>
+    <Version Release="7"/>
     <Files Count="14">
       <Item1>
         <Filename Value="..\..\src\zexmlss.pas"/>
@@ -102,5 +102,8 @@
       <Version Value="2"/>
       <IgnoreBinaries Value="False"/>
     </PublishOptions>
+    <CustomOptions Items="ExternHelp" Version="2">
+      <_ExternHelp Items="Count"/>
+    </CustomOptions>
   </Package>
 </CONFIG>
