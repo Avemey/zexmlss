@@ -266,6 +266,8 @@ type
     strike: boolean;
     charset: integer;
     color: TColor;
+    ColorType: byte;
+    LumFactor: double;
     fontsize: integer;
   end;
 
@@ -1590,6 +1592,8 @@ var
   var
     num: integer;
     t: real;
+    _max, _min: integer;
+    _delta, i: integer;
 
   begin
     num := 0;
@@ -1612,8 +1616,14 @@ var
         if (s > '') then
           _currSheet.Columns[num].Hidden := ZETryStrToBoolean(s);
 
-        //s := xml.Attributes.ItemsByName['max'];
-        //s := xml.Attributes.ItemsByName['min'];
+        _min := 0;
+        _max := 0;
+        s := xml.Attributes.ItemsByName['max'];
+        if (s > '') then
+          TryStrToInt(s, _max);
+        s := xml.Attributes.ItemsByName['min'];
+        if (s > '') then
+          TryStrToInt(s, _min);
         //s := xml.Attributes.ItemsByName['outlineLevel'];
         //s := xml.Attributes.ItemsByName['phonetic'];
         s := xml.Attributes.ItemsByName['style'];
@@ -1624,6 +1634,18 @@ var
           t := ZETryStrToFloat(s, 5.14509803921569);
           t := 10 * t / 5.14509803921569;
           _currSheet.Columns[num].WidthMM := t;
+        end;
+
+        if (_max > _min) then
+        begin
+          _delta := _max - _min;
+          if (_delta < 100) then
+          begin
+            CheckCol(num + _delta);
+            for i := num + 1 to num + _delta do
+              _currSheet.Columns[i].Assign(_currSheet.Columns[num]);
+            inc(num, _delta);
+          end;
         end;
 
         inc(num);
@@ -2388,6 +2410,8 @@ var
     fnt.strike := false;
     fnt.charset := 204;
     fnt.color := clBlack;
+    fnt.LumFactor := 0;
+    fnt.ColorType := 0;
     fnt.fontsize := 8;
   end; //ZEXLSXZeroFont
 
@@ -2501,6 +2525,7 @@ var
     t: integer;
 
   begin
+    //I hate this f****** format! m$ office >= 2007 is big piece of shit! Arrgh!
     s := xml.Attributes.ItemsByName['rgb'];
     if (length(s) > 2) then
     begin
@@ -2513,6 +2538,13 @@ var
       if (TryStrToInt(s, t)) then
       begin
         retColorType := 2;
+        retColor := t;
+      end;
+    s := xml.Attributes.ItemsByName['indexed'];
+    if (s > '') then
+      if (TryStrToInt(s, t)) then
+      begin
+        retColorType := 1;
         retColor := t;
       end;
     s := xml.Attributes.ItemsByName['tint'];
@@ -2546,7 +2578,7 @@ var
           FontArray[_currFont].name := s
         else
         if ((xml.TagName = 'b') and (xml.TagType = 5)) then
-          FontArray[_currFont].bold := ZEStrToBoolean(s)
+          FontArray[_currFont].bold := true
         else
         if ((xml.TagName = 'charset') and (xml.TagType = 5)) then
         begin
@@ -2555,20 +2587,18 @@ var
         end else
         if ((xml.TagName = 'color') and (xml.TagType = 5)) then
         begin
-          s := xml.Attributes.ItemsByName['rgb'];
-          if (length(s) > 2) then
-            delete(s, 1, 2);
-          if (s > '') then
-            FontArray[_currFont].color := HTMLHexToColor(s);
+          ZXLSXGetColor(FontArray[_currFont].color,
+                        FontArray[_currFont].ColorType,
+                        FontArray[_currFont].LumFactor);
         end else
         if ((xml.TagName = 'i') and (xml.TagType = 5)) then
-          FontArray[_currFont].italic := ZEStrToBoolean(s)
+          FontArray[_currFont].italic := true
         else
   //      if ((xml.TagName = 'outline') and (xml.TagType = 5)) then
   //      begin
   //      end else
         if ((xml.TagName = 'strike') and (xml.TagType = 5)) then
-          FontArray[_currFont].strike := ZEStrToBoolean(s)
+          FontArray[_currFont].strike := true
         else
         if ((xml.TagName = 'sz') and (xml.TagType = 5)) then
         begin
@@ -3147,81 +3177,6 @@ var
     end; //while
   end; //_ReadColors
 
-  //Применить стиль
-  //INPUT
-  //  var XMLSSStyle: TZStyle         - стиль в хранилище
-  //  var XLSXStyle: TZXLSXCellStyle  - стиль в xlsx
-  procedure _ApplyStyle(var XMLSSStyle: TZStyle; var XLSXStyle: TZXLSXCellStyle);
-  var
-    i: integer;
-
-  begin
-    if (XLSXStyle.applyAlignment) then
-    begin
-      XMLSSStyle.Alignment.Horizontal := XLSXStyle.alignment.horizontal;
-      XMLSSStyle.Alignment.Vertical := XLSXStyle.alignment.vertical;
-      XMLSSStyle.Alignment.Indent := XLSXStyle.alignment.indent;
-      XMLSSStyle.Alignment.ShrinkToFit := XLSXStyle.alignment.shrinkToFit;
-      XMLSSStyle.Alignment.WrapText := XLSXStyle.alignment.wrapText;
-
-      XMLSSStyle.Alignment.Rotate := 0;
-      i := XLSXStyle.alignment.textRotation;
-      XMLSSStyle.Alignment.VerticalText := (i = 255);
-      if (i >= 0) and (i <= 180) then begin
-        if i > 90 then i := 90 - i;
-        XMLSSStyle.Alignment.Rotate := i
-      end;
-    end;
-
-    if (XLSXStyle.applyBorder) then
-    begin
-      n := XLSXStyle.borderId;
-      if ((n >= 0) and (n < BorderCount)) then
-        for i := 0 to 5 do
-        if (BorderArray[n][i].isEnabled) then
-        begin
-          XMLSSStyle.Border[i].LineStyle := BorderArray[n][i].style;
-          XMLSSStyle.Border[i].Weight := BorderArray[n][i].Weight;
-          if (BorderArray[n][i].isColor) then
-            XMLSSStyle.Border[i].Color := BorderArray[n][i].color;
-        end;
-    end;
-
-    if (XLSXStyle.applyFont) then
-    begin
-      n := XLSXStyle.fontId;
-      if ((n >= 0) and (n < FontCount)) then
-      begin
-        XMLSSStyle.Font.Name := FontArray[n].name;
-        XMLSSStyle.Font.Size := FontArray[n].fontsize;
-        XMLSSStyle.Font.Charset := FontArray[n].charset;
-        XMLSSStyle.Font.Color := FontArray[n].color;
-        if (FontArray[n].bold) then
-          XMLSSStyle.Font.Style := [fsBold];
-        if (FontArray[n].underline) then
-          XMLSSStyle.Font.Style := XMLSSStyle.Font.Style + [fsUnderline];
-        if (FontArray[n].italic) then
-          XMLSSStyle.Font.Style := XMLSSStyle.Font.Style + [fsItalic];
-        if (FontArray[n].strike) then
-          XMLSSStyle.Font.Style := XMLSSStyle.Font.Style + [fsStrikeOut];
-      end;
-    end;
-
-    if (XLSXStyle.applyProtection) then
-    begin
-      XMLSSStyle.Protect := XLSXStyle.locked;
-      XMLSSStyle.HideFormula := XLSXStyle.hidden;
-    end;
-
-    n := XLSXStyle.fillId;
-    if ((n >= 0) and (n < FillCount)) then
-    begin
-      XMLSSStyle.CellPattern := FillArray[n].patternfill;
-      XMLSSStyle.BGColor := FillArray[n].bgcolor;
-      XMLSSStyle.PatternColor := FillArray[n].patterncolor;
-    end;
-  end; //_ApplyStyle
-
   //Конвертирует RGB в HSL
   //http://en.wikipedia.org/wiki/HSL_color_space
   //INPUT
@@ -3594,8 +3549,89 @@ var
       if ((t >= 0) and (t < ThemaColorCount)) then
         AColor := ThemaFillsColors[t];
     end;
+    if (ColorType = 1) then
+      if ((AColor >= 0) and (AColor < indexedColorCount))  then
+        AColor := indexedColor[AColor];
     ApplyLumFactor(AColor, LumFactor);
   end; //XLSXApplyColor
+
+  //Применить стиль
+  //INPUT
+  //  var XMLSSStyle: TZStyle         - стиль в хранилище
+  //  var XLSXStyle: TZXLSXCellStyle  - стиль в xlsx
+  procedure _ApplyStyle(var XMLSSStyle: TZStyle; var XLSXStyle: TZXLSXCellStyle);
+  var
+    i: integer;
+
+  begin
+    if (XLSXStyle.applyAlignment) then
+    begin
+      XMLSSStyle.Alignment.Horizontal := XLSXStyle.alignment.horizontal;
+      XMLSSStyle.Alignment.Vertical := XLSXStyle.alignment.vertical;
+      XMLSSStyle.Alignment.Indent := XLSXStyle.alignment.indent;
+      XMLSSStyle.Alignment.ShrinkToFit := XLSXStyle.alignment.shrinkToFit;
+      XMLSSStyle.Alignment.WrapText := XLSXStyle.alignment.wrapText;
+
+      XMLSSStyle.Alignment.Rotate := 0;
+      i := XLSXStyle.alignment.textRotation;
+      XMLSSStyle.Alignment.VerticalText := (i = 255);
+      if (i >= 0) and (i <= 180) then begin
+        if i > 90 then i := 90 - i;
+        XMLSSStyle.Alignment.Rotate := i
+      end;
+    end;
+
+    if (XLSXStyle.applyBorder) then
+    begin
+      n := XLSXStyle.borderId;
+      if ((n >= 0) and (n < BorderCount)) then
+        for i := 0 to 5 do
+        if (BorderArray[n][i].isEnabled) then
+        begin
+          XMLSSStyle.Border[i].LineStyle := BorderArray[n][i].style;
+          XMLSSStyle.Border[i].Weight := BorderArray[n][i].Weight;
+          if (BorderArray[n][i].isColor) then
+            XMLSSStyle.Border[i].Color := BorderArray[n][i].color;
+        end;
+    end;
+
+    if (XLSXStyle.applyFont) then
+    begin
+      n := XLSXStyle.fontId;
+      if ((n >= 0) and (n < FontCount)) then
+      begin
+        XLSXApplyColor(FontArray[n].color,
+                       FontArray[n].ColorType,
+                       FontArray[n].LumFactor);
+        XMLSSStyle.Font.Name := FontArray[n].name;
+        XMLSSStyle.Font.Size := FontArray[n].fontsize;
+        XMLSSStyle.Font.Charset := FontArray[n].charset;
+        XMLSSStyle.Font.Color := FontArray[n].color;
+        if (FontArray[n].bold) then
+          XMLSSStyle.Font.Style := [fsBold];
+        if (FontArray[n].underline) then
+          XMLSSStyle.Font.Style := XMLSSStyle.Font.Style + [fsUnderline];
+        if (FontArray[n].italic) then
+          XMLSSStyle.Font.Style := XMLSSStyle.Font.Style + [fsItalic];
+        if (FontArray[n].strike) then
+          XMLSSStyle.Font.Style := XMLSSStyle.Font.Style + [fsStrikeOut];
+      end;
+    end;
+
+    if (XLSXStyle.applyProtection) then
+    begin
+      XMLSSStyle.Protect := XLSXStyle.locked;
+      XMLSSStyle.HideFormula := XLSXStyle.hidden;
+    end;
+
+    n := XLSXStyle.fillId;
+    if ((n >= 0) and (n < FillCount)) then
+    begin
+      XMLSSStyle.CellPattern := FillArray[n].patternfill;
+      XMLSSStyle.BGColor := FillArray[n].bgcolor;
+      XMLSSStyle.PatternColor := FillArray[n].patterncolor;
+    end;
+  end; //_ApplyStyle
 
 begin
   result := false;
@@ -4994,14 +5030,14 @@ var
 
     // ECMA 376 ed.4 part1 18.18.50: default|portrait|landscape
     _xml.Attributes.Add('orientation',
-        IfThen(_sheet.SheetOptions.PortraitOrientation, 'portrait','landscape'),
+        IfThen(_sheet.SheetOptions.PortraitOrientation, 'portrait', 'landscape'),
         false);
 
     _xml.Attributes.Add('pageOrder', 'downThenOver', false);
     _xml.Attributes.Add('paperSize', intToStr(_sheet.SheetOptions.PaperSize), false);
     _xml.Attributes.Add('scale', '100', false);
     _xml.Attributes.Add('useFirstPageNumber', 'true', false);
-    _xml.Attributes.Add('usePrinterDefaults', 'false', false);
+    //_xml.Attributes.Add('usePrinterDefaults', 'false', false); //do not use!
     _xml.Attributes.Add('verticalDpi', '300', false);
     _xml.WriteEmptyTag('pageSetup', true, false);
     //  <headerFooter differentFirst="false" differentOddEven="false">

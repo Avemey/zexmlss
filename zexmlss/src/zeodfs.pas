@@ -315,6 +315,7 @@ const
   ZETag_StyleStyle          = 'style:style';
   ZETag_config_name         = 'config:name';
   ZETag_config_config_item_map_named = 'config:config-item-map-named';
+  ZETag_office_automatic_styles = 'office:automatic-styles';
 
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   const_ConditionalStylePrefix      = 'ConditionalStyle_f';
@@ -2974,6 +2975,16 @@ var
   end; //_AddConditionalStyles
   {$ENDIF}
 
+  //<office:automatic-styles>..</office:automatic-styles>
+  //Contains page layout (paper size, orientation, etc)
+  procedure _WriteAutomaticStyle();
+  begin
+    _xml.Attributes.Clear();
+    _xml.WriteTagNode(ZETag_office_automatic_styles, true, true, true);
+
+    _xml.WriteEndTagNode(); //office:automatic-styles
+  end; //_WriteAutomaticStyle
+
 begin
   result := 0;
   _xml := nil;
@@ -3011,6 +3022,8 @@ begin
     {$ENDIF}
 
     _xml.WriteEndTagNode(); //office:styles
+
+    _WriteAutomaticStyle(); //<office:automatic-styles>..</office:automatic-styles>
 
     _xml.WriteEndTagNode(); //office:document-styles
   finally
@@ -3321,7 +3334,7 @@ var
     ZEWriteFontFaceDecls(XMLSS, _xml);
 
     ///********   Automatic Styles   ********///
-    _xml.WriteTagNode('office:automatic-styles', true, true, false);
+    _xml.WriteTagNode(ZETag_office_automatic_styles, true, true, false);
     //******* סעטכט סעמכבצמג
     kol := High(_pages);
     SetLength(ColumnStyle, kol + 1);
@@ -4684,7 +4697,7 @@ var
     _style := nil;
     try
       _style := TZStyle.Create();
-      while (not IfTag('office:automatic-styles', 6)) do
+      while (not IfTag(ZETag_office_automatic_styles, 6)) do
       begin
         if (xml.Eof()) then
           break;
@@ -5256,7 +5269,7 @@ var
     begin
       xml.ReadTag();
       ErrorReadCode := ErrorReadCode or xml.ErrorCode;
-      if (ifTag('office:automatic-styles', 4)) then
+      if (ifTag(ZETag_office_automatic_styles, 4)) then
         _ReadAutomaticStyle();
       //if (ifTag('office:styles', 4)) then
       //if (ifTag('office:master-styles', 4)) then
