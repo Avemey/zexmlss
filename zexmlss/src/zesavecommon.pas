@@ -78,8 +78,10 @@ function ZENormalizeAngle180(const value: TZCellTextRotate): integer;
 
 // single place to update version et all
 function ZELibraryName: string;
-const ZELibraryVersion = '0.0.6';
+
+const ZELibraryVersion = '0.0.7';
       ZELibraryFork = '';//'Arioch';  // or empty str   // URL ?
+
 implementation
 
 function ZELibraryName: string;

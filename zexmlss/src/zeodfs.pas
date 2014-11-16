@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2014.07.20
+// Last update: 2014.11.08
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - added uniform save API
 //     to create ODS in Delphi/Windows
@@ -231,13 +231,26 @@ type
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     FConditionWriter: TZODFConditionalWriteHelper;
     {$ENDIF}
+    FUniquePageLayouts: array of integer;     //array of links to pages with unique page layouts
+                                              //  -1 - default style
+    FUniquePageLayoutsCount: integer;         //count of unique Page layouts
+    FPageLayoutsIndexes: array of integer;    //Links to unique page layouts for each sheet
+
+    FMasterPagesIndexes: array of integer;    //Links to unique masterpage style for each sheet
+    FMasterPagesCount: integer;               //Count of unique masterpages styles
+    FMasterPages: array of integer;           //array of links to pages with unique masterpages styles
+                                              // -1 - default style
+    FMasterPagesNames: array of string;       //array of masterpages styles names
   protected
   public
     constructor Create(AXMLSS: TZEXMLSS;
                        const _pages: TIntegerDynArray;
                        const _names: TStringDynArray;
-                       PageCount: integer); reintroduce; overload; virtual;
+                       PagesCount: integer); reintroduce; overload; virtual;
     destructor Destroy(); override;
+
+    procedure WriteStylesPageLayouts(xml: TZsspXMLWriterH; const _pages: TIntegerDynArray);
+
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     property ConditionWriter: TZODFConditionalWriteHelper read FConditionWriter;
     {$ENDIF}
@@ -316,6 +329,21 @@ const
   ZETag_config_name         = 'config:name';
   ZETag_config_config_item_map_named = 'config:config-item-map-named';
   ZETag_office_automatic_styles = 'office:automatic-styles';
+  ZETag_style_page_layout   = 'style:page-layout';
+  ZETag_fo_margin_top       = 'fo:margin-top';
+  ZETag_fo_margin_bottom    = 'fo:margin-bottom';
+  ZETag_fo_margin_left      = 'fo:margin-left';
+  ZETag_fo_margin_right     = 'fo:margin-right';
+  ZETag_portrait            = 'portrait';
+  ZETag_landscape           = 'landscape';
+  ZETag_style_print_orientation = 'style:print-orientation';
+  ZETag_fo_page_width       = 'fo:page-width';
+  ZETag_fo_page_height      = 'fo:page-height';
+  ZETag_style_header_style  = 'style:header-style';
+  ZETag_style_footer_style  = 'style:footer-style';
+  ZETag_fo_background_color = 'fo:background-color';
+  ZETag_style_header_footer_properties = 'style:header-footer-properties';
+  ZETag_style_page_layout_properties = 'style:page-layout-properties';
 
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   const_ConditionalStylePrefix      = 'ConditionalStyle_f';
@@ -327,6 +355,55 @@ const
   const_calcext_condition           = 'calcext:condition';
   const_calcext_target_range_address= 'calcext:target-range-address';
   {$ENDIF}
+
+  const_ODS_paper_sizes_count = 42;
+
+  //Sizes in 10^(-4) m! A4 = 2100*10^(-4) m x 2970*10^(-4) m
+  const_ODS_paper_sizes: array [0..const_ODS_paper_sizes_count - 1] of array [0..1] of integer =
+                  (
+                    (0, 0),             // 0        Undefined
+                    (2159, 2794),       // 1        Letter                   8 1/2" x 11"
+                    (2159, 2794),       // 2        Letter small             8 1/2" x 11"
+                    (2794, 4318),       // 3        Tabloid                     11" x 17"
+                    (4318, 2794),       // 4        Ledger                      17" x 11"
+                    (2159, 3556),       // 5        Legal                    8 1/2" x 14"
+                    (1397, 2159),       // 6        Statement                5 1/2" x 8 1/2"
+                    (1842, 2667),       // 7        Executive                7 1/4" x 10 1/2"
+                    (2970, 4200),       // 8        A3                        297mm x 420mm
+                    (2100, 2970),       // 9        A4                        210mm x 297mm
+                    (2100, 2970),       // 10       A4 small                  210mm x 297mm
+                    (1480, 2100),       // 11       A5                        148mm x 210mm
+                    (2500, 3540),       // 12       B4                        250mm x 354mm
+                    (1820, 2570),       // 13       B5                        182mm x 257mm
+                    (2159, 3302),       // 14       Folio                    8 1/2" x 13"
+                    (2150, 2750),       // 15       Quarto                    215mm x 275mm
+                    (2540, 3556),       // 16                                   10" x 14"
+                    (2794, 4318),       // 17                                   11" x 17"
+                    (2159, 2794),       // 18       Note                     8 1/2" x 11"
+                    (984, 2254),        // 19       #9 Envelope              3 7/8" x 8 7/8"
+                    (1048, 2413),       // 20       #10 Envelope             4 1/8" x 9 1/2"
+                    (1143, 2635),       // 21       #11 Envelope             4 1/2" x 10 3/8"
+                    (1207, 2794),       // 22       #12 Envelope             4 3/4" x 11"
+                    (1270, 2921),       // 23       #14 Envelope                 5" x 11 1/2"
+                    (4318, 5588),       // 24       C Sheet                     17" x 22"
+                    (5588, 8636),       // 25       D Sheet                     22" x 34"
+                    (8636, 11176),      // 26       E Sheet                     34" x 44"
+                    (1100, 2200),       // 27       DL Envelope               110mm x 220mm
+                    (1620, 2290),       // 28       C5 Envelope               162mm x 229mm
+                    (3240, 4580),       // 29       C3 Envelope               324mm x 458mm
+                    (2290, 3240),       // 30       C4 Envelope               229mm x 324mm
+                    (1140, 1620),       // 31       C6 Envelope               114mm x 162mm
+                    (1140, 2290),       // 32       C65 Envelope              114mm x 229mm
+                    (2500, 3530),       // 33       B4 Envelope               250mm x 353mm
+                    (1760, 2500),       // 34       B5 Envelope               176mm x 250mm
+                    (1250, 1760),       // 35       B6 Envelope               125mm x 176mm
+                    (1100, 2300),       // 36       Italy Envelope            110mm x 230mm
+                    (984, 1905),        // 37       Monarch Envelope         3 7/8" x 7 1/2"
+                    (921, 1651),        // 38       6 3/4 Envelope           3 5/8" x 6 1/2"
+                    (3778, 2794),       // 39       US Standard Fanfold     14 7/8" x 11"
+                    (2159, 3048),       // 40       German Std. Fanfold      8 1/2" x 12"
+                    (2159, 3302)        // 41       German Legal Fanfold     8 1/2" x 13"
+                  );
 
 type
   TZODFColumnStyle = record
@@ -430,6 +507,18 @@ begin
 end; //DoDoneOutZipStream
 
 {$ENDIF}
+
+//Convert double to string for ODF sizes (like 23.95cm etc)
+//INPUT
+//      AValue: double
+//  const AFormat: string
+//  const APostfix: string
+//RETURN
+//      string
+function ODFGetSizeToStr(AValue: double; const AFormat: string = '0.###'; const APostfix: string = 'cm'): string;
+begin
+  Result := ZEFloatSeparator(FormatFloat(AFormat, AValue)) + APostfix;
+end; //ODFGetSizeToStr
 
 {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
 
@@ -2273,13 +2362,128 @@ end; //AddStyle
 constructor TZEODFWriteHelper.Create(AXMLSS: TZEXMLSS;
                        const _pages: TIntegerDynArray;
                        const _names: TStringDynArray;
-                       PageCount: integer);
+                       PagesCount: integer);
+var
+  i: integer;
+  _a: array of integer;
+
+  function _GetSheetOptions(PageNum: integer): TZSheetOptions;
+  begin
+    if (PageNum <= -1) then
+      Result := AXMLSS.DefaultSheetOptions
+    else
+      Result := AXMLSS.Sheets[_pages[PageNum]].SheetOptions;
+  end; //_GetSheetOptions
+
+  //For Styles.xml, get number of <style:page-layout> .. </style:page-layout>
+  //INPUT
+  //      SheetOptions: TZSheetOptions  - sheet options
+  //      PageNum: integer              - number of page in _pages array
+  //RETURN
+  //      integer - index of page layout
+  function _GetPageLayoutIndex(SheetOptions: TZSheetOptions; PageNum: integer): integer;
+  var
+    i: integer;
+    _SO: TZSheetOptions;
+    b: boolean;
+
+  begin
+    Result := -1;
+    for i := 0 to FUniquePageLayoutsCount - 1 do
+    begin
+      _SO := _GetSheetOptions(FUniquePageLayouts[i]);
+
+      b := (_SO.MarginLeft = SheetOptions.MarginLeft) and
+           (_SO.MarginBottom = SheetOptions.MarginBottom) and
+           (_SO.MarginTop = SheetOptions.MarginTop) and
+           (_SO.MarginRight = SheetOptions.MarginRight) and
+           (_SO.PaperSize = SheetOptions.PaperSize) and
+           (_SO.PortraitOrientation = SheetOptions.PortraitOrientation) and
+           (_SO.HeaderMargin = _SO.HeaderMargin) and
+           (_SO.FooterMargin = _SO.FooterMargin)
+           ;
+      if (b) then
+      begin
+        Result := i;
+        exit;
+      end;
+    end;
+    if (Result < 0) then
+    begin
+      Result := FUniquePageLayoutsCount;
+      FUniquePageLayouts[FUniquePageLayoutsCount] := PageNum;
+      inc(FUniquePageLayoutsCount);
+    end;
+  end; //_GetPageLayoutIndex
+
+  //For Styles.xml, get number of <style:master-page> .. </style:master-page>
+  //INPUT
+  //      SheetOptions: TZSheetOptions  - sheet options
+  //      PageNum: integer              - number of page in _pages array
+  //RETURN
+  //      integer - index of master page
+  function _GetMasterPageIndex(SheetOptions: TZSheetOptions; PageNum: integer): integer;
+  var
+    i: integer;
+    _SO: TZSheetOptions;
+    b: boolean;
+
+  begin
+    Result := -1;
+    for i := 0 to FMasterPagesCount - 1 do
+    begin
+      if (FMasterPages[i] <= -1) then
+        _SO := AXMLSS.DefaultSheetOptions
+      else
+        _SO := AXMLSS.Sheets[_pages[FMasterPages[i]]].SheetOptions;
+
+      b := (_SO.HeaderData = SheetOptions.HeaderData) and
+           (_SO.FooterData = SheetOptions.FooterData) and
+           (FPageLayoutsIndexes[FMasterPages[i]] = _a[PageNum]);
+      if (b) then
+      begin
+        Result := i;
+        exit;
+      end;
+    end;
+    if (Result < 0) then
+    begin
+      Result := FMasterPagesCount;
+      FMasterPages[FMasterPagesCount] := PageNum;
+      FPageLayoutsIndexes[FMasterPagesCount] := _a[PageNum];
+      FMasterPagesNames[FMasterPagesCount] := 'MasterPage' + IntToStr(FMasterPagesCount);
+      inc(FMasterPagesCount);
+    end;
+  end; //_GetMasterPageIndex
+
 begin
   inherited Create(AXMLSS);
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-  FConditionWriter := TZODFConditionalWriteHelper.Create(AXMLSS, _pages, _names, PageCount);
+  FConditionWriter := TZODFConditionalWriteHelper.Create(AXMLSS, _pages, _names, PagesCount);
   {$ENDIF}
-end;
+  SetLength(FUniquePageLayouts, PagesCount + 1);
+  FUniquePageLayouts[0] := -1;  //Default page layout
+  FUniquePageLayoutsCount := 1;
+  SetLength(FPageLayoutsIndexes, PagesCount + 1);
+
+  SetLength(_a, PagesCount);
+
+  SetLength(FMasterPages, PagesCount + 1);
+  SetLength(FMasterPagesNames, PagesCount + 1);
+  SetLength(FMasterPagesIndexes, PagesCount);
+  FMasterPagesCount := 1;
+  FMasterPages[0] := -1;        //Default masterpage
+  FMasterPagesNames[0] := 'Default';
+  try
+    for i := 0 to PagesCount - 1 do
+      _a[i] := _GetPageLayoutIndex(AXMLSS.Sheets[_pages[i]].SheetOptions, i);
+
+    for i := 0 to PagesCount - 1 do
+      FMasterPagesIndexes[i] := _GetMasterPageIndex(AXMLSS.Sheets[_pages[i]].SheetOptions, i);
+  finally
+    SetLength(_a, 0);
+  end;
+end; //Create
 
 destructor TZEODFWriteHelper.Destroy();
 begin
@@ -2287,8 +2491,176 @@ begin
   if (Assigned(FConditionWriter)) then
     FreeAndNil(FConditionWriter);
   {$ENDIF}
+  SetLength(FPageLayoutsIndexes, 0);
+  SetLength(FUniquePageLayouts, 0);
+  SetLength(FMasterPages, 0);
+  SetLength(FMasterPagesNames, 0);
+  SetLength(FMasterPagesIndexes, 0);
   inherited;
 end;
+
+//Write to XML all page layouts styles (<style:page-layout> .. </style:page-layout>)
+//INPUT
+//      xml: TZsspXMLWriterH
+//  const _pages: TIntegerDynArray
+procedure TZEODFWriteHelper.WriteStylesPageLayouts(xml: TZsspXMLWriterH; const _pages: TIntegerDynArray);
+var
+  i: integer;
+  _SO: TZSheetOptions;
+  s: string;
+  _w, _h: integer;
+
+  (*
+  <style:page-layout style:name="Mpm1">
+   <style:page-layout-properties fo:page-width="21.001cm" fo:page-height="29.7cm" style:num-format="1" style:print-orientation="portrait" fo:margin-top="2.2cm" fo:margin-bottom="1.799cm" fo:margin-left="1.9cm" fo:margin-right="2.101cm" fo:border="0.06pt solid #000000" fo:padding="0cm" style:shadow="none" fo:background-color="#00ff00" style:writing-mode="lr-tb">
+    <style:background-image/>
+   </style:page-layout-properties>
+   <style:header-style>
+    <style:header-footer-properties fo:min-height="0.201cm" fo:margin-left="0.101cm" fo:margin-right="0.101cm" fo:margin-bottom="0.101cm"/>
+   </style:header-style>
+   <style:footer-style>
+    <style:header-footer-properties fo:min-height="0.6cm" fo:margin-left="0cm" fo:margin-right="0cm" fo:margin-top="0.199cm"/>
+   </style:footer-style>
+  </style:page-layout>
+  *)
+
+  procedure _AddAttrSize(const AttrName: string; Value: integer; DefaultValue: integer = 20);
+  begin
+    if (Value <> DefaultValue) then
+      xml.Attributes.Add(AttrName, ODFGetSizeToStr(Value * 0.1), false);
+  end;
+
+  procedure _AddHeaderFooter(const ATagName, AAttrName: string; Value: integer; Color: TColor);
+  begin
+    xml.Attributes.Clear();
+    xml.WriteTagNode(ATagName, true, true, false);
+    _AddAttrSize(AAttrName, Value, -1);
+    if (Color <> clWindow) then
+      xml.Attributes.Add(ZETag_fo_background_color, '#' + ColorToHTMLHex(Color), false);
+
+    xml.WriteTagNode(ZETag_style_header_footer_properties, true, true, false);
+    xml.WriteEndTagNode(); //style:header-footer-properties
+
+    xml.WriteEndTagNode(); // ATagName
+  end;
+
+  //<style:page-layout-properties>..</style:page-layout-properties>
+  procedure _AddPageLayoutProperties(num: integer);
+  begin
+    if (FUniquePageLayouts[num] < 0) then
+      _SO := FXMLSS.DefaultSheetOptions
+    else
+      _SO := FXMLSS.Sheets[_pages[FUniquePageLayouts[num]]].SheetOptions;
+
+    xml.Attributes.Clear();
+
+    //Possible attributes (+ = implemented, ??? = not implemented):
+    //  fo:page-width="21.001cm"            +
+    //  fo:page-height="29.7cm"             +
+    //  style:num-format="1"                ???
+    //  style:print-orientation="portrait"  +
+    //  fo:margin-top="2.2cm"               +
+    //  fo:margin-bottom="1.799cm"          +
+    //  fo:margin-left="1.9cm"              +
+    //  fo:margin-right="2.101cm"           +
+    //  fo:border="0.06pt solid #000000"    ???
+    //  fo:padding="0cm"                    ???
+    //  style:shadow="none"                 ???
+    //  fo:background-color="#00ff00"       ???
+    //  style:writing-mode="lr-tb"          ???
+
+    //  fo:border-bottom                    ???
+    //  fo:border-left                      ???
+    //  fo:border-right                     ???
+    //  fo:border-top                       ???
+    //  fo:margin                           ???
+    //  fo:padding-bottom                   ???
+    //  fo:padding-left                     ???
+    //  fo:padding-right                    ???
+    //  fo:padding-top                      ???
+    //  style:border-line-width             ???
+    //  style:border-line-width-bottom      ???
+    //  style:border-line-width-left        ???
+    //  style:border-line-width-right       ???
+    //  style:border-line-width-top         ???
+    //  style:first-page-number             ???
+    //  style:footnote-max-height           ???
+    //  style:layout-grid-base-height       ???
+    //  style:layout-grid-base-width        ???
+    //  style:layout-grid-color             ???
+    //  style:layout-grid-display           ???
+    //  style:layout-grid-lines             ???
+    //  style:layout-grid-mode              ???
+    //  style:layout-grid-print             ???
+    //  style:layout-grid-ruby-below        ???
+    //  style:layout-grid-ruby-height       ???
+    //  style:layout-grid-snap-to           ???
+    //  style:layout-grid-standard-mode     ???
+    //  style:num-letter-sync               ???
+    //  style:num-prefix                    ???
+    //  style:num-suffix                    ???
+    //  style:paper-tray-name               ???
+    //  style:print                         ???
+    //  style:print-page-order              ???
+    //  style:register-truth-ref-style-name ???
+
+    //  style:scale-to                      ???  for printing, default 100%
+    //  style:scale-to-pages                ???  for printing, number of pages on witch a document shoud be printed, default 1
+    //  style:table-centering               ???
+
+    //Default margins (t/r/b/l) in mm: 20/20/20/20
+    _AddAttrSize(ZETag_fo_margin_top, _SO.MarginTop);
+    _AddAttrSize(ZETag_fo_margin_bottom, _SO.MarginBottom);
+    _AddAttrSize(ZETag_fo_margin_left, _SO.MarginLeft);
+    _AddAttrSize(ZETag_fo_margin_right, _SO.MarginRight);
+
+    s := IfThen(_SO.PortraitOrientation, ZETag_portrait, ZETag_landscape);
+    xml.Attributes.Add(ZETag_style_print_orientation, s, false);
+
+    if (_SO.PaperSize > 0) and (_so.PaperSize < const_ODS_paper_sizes_count) then
+    begin
+      _w := const_ODS_paper_sizes[_SO.PaperSize][0];
+      _h := const_ODS_paper_sizes[_SO.PaperSize][1];
+    end
+    else
+    begin
+      _w := _SO.PaperWidth * 10;
+      _h := _So.PaperHeight * 10;
+    end;
+
+    if (not _SO.PortraitOrientation) then
+    begin
+      i := _w;
+      _w := _h;
+      _h := i;
+    end;
+
+    xml.Attributes.Add(ZETag_fo_page_width, ODFGetSizeToStr(_w * 0.01), false);
+    xml.Attributes.Add(ZETag_fo_page_height, ODFGetSizeToStr(_h * 0.01), false);
+
+    xml.Attributes.Add('style:writing-mode', 'lr-tb', false); //???
+
+    xml.WriteTagNode(ZETag_style_page_layout_properties, true, true, false);
+    //Possible child tags:
+    //  style:background-image
+    //  style:columns
+    //  style:footnote-sep
+    xml.WriteEndTagNode(); //style:page-layout-properties
+
+    _AddHeaderFooter(ZETag_style_header_style, ZETag_fo_margin_bottom, _SO.HeaderMargin, _SO.HeaderBGColor);
+    _AddHeaderFooter(ZETag_style_footer_style, ZETag_fo_margin_top, _SO.FooterMargin, _SO.FooterBGColor);
+  end; //_AddPageLayoutProperties
+
+begin
+  for i := 0 to FUniquePageLayoutsCount - 1 do
+  begin
+    xml.Attributes.Clear();
+    xml.Attributes.Add(ZETag_Attr_StyleName, 'Mpm' + IntToStr(i + 1), false);
+    xml.WriteTagNode(ZETag_style_page_layout, true, true, false);
+
+    xml.WriteEndTagNode(); // style:page-layout
+  end;
+end; //WriteStylesPageLayouts
 
 //BooleanToStr дл€ ODF //TODO: потом заменить
 function ODFBoolToStr(value: boolean): string;
@@ -2756,7 +3128,7 @@ begin
   //÷вет фона €чейки
   if ((ProcessedStyle.BGColor <> XMLSS.Styles.DefaultStyle.BGColor) or (isDefaultStyle)) then
     if (ProcessedStyle.BGColor <> clWindow) then
-      _xml.Attributes.Add('fo:background-color', '#' + ColorToHTMLHex(ProcessedStyle.BGColor));
+      _xml.Attributes.Add(ZETag_fo_background_color, '#' + ColorToHTMLHex(ProcessedStyle.BGColor));
 
   //style:shrink-to-fit
   if (ProcessedStyle.Alignment.ShrinkToFit) then
@@ -3236,7 +3608,7 @@ var
         s := 'column';
       _xml.Attributes.Add('fo:break-before', s);
       //Ўирина колонки style:column-width
-      _xml.Attributes.Add('style:column-width', ZEFloatSeparator(FormatFloat('0.###', XMLSS.Sheets[_pages[now_i]].Columns[now_j].WidthMM / 10)) + 'cm', false);
+      _xml.Attributes.Add('style:column-width', ODFGetSizeToStr(XMLSS.Sheets[_pages[now_i]].Columns[now_j].WidthMM * 0.1), false);
       _xml.WriteEmptyTag('style:table-column-properties', true, false);
 
       _xml.WriteEndTagNode(); //style:style
@@ -3286,7 +3658,7 @@ var
         s := 'page';
       _xml.Attributes.Add('fo:break-before', s);
       //высота строки style:row-height
-      _xml.Attributes.Add('style:row-height', ZEFloatSeparator(FormatFloat('0.###', XMLSS.Sheets[_pages[now_i]].Rows[now_j].HeightMM / 10)) + 'cm', false);
+      _xml.Attributes.Add('style:row-height', ODFGetSizeToStr(XMLSS.Sheets[_pages[now_i]].Rows[now_j].HeightMM * 0.1), false);
        //?? style:min-row-height
       //style:use-optimal-row-height - пересчитывать ли высоту, если содержимое €чеек изменилось
       if (abs(XMLSS.Sheets[_pages[now_i]].Rows[now_j].Height - XMLSS.Sheets[_pages[now_i]].DefaultRowHeight) < 0.001) then
@@ -3296,7 +3668,7 @@ var
       if (k > -1) then
         if (XMLSS.Styles.Count - 1 >= k) then
           if (XMLSS.Styles[k].BGColor <> XMLSS.Styles[-1].BGColor) then
-            _xml.Attributes.Add('fo:background-color', '#' + ColorToHTMLHex(XMLSS.Styles[k].BGColor), false);
+            _xml.Attributes.Add(ZETag_fo_background_color, '#' + ColorToHTMLHex(XMLSS.Styles[k].BGColor), false);
 
       //?? fo:keep-together - неразрывные строки (auto | always)
       _xml.WriteEmptyTag('style:table-row-properties', true, false);
@@ -4360,7 +4732,7 @@ begin
            'ttb' = xml.Attributes['style:direction'];
 
       //цвет фона
-      s := xml.Attributes.ItemsByName['fo:background-color'];
+      s := xml.Attributes.ItemsByName[ZETag_fo_background_color];
       if (s > '') then
         _style.BGColor := GetBGColorForODS(s);//HTMLHexToColor(s);
 
@@ -4765,7 +5137,7 @@ var
                 s := xml.Attributes.ItemsByName['style:row-height'];
                 if (s > '') then
                   ODFGetValueSizeMM(s, ODFRowStyles[RowStyleCount].height);
-                s := xml.Attributes.ItemsByName['fo:background-color'];
+                s := xml.Attributes.ItemsByName[ZETag_fo_background_color];
                if (s > '') then
                  ODFRowStyles[RowStyleCount].color := HTMLHexToColor(s);
               end;

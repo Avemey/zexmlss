@@ -386,6 +386,22 @@ type
     property Active: boolean read FActive write SetActive;
   end;
 
+  //Footer/Header
+  TZSheetFooterHeader = class (TPersistent)
+  private
+    FDataLeft: string;
+    FData: string;
+    FDataRight: string;
+  public
+    constructor Create();
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(Source: TPersistent): boolean; virtual;
+  published
+    property DataLeft: string read FDataLeft write FDataLeft;
+    property Data: string read FData write FData;
+    property DataRight: string read FDataRight write FDataRight;
+  end;
+
   //WorkSheetOptions
   TZSheetOptions = class (TPersistent)
   private
@@ -403,9 +419,20 @@ type
     FStartPageNumber: integer;
     FHeaderMargin: word;
     FFooterMargin: word;
-    FHeaderData: string;
-    FFooterData: string;
+    FIsEvenFooterEqual: boolean;      //Is the footer on even and odd pages the same?
+    FIsEvenHeaderEqual: boolean;      //Is the header on even and odd pages the same?
+
+    FHeader: TZSheetFooterHeader;     //Header for all pages. When IsEvenFooterEqual = false - only for odd pages.
+    FFooter: TZSheetFooterHeader;     //Footer for all pages. When IsEvenFooterEqual = false - only for odd pages.
+    FEvenHeader: TZSheetFooterHeader; //Header for even pages. Used only if IsEvenFooterEqual = false
+    FEvenFooter: TZSheetFooterHeader; //Footer for even pages. Used only if IsEvenFooterEqual = false
+
+    FHeaderBGColor: TColor;
+    FFooterBGColor: TColor;
+
     FPaperSize: byte;
+    FPaperWidth: integer;
+    FPaperHeight: integer;
     FSplitVerticalMode: TZSplitMode;
     FSplitHorizontalMode: TZSplitMode;
     FSplitVerticalValue: integer;       //Вроде можно вводить отрицательные
@@ -413,8 +440,13 @@ type
                                         //    в пикселях, если SplitMode = ZSplitSplit
                                         //    в кол-ве строк/столбцов, если SplitMode = ZSplitFrozen
                                         // Если SplitMode = ZSplitNone, то фиксация столбцов/ячеек не работает
+    function GetHeaderData(): string;
+    procedure SetHeaderData(Value: string);
+    function GetFooterData(): string;
+    procedure SetfooterData(Value: string);
   public
     constructor Create(); virtual;
+    destructor Destroy(); override;
     procedure Assign(Source: TPersistent); override;
   published
     property ActiveCol: word read FActiveCol write FActiveCol default 0;
@@ -424,14 +456,26 @@ type
     property MarginTop: word read FMarginTop write FMarginTop default 25;
     property MarginRight: word read FMarginRight write FMarginRight default 20;
     property PaperSize: byte read FPaperSize write FPaperSize default 9; // A4
+    property PaperWidth: integer read FPaperWidth write FPaperWidth default 0;    //User defined paper width in mm.
+                                                                                  // used only for PaperSize = 0!
+    property PaperHeight: integer read FPaperHeight write FPaperHeight default 0; //User defined paper height in mm.
+                                                                                  // used only for PaperSize = 0!
     property PortraitOrientation: boolean read FPortraitOrientation write FPortraitOrientation default true;
     property CenterHorizontal: boolean read FCenterHorizontal write FCenterHorizontal default false;
     property CenterVertical: boolean read FCenterVertical write FCenterVertical default false;
     property StartPageNumber: integer read FStartPageNumber write FStartPageNumber default 1;
     property HeaderMargin: word read FHeaderMargin write FHeaderMargin default 13;
     property FooterMargin: word read FFooterMargin write FFooterMargin default 13;
-    property HeaderData: string read FHeaderData write FHeaderData;
-    property FooterData: string read FFooterData write FFooterData;
+    property IsEvenFooterEqual: boolean read FIsEvenFooterEqual write FIsEvenFooterEqual default true;
+    property IsEvenHeaderEqual: boolean read FIsEvenHeaderEqual write FIsEvenHeaderEqual default true;
+    property HeaderData: string read GetHeaderData write SetHeaderData;
+    property FooterData: string read GetFooterData write SetFooterData;
+    property Header: TZSheetFooterHeader read FHeader;
+    property Footer: TZSheetFooterHeader read FFooter;
+    property EvenHeader: TZSheetFooterHeader read FEvenHeader;
+    property EvenFooter: TZSheetFooterHeader read FEvenFooter;
+    property HeaderBGColor: TColor read FHeaderBGColor write FHeaderBGColor default clWindow;
+    property FooterBGColor: TColor read FFooterBGColor write FFooterBGColor default clWindow;
     property SplitVerticalMode: TZSplitMode read FSplitVerticalMode write FSplitVerticalMode default ZSplitNone;
     property SplitHorizontalMode: TZSplitMode read FSplitHorizontalMode write FSplitHorizontalMode default ZSplitNone;
     property SplitVerticalValue: integer read FSplitVerticalValue write FSplitVerticalValue;
@@ -2307,6 +2351,47 @@ begin
   FSize := PixelToPoint(Value, t);
 end;
 
+////::::::::::::: TZSheetFooterHeader :::::::::::::::::////
+
+constructor TZSheetFooterHeader.Create();
+begin
+  inherited;
+  FDataLeft := '';
+  FData := '';
+  FDataRight := '';
+end;
+
+procedure TZSheetFooterHeader.Assign(Source: TPersistent);
+var
+  _t: TZSheetFooterHeader;
+
+begin
+  if (Source is TZSheetFooterHeader) then
+  begin
+    _t := Source as TZSheetFooterHeader;
+    FDataLeft := _t.DataLeft;
+    FData := _t.Data;
+    FDataRight := _t.DataRight;
+  end
+  else
+    inherited;
+end;
+
+function TZSheetFooterHeader.IsEqual(Source: TPersistent): boolean;
+var
+  _t: TZSheetFooterHeader;
+
+begin
+  result := false;
+  if (Source is TZSheetFooterHeader) then
+  begin
+    _t := Source as TZSheetFooterHeader;
+    result := (_t.DataLeft = FDataLeft) and
+              (_t.Data = FData) and
+              (_t.DataRight = FDataRight);
+  end;
+end;
+
 ////::::::::::::: TZSheetOptions :::::::::::::::::////
 
 constructor TZSheetOptions.Create();
@@ -2325,12 +2410,53 @@ begin
   FHeaderMargin := 13;
   FFooterMargin := 13;
   FPaperSize := 9;
-  FHeaderData := '';
-  FFooterData := '';
+
+  FIsEvenFooterEqual := true;
+  FIsEvenHeaderEqual := true;
+
+  FHeader := TZSheetFooterHeader.Create();
+  FFooter := TZSheetFooterHeader.Create();
+  FEvenHeader := TZSheetFooterHeader.Create();
+  FEvenFooter := TZSheetFooterHeader.Create();
+
+  FHeaderBGColor := clWindow;
+  FFooterBGColor := clWindow;
+
   FSplitVerticalMode := ZSplitNone;
   FSplitHorizontalMode := ZSplitNone;
   FSplitVerticalValue := 0;
   FSplitHorizontalValue := 0;
+  FPaperWidth := 0;
+  FPaperHeight := 0;
+end;
+
+destructor TZSheetOptions.Destroy();
+begin
+  FreeAndNil(FHeader);
+  FreeAndNil(FFooter);
+  FreeAndNil(FEvenHeader);
+  FreeAndNil(FEvenFooter);
+  inherited;
+end;
+
+function TZSheetOptions.GetHeaderData(): string;
+begin
+  result := FHeader.Data;
+end;
+
+procedure TZSheetOptions.SetHeaderData(Value: string);
+begin
+  FHeader.Data := Value;
+end;
+
+function TZSheetOptions.GetFooterData(): string;
+begin
+  result := FFooter.Data;
+end;
+
+procedure TZSheetOptions.SetfooterData(Value: string);
+begin
+  FFooter.Data := Value;
 end;
 
 procedure TZSheetOptions.Assign(Source: TPersistent);
@@ -2360,6 +2486,14 @@ begin
     SplitHorizontalMode := t.SplitHorizontalMode;
     SplitVerticalValue := t.SplitVerticalValue;
     SplitHorizontalValue := t.SplitHorizontalValue;
+    Footer.Assign(t.Footer);
+    Header.Assign(t.Header);
+    EvenHeader.Assign(t.EvenHeader);
+    EvenFooter.Assign(t.EvenFooter);
+    HeaderBGColor := t.HeaderBGColor;
+    FooterBGColor := t.FooterBGColor;
+    IsEvenFooterEqual := t.IsEvenFooterEqual;
+    IsEvenHeaderEqual := t.IsEvenHeaderEqual;
   end else
     inherited Assign(Source);
 end;
