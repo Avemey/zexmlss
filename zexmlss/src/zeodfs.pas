@@ -2510,20 +2510,6 @@ var
   s: string;
   _w, _h: integer;
 
-  (*
-  <style:page-layout style:name="Mpm1">
-   <style:page-layout-properties fo:page-width="21.001cm" fo:page-height="29.7cm" style:num-format="1" style:print-orientation="portrait" fo:margin-top="2.2cm" fo:margin-bottom="1.799cm" fo:margin-left="1.9cm" fo:margin-right="2.101cm" fo:border="0.06pt solid #000000" fo:padding="0cm" style:shadow="none" fo:background-color="#00ff00" style:writing-mode="lr-tb">
-    <style:background-image/>
-   </style:page-layout-properties>
-   <style:header-style>
-    <style:header-footer-properties fo:min-height="0.201cm" fo:margin-left="0.101cm" fo:margin-right="0.101cm" fo:margin-bottom="0.101cm"/>
-   </style:header-style>
-   <style:footer-style>
-    <style:header-footer-properties fo:min-height="0.6cm" fo:margin-left="0cm" fo:margin-right="0cm" fo:margin-top="0.199cm"/>
-   </style:footer-style>
-  </style:page-layout>
-  *)
-
   procedure _AddAttrSize(const AttrName: string; Value: integer; DefaultValue: integer = 20);
   begin
     if (Value <> DefaultValue) then
@@ -2657,7 +2643,7 @@ begin
     xml.Attributes.Clear();
     xml.Attributes.Add(ZETag_Attr_StyleName, 'Mpm' + IntToStr(i + 1), false);
     xml.WriteTagNode(ZETag_style_page_layout, true, true, false);
-
+    _AddPageLayoutProperties(_Pages[FUniquePageLayouts[i]]);
     xml.WriteEndTagNode(); // style:page-layout
   end;
 end; //WriteStylesPageLayouts
@@ -3353,7 +3339,7 @@ var
   begin
     _xml.Attributes.Clear();
     _xml.WriteTagNode(ZETag_office_automatic_styles, true, true, true);
-
+    WriteHelper.WriteStylesPageLayouts(_xml, _pages);
     _xml.WriteEndTagNode(); //office:automatic-styles
   end; //_WriteAutomaticStyle
 

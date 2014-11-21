@@ -3013,9 +3013,9 @@ var
                   begin
                     FErrorCode := FErrorCode or 128;
                     _type_comment := -1;
-                    FValue := sl;
+                    FValue := sl + ss;
                   end;
-                  FValue := FValue + ss;
+                  //FValue := FValue + ss;
                 end else
                 begin
                   {$IFDEF DELPHI_UNICODE}
