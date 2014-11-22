@@ -3341,7 +3341,7 @@ begin
     if (Count <> t.Count) then
       exit;
     for i := 0 to Count - 1 do
-      if (not FConditions[i].Equals(t.Items[i])) then
+      if (not FConditions[i].IsEqual(t.Items[i])) then
         exit;
     result := true;
   end;
@@ -3796,7 +3796,7 @@ begin
     if (Count <> t.Count) then
       exit;
     for i := 0 to Count - 1 do
-      if (not FStyles[i].Equals(t.Items[i])) then
+      if (not FStyles[i].IsEqual(t.Items[i])) then
         exit;
 
     result := true;

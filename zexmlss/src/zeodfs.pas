@@ -1393,15 +1393,15 @@ var
   function _CheckCondition(): boolean;
   var
     v1, v2: double;
-    FS: TFormatSettings;
     t: integer;
 
     function _CheckBetween(val: TZCondition): boolean;
     begin
       result := false;
       if (kol = 3) then
-        if (TryStrToFloat(_strArr[1], v1 , FS)) then
-          if (TryStrToFloat(_strArr[2], v2 , FS)) then
+        //can not use standart TryStrToFloat - no FS in C++ builder 6!
+        if (ZEIsTryStrToFloat(_strArr[1], v1)) then
+          if (ZEIsTryStrToFloat(_strArr[2], v2)) then
           begin
             result := true;
             Condition := val;
@@ -1415,7 +1415,7 @@ var
       result := false;
       if (kol >= 2) then
         if (ODFGetOperatorByStr(_strArr[0], ConditionOperator)) then
-          if (TryStrToFloat(_strArr[1], v1, FS)) then
+          if (ZEIsTryStrToFloat(_strArr[1], v1)) then
           begin
             result := true;
             Condition := ZCFCellContentOperator;
@@ -1448,7 +1448,7 @@ var
       if (kol = 2) then
       begin
         if (isFloat) then
-          result := TryStrToFloat(_strArr[1], v1, FS)
+          result := ZEIsTryStrToFloat(_strArr[1], v1)
         else
           result := TryStrToInt(_strArr[1], t);
         if (result) then
@@ -1489,7 +1489,6 @@ var
   begin
     result := false;
     s := _strArr[0];
-    FS.DecimalSeparator := '.';
 
     //TODO: не забыть добавить все остальные условия
     //Для условных стилей из ODF (без расширения в LibreOffice):
@@ -2207,7 +2206,7 @@ begin
               //TODO: потом переделать сравнение условных форматирований
               //      (пересечение областей и др.)
               for i := 0 to _CF.Count - 1 do
-                if (_CF[i].Equals(_CFItem)) then
+                if (_CF[i].IsEqual(_CFItem)) then
                 begin
                   b := false;
                   break;

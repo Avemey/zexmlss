@@ -32,6 +32,7 @@ const
 //  TZESaveStrArray = array of string;  // Since Delphi 7 and FPC 2005 - TStringDynArray
 
 //ѕопытка преобразовать строку в число
+function ZEIsTryStrToFloat(const st: string; out retValue: double): boolean;
 function ZETryStrToFloat(const st: string; valueIfError: double = 0): double; overload;
 function ZETryStrToFloat(const st: string; out isOk: boolean; valueIfError: double = 0): double; overload;
 
@@ -270,6 +271,11 @@ begin
       result := valueIfError;
   end;
 end; //ZETryStrToBoolean
+
+function ZEIsTryStrToFloat(const st: string; out retValue: double): boolean;
+begin
+  retValue := ZETryStrToFloat(st, Result);
+end;
 
 //ѕопытка преобразовать строку в число
 //INPUT
