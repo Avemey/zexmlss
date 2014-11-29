@@ -250,6 +250,7 @@ type
     destructor Destroy(); override;
 
     procedure WriteStylesPageLayouts(xml: TZsspXMLWriterH; const _pages: TIntegerDynArray);
+    procedure WriteStylesMasterPages(xml: TZsspXMLWriterH; const _pages: TIntegerDynArray);
 
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     property ConditionWriter: TZODFConditionalWriteHelper read FConditionWriter;
@@ -323,6 +324,7 @@ uses
    ;
 
 const
+  ZETag_text_p              = 'text:p';
   ZETag_StyleFontFace       = 'style:font-face';      //style:font-face
   ZETag_Attr_StyleName      = 'style:name';           //style:name
   ZETag_StyleStyle          = 'style:style';
@@ -344,6 +346,16 @@ const
   ZETag_fo_background_color = 'fo:background-color';
   ZETag_style_header_footer_properties = 'style:header-footer-properties';
   ZETag_style_page_layout_properties = 'style:page-layout-properties';
+  ZETag_office_master_styles = 'office:master-styles';
+  ZETag_style_master_page   = 'style:master-page';
+  ZETag_style_page_layout_name = 'style:page-layout-name';
+  ZETag_style_header        = 'style:header';
+  ZETag_style_header_left   = 'style:header-left';
+  ZETag_style_footer        = 'style:footer';
+  ZETag_style_footer_left   = 'style:footer-left';
+  ZETag_style_region_left   = 'style:region-left';
+  ZETag_style_region_center = 'style:region-center';
+  ZETag_style_region_right  = 'style:region-right';
 
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   const_ConditionalStylePrefix      = 'ConditionalStyle_f';
@@ -2398,8 +2410,10 @@ var
            (_SO.MarginRight = SheetOptions.MarginRight) and
            (_SO.PaperSize = SheetOptions.PaperSize) and
            (_SO.PortraitOrientation = SheetOptions.PortraitOrientation) and
-           (_SO.HeaderMargin = _SO.HeaderMargin) and
-           (_SO.FooterMargin = _SO.FooterMargin)
+           (_SO.HeaderMargin = SheetOptions.HeaderMargin) and
+           (_SO.FooterMargin = SheetOptions.FooterMargin) and
+           (_SO.HeaderBGColor = SheetOptions.HeaderBGColor) and
+           (_SO.FooterBGColor = SheetOptions.FooterBGColor)
            ;
       if (b) then
       begin
@@ -2436,8 +2450,10 @@ var
       else
         _SO := AXMLSS.Sheets[_pages[FMasterPages[i]]].SheetOptions;
 
-      b := (_SO.HeaderData = SheetOptions.HeaderData) and
-           (_SO.FooterData = SheetOptions.FooterData) and
+      b := (_SO.Header.IsEqual(SheetOptions.Header)) and
+           (_SO.Footer.IsEqual(SheetOptions.Footer)) and
+           (_SO.IsEvenFooterEqual = SheetOptions.IsEvenFooterEqual) and
+           (_SO.IsEvenHeaderEqual = SheetOptions.IsEvenHeaderEqual) and
            (FPageLayoutsIndexes[FMasterPages[i]] = _a[PageNum]);
       if (b) then
       begin
@@ -2646,6 +2662,68 @@ begin
     xml.WriteEndTagNode(); // style:page-layout
   end;
 end; //WriteStylesPageLayouts
+
+//Write to XML all master pages (<style:master-page> .. </style:master-page>)
+//INPUT
+//      xml: TZsspXMLWriterH
+//  const _pages: TIntegerDynArray
+procedure TZEODFWriteHelper.WriteStylesMasterPages(xml: TZsspXMLWriterH; const _pages: TIntegerDynArray);
+var
+  i: integer;
+  _SO: TZSheetOptions;
+
+  procedure _WriteRegion(const RegionName, Txt: string);
+  begin
+    xml.WriteTagNode(RegionName, true, true, false);
+    xml.WriteTag(ZETag_text_p, Txt, true, false, true);
+    xml.WriteEndTagNode();
+  end; //_WriteRegion
+
+  //Write header/footer item
+  procedure _WriteHFItem(const TagName: string; const HFItem: TZSheetFooterHeader);
+  begin
+    xml.Attributes.Clear();
+    xml.WriteTagNode(TagName, true, true, false);
+    if ((HFItem.DataLeft = HFItem.DataRight) and (HFItem.DataLeft = '')) then
+    begin
+      xml.WriteTag(ZETag_text_p, HFItem.Data, true, false, true);
+    end
+    else
+    begin
+      _WriteRegion(ZETag_style_region_left, HFItem.DataLeft);
+      _WriteRegion(ZETag_style_region_center, HFItem.Data);
+      _WriteRegion(ZETag_style_region_right, HFItem.DataRight);
+    end;
+
+    xml.WriteEndTagNode(); //TagName
+  end; //_WriteHFItem
+
+  procedure _WriteMasterPage(Num: integer);
+  begin
+    if (num < 0) then
+      _SO := FXMLSS.DefaultSheetOptions
+    else
+      _SO := FXMLSS.Sheets[num].SheetOptions;
+
+    _WriteHFItem(ZETag_style_header, _SO.Header);
+    if (not _SO.IsEvenHeaderEqual) then
+      _WriteHFItem(ZETag_style_header_left, _SO.EvenHeader);
+    _WriteHFItem(ZETag_style_footer, _SO.Footer);
+    if (not _SO.IsEvenFooterEqual) then
+      _WriteHFItem(ZETag_style_footer_left, _SO.EvenFooter);
+  end; //_WriteMasterPage
+
+begin
+  for i := 0 to FMasterPagesCount - 1 do
+  begin
+    xml.Attributes.Clear();
+    xml.Attributes.Add(ZETag_Attr_StyleName, FMasterPagesNames[i], false);
+    xml.Attributes.Add(ZETag_style_page_layout_name, 'Mpm' + IntToStr(FUniquePageLayouts[FPageLayoutsIndexes[FMasterPages[i]]]));
+    xml.WriteTagNode(ZETag_style_master_page, true, true, false);
+    _WriteMasterPage(_Pages[FMasterPages[i]]);
+    xml.WriteEndTagNode(); //style:master-page
+  end;
+end; //WriteStylesMasterPages
 
 //BooleanToStr для ODF //TODO: потом заменить
 function ODFBoolToStr(value: boolean): string;
@@ -3342,6 +3420,16 @@ var
     _xml.WriteEndTagNode(); //office:automatic-styles
   end; //_WriteAutomaticStyle
 
+  // <office:master-styles>..</office:master-styles>
+  //Contains master-pages styles (footers/headers etc)
+  procedure _WriteOfficeMasterStyles();
+  begin
+    _xml.Attributes.Clear();
+    _xml.WriteTagNode(ZETag_office_master_styles, true, true, true);
+
+    _xml.WriteEndTagNode(); //office:master-styles
+  end; //_WriteOfficeMasterStyles
+
 begin
   result := 0;
   _xml := nil;
@@ -3381,6 +3469,8 @@ begin
     _xml.WriteEndTagNode(); //office:styles
 
     _WriteAutomaticStyle(); //<office:automatic-styles>..</office:automatic-styles>
+
+    _WriteOfficeMasterStyles(); // <office:master-styles> .. </office:master-styles>
 
     _xml.WriteEndTagNode(); //office:document-styles
   finally
@@ -3784,7 +3874,7 @@ var
       if (href > '') then
       begin
         xml.Attributes.Clear();
-        xml.WriteTagNode('text:p', true, false, true);
+        xml.WriteTagNode(ZETag_text_p, true, false, true);
         xml.Attributes.Add('xlink:type', 'simple'); // mandatory for ODF 1.2 validator
         xml.Attributes.Add('xlink:href', href);
         //office:target-frame-name='_blank' - открывать в новом фрейме
@@ -3797,14 +3887,14 @@ var
         begin
           if CellData[i] = AnsiChar(#10) then
           begin
-            xml.WriteTag('text:p', s, true, false, true);
+            xml.WriteTag(ZETag_text_p, s, true, false, true);
             s := '';
           end else
             if (CellData[i] <> AnsiChar(#13)) then
               s := s + CellData[i];
         end;
         if (s > '') then
-          xml.WriteTag('text:p', s, true, false, true);
+          xml.WriteTag(ZETag_text_p, s, true, false, true);
       end;
     end; //WriteTextP
 
@@ -5350,13 +5440,13 @@ var
             xml.ReadTag();
 
             //Текст ячейки
-            if (IfTag('text:p', 4)) then
+            if (IfTag(ZETag_text_p, 4)) then
             begin
               _IsHaveTextInRow := true;
               _isHaveTextCell := true;
               if (_isnf) then
                 _celltext := _celltext + {$IFDEF FPC} LineEnding {$ELSE} sLineBreak {$ENDIF};
-              while (not IfTag('text:p', 6)) do
+              while (not IfTag(ZETag_text_p, 6)) do
               begin
                 if (xml.Eof()) then
                   break;
@@ -5393,7 +5483,7 @@ var
                 //TODO: <text:span> - в будущем нужно будет как-то обрабатывать текст с
                 //      форматированием, сейчас игнорируем
                 _celltext := _celltext + xml.TextBeforeTag;
-                if ((xml.TagName <> 'text:p') and (xml.TagName <> 'text:a') and (xml.TagName <> 'text:s') and
+                if ((xml.TagName <> ZETag_text_p) and (xml.TagName <> 'text:a') and (xml.TagName <> 'text:s') and
                     (xml.TagName <> 'text:span')) then
                   _celltext := _celltext +  xml.RawTextTag;
               end; //while
@@ -5419,9 +5509,9 @@ var
                 //dc:date - дата комментария, пока игнорируется
 
                 //Текст примечания
-                if (IfTag('text:p', 4)) then
+                if (IfTag(ZETag_text_p, 4)) then
                 begin
-                  while (not IfTag('text:p', 6)) do
+                  while (not IfTag(ZETag_text_p, 6)) do
                   begin
                     if (xml.Eof()) then
                       break;
