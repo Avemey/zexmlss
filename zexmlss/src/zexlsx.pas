@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2014.07.20
+// Last update: 2014.12.01
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - uniform save API for creating
 //     XLSX files in Delphi/Windows
@@ -3633,6 +3633,84 @@ var
     end;
   end; //_ApplyStyle
 
+  //I hate this f*****g format!
+  //  Sometimes in styles.xml there are no <Colors> .. </Colors>! =_="
+  //  Using standart colors.
+  procedure _CheckIndexedColors();
+  const
+    _standart: array [0..55] of string =
+    (
+      '#000000',
+      '#FFFFFF',
+      '#FF0000',
+      '#00FF00',
+      '#0000FF',
+      '#FFFF00',
+      '#FF00FF',
+      '#00FFFF',
+      '#800000',
+      '#008000',
+      '#000080',
+      '#808000',
+      '#800080',
+      '#008080',
+      '#C0C0C0',
+      '#808080',
+      '#9999FF',
+      '#993366',
+      '#FFFFCC',
+      '#CCFFFF',
+      '#660066',
+      '#FF8080',
+      '#0066CC',
+      '#CCCCFF',
+      '#000080',
+      '#FF00FF',
+      '#FFFF00',
+      '#00FFFF',
+      '#800080',
+      '#800000',
+      '#008080',
+      '#0000FF',
+      '#00CCFF',
+      '#CCFFFF',
+      '#CCFFCC',
+      '#FFFF99',
+      '#99CCFF',
+      '#FF99CC',
+      '#CC99FF',
+      '#FF66CC',
+      '#3366FF',
+      '#33CCCC',
+      '#99CC00',
+      '#FFCC00',
+      '#FF9900',
+      '#FF99CC',
+      '#666699',
+      '#969696',
+      '#003300',
+      '#339966',
+      '#003300',
+      '#333300',
+      '#993300',
+      '#993366',
+      '#333399',
+      '#333333'
+    );
+  var
+    i: integer;
+
+  begin
+    if (indexedColorCount = 0) then
+    begin
+      indexedColorCount := 56;
+      indexedColorMax := indexedColorCount + 10;
+      SetLength(indexedColor, indexedColorMax);
+      for i := 0 to 55 do
+        indexedColor[i] := HTMLHexToColor(_standart[i]);
+    end;
+  end; //_CheckIndexedColors
+
 begin
   result := false;
   xml := nil;
@@ -3684,6 +3762,8 @@ begin
     end; //while
 
     //тут незабыть применить номера цветов, если были введены
+
+    _CheckIndexedColors();
 
     //
     for i := 0 to FillCount - 1 do
@@ -3887,6 +3967,7 @@ begin
       end;
     end; //while
     result := true;
+
   finally
     if (Assigned(xml)) then
       FreeAndNil(xml);
@@ -4000,6 +4081,45 @@ begin
     _authors := nil;  
   end;
 end; //ZEXSLXReadComments
+
+procedure XLSXSortRelationArray(var arr: TZXLSXRelationsArray; count: integer);
+var
+  tmp: TZXLSXRelations;
+  i, j: integer;
+  _t1, _t2: integer;
+  s: string;
+  b: boolean;
+
+  function _cmp(): boolean;
+  begin
+    b := false;
+    s := arr[j].id;
+    delete(s, 1, 3);
+    b := TryStrToInt(s, _t1);
+    if (b) then
+    begin
+      s := arr[j + 1].id;
+      delete(s, 1, 3);
+      b := TryStrToInt(s, _t2);
+    end;
+
+    if (b) then
+      result := _t1 > _t2
+    else
+      result := arr[j].id > arr[j + 1].id;
+  end;
+
+begin
+  //TODO: do not forget update sorting.
+  for i := 0 to count - 2 do
+    for j := 0 to count - 2 do
+      if (_cmp()) then
+      begin
+        tmp := arr[j];
+        arr[j] := arr[j + 1];
+        arr[j + 1] := tmp;
+      end;
+end;
 
 //Читает распакованный xlsx
 //INPUT
@@ -4285,20 +4405,20 @@ begin
           break;
         end; //if
 
-        for i := 1 to RelationsCounts[SheetRelationNumber] do
+        //for i := 1 to RelationsCounts[SheetRelationNumber] do
+        XLSXSortRelationArray(RelationsArray[SheetRelationNumber], RelationsCounts[SheetRelationNumber]);
         for j := 0 to RelationsCounts[SheetRelationNumber] - 1 do
-        if (RelationsArray[SheetRelationNumber][j].sheetid = i) then
-        begin
-          b := _CheckSheetRelations(FileArray[RelationsArray[SheetRelationNumber][j].fileid].name);
-          FreeAndNil(stream);
-          stream := TFileStream.Create(DirName + FileArray[RelationsArray[SheetRelationNumber][j].fileid].name, fmOpenRead or fmShareDenyNone);
-          if (not ZEXSLXReadSheet(XMLSS, stream, RelationsArray[SheetRelationNumber][j].name, StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
-            result := result or 4;
-          if (b) then
-            _ReadComments();
-          _no_sheets := false;
-          break;
-        end; //if
+          if (RelationsArray[SheetRelationNumber][j].sheetid > 0) then
+          begin
+            b := _CheckSheetRelations(FileArray[RelationsArray[SheetRelationNumber][j].fileid].name);
+            FreeAndNil(stream);
+            stream := TFileStream.Create(DirName + FileArray[RelationsArray[SheetRelationNumber][j].fileid].name, fmOpenRead or fmShareDenyNone);
+            if (not ZEXSLXReadSheet(XMLSS, stream, RelationsArray[SheetRelationNumber][j].name, StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
+              result := result or 4;
+            if (b) then
+              _ReadComments();
+            _no_sheets := false;
+          end; //if
       end;
       //если прочитано 0 листов - пробуем прочитать все (не удалось прочитать workbook/rel)
       if (_no_sheets) then
@@ -4534,9 +4654,10 @@ begin
           break;
         end; //if
 
-        for i := 1 to ZH.RelationsCounts[ZH.SheetRelationNumber] do
+        //for i := 1 to ZH.RelationsCounts[ZH.SheetRelationNumber] do
+        XLSXSortRelationArray(RelationsArray[SheetRelationNumber], RelationsCounts[SheetRelationNumber]);
         for j := 0 to ZH.RelationsCounts[ZH.SheetRelationNumber] - 1 do
-        if (ZH.RelationsArray[ZH.SheetRelationNumber][j].sheetid = i) then
+        if (ZH.RelationsArray[ZH.SheetRelationNumber][j].sheetid > 0) then
         begin
           ZH.ListName := ZH.RelationsArray[ZH.SheetRelationNumber][j].name;
 

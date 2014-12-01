@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2014.11.08
+// Last update: 2014.12.01
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - added uniform save API
 //     to create ODS in Delphi/Windows
@@ -2524,6 +2524,7 @@ var
   _SO: TZSheetOptions;
   s: string;
   _w, _h: integer;
+  tmp: integer;
 
   procedure _AddAttrSize(const AttrName: string; Value: integer; DefaultValue: integer = 20);
   begin
@@ -2631,9 +2632,9 @@ var
 
     if (not _SO.PortraitOrientation) then
     begin
-      i := _w;
+      tmp := _w;
       _w := _h;
-      _h := i;
+      _h := tmp;
     end;
 
     xml.Attributes.Add(ZETag_fo_page_width, ODFGetSizeToStr(_w * 0.01), false);
@@ -2703,7 +2704,7 @@ var
     if (num < 0) then
       _SO := FXMLSS.DefaultSheetOptions
     else
-      _SO := FXMLSS.Sheets[num].SheetOptions;
+      _SO := FXMLSS.Sheets[_Pages[num]].SheetOptions;
 
     _WriteHFItem(ZETag_style_header, _SO.Header);
     if (not _SO.IsEvenHeaderEqual) then
@@ -2718,9 +2719,9 @@ begin
   begin
     xml.Attributes.Clear();
     xml.Attributes.Add(ZETag_Attr_StyleName, FMasterPagesNames[i], false);
-    xml.Attributes.Add(ZETag_style_page_layout_name, 'Mpm' + IntToStr(FUniquePageLayouts[FPageLayoutsIndexes[FMasterPages[i]]]));
+    xml.Attributes.Add(ZETag_style_page_layout_name, 'Mpm' + IntToStr(FUniquePageLayouts[FPageLayoutsIndexes[FMasterPagesIndexes[i]]] + 1));
     xml.WriteTagNode(ZETag_style_master_page, true, true, false);
-    _WriteMasterPage(_Pages[FMasterPages[i]]);
+    _WriteMasterPage(FMasterPages[i]);
     xml.WriteEndTagNode(); //style:master-page
   end;
 end; //WriteStylesMasterPages
@@ -3426,7 +3427,7 @@ var
   begin
     _xml.Attributes.Clear();
     _xml.WriteTagNode(ZETag_office_master_styles, true, true, true);
-
+    WriteHelper.WriteStylesMasterPages(_xml, _pages);
     _xml.WriteEndTagNode(); //office:master-styles
   end; //_WriteOfficeMasterStyles
 
