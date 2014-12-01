@@ -2375,7 +2375,7 @@ constructor TZEODFWriteHelper.Create(AXMLSS: TZEXMLSS;
                        const _names: TStringDynArray;
                        PagesCount: integer);
 var
-  i: integer;
+  i, t: integer;
   _a: array of integer;
 
   function _GetSheetOptions(PageNum: integer): TZSheetOptions;
@@ -2485,16 +2485,24 @@ begin
 
   SetLength(FMasterPages, PagesCount + 1);
   SetLength(FMasterPagesNames, PagesCount + 1);
-  SetLength(FMasterPagesIndexes, PagesCount);
+  SetLength(FMasterPagesIndexes, PagesCount + 1);
   FMasterPagesCount := 1;
   FMasterPages[0] := -1;        //Default masterpage
   FMasterPagesNames[0] := 'Default';
+
   try
     for i := 0 to PagesCount - 1 do
       _a[i] := _GetPageLayoutIndex(AXMLSS.Sheets[_pages[i]].SheetOptions, i);
 
+    t := 0;
+    if (FMasterPagesCount > PagesCount) then
+    begin
+      t := 1;
+      FMasterPagesIndexes[0] := 0;
+    end;
+
     for i := 0 to PagesCount - 1 do
-      FMasterPagesIndexes[i] := _GetMasterPageIndex(AXMLSS.Sheets[_pages[i]].SheetOptions, i);
+      FMasterPagesIndexes[i + t] := _GetMasterPageIndex(AXMLSS.Sheets[_pages[i]].SheetOptions, i);
   finally
     SetLength(_a, 0);
   end;

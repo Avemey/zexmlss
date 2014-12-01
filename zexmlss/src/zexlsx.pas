@@ -276,8 +276,10 @@ type
 {$IFDEF FPC}
   //Для распаковки в поток
 
-  { TXSLXZipHelper }
+  procedure XLSXSortRelationArray(var arr: TZXLSXRelationsArray; count: integer); forward;
 
+  { TXSLXZipHelper }
+type
   TXSLXZipHelper = class
   private
     FXMLSS: TZEXMLSS;
@@ -310,6 +312,7 @@ type
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
+    procedure SortRelationArray();
     procedure DoCreateOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
     procedure DoDoneOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
     procedure AddArchFile(const FileName: string);
@@ -383,6 +386,11 @@ begin
   FSheetRelations := nil;
   FreeAndNil(FReadHelper);
   inherited;
+end;
+
+procedure TXSLXZipHelper.SortRelationArray();
+begin
+ XLSXSortRelationArray(FRelationsArray[SheetRelationNumber], RelationsCounts[SheetRelationNumber]);
 end;
 
 function TXSLXZipHelper.GetArchFileItem(num: integer): string;
@@ -4655,7 +4663,8 @@ begin
         end; //if
 
         //for i := 1 to ZH.RelationsCounts[ZH.SheetRelationNumber] do
-        XLSXSortRelationArray(RelationsArray[SheetRelationNumber], RelationsCounts[SheetRelationNumber]);
+        ZH.SortRelationArray();
+        //XLSXSortRelationArray(ZH.RelationsArray[ZH.SheetRelationNumber], ZH.RelationsCounts[ZH.SheetRelationNumber]);
         for j := 0 to ZH.RelationsCounts[ZH.SheetRelationNumber] - 1 do
         if (ZH.RelationsArray[ZH.SheetRelationNumber][j].sheetid > 0) then
         begin
