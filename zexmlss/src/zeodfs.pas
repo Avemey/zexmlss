@@ -206,8 +206,15 @@ type
   //Для чтения стилей и всего такого
   TZEODFReadHelper = class(TZEODFReadWriteHelperParent)
   private
-    FStylesCount: integer;                //Кол-во стилей
-    FStyles: array of TZStyle;            //Стили из styles.xml
+    FStylesCount: integer;                  //Кол-во стилей
+    FStyles: array of TZStyle;              //Стили из styles.xml
+    FMasterPagesCount: integer;
+    FMasterPages: array of TZSheetOptions;  //Array of master pages
+    FMasterPagesNames: array of string;
+    FPageLayoutsCount: integer;
+    FPageLayouts: array of TZSheetOptions;
+    FPageLayoutsNames: array of string;
+
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     FConditionReader: TZODFConditionalReadHelper; //Для чтения условного форматирования
     {$ENDIF}
@@ -217,6 +224,7 @@ type
     StylesProperties: TZODFStyleArray;
     constructor Create(AXMLSS: TZEXMLSS); override;
     destructor Destroy(); override;
+    procedure ReadAutomaticStyles(xml: TZsspXMLReaderH);
     procedure AddStyle();
     property StylesCount: integer read FStylesCount;
     property Style[num: integer]: TZStyle read GetStyle;
@@ -251,6 +259,7 @@ type
 
     procedure WriteStylesPageLayouts(xml: TZsspXMLWriterH; const _pages: TIntegerDynArray);
     procedure WriteStylesMasterPages(xml: TZsspXMLWriterH; const _pages: TIntegerDynArray);
+    function GetMasterPageName(PageNum: integer): string;
 
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     property ConditionWriter: TZODFConditionalWriteHelper read FConditionWriter;
@@ -356,6 +365,11 @@ const
   ZETag_style_region_left   = 'style:region-left';
   ZETag_style_region_center = 'style:region-center';
   ZETag_style_region_right  = 'style:region-right';
+  ZETag_style_family        = 'style:family';
+  ZETag_style_master_page_name = 'style:master-page-name';
+  ZETag_table_style_name    = 'table:style-name';
+  ZETag_style_table_properties = 'style:table-properties';
+  ZETag_tableooo_tab_color  = 'tableooo:tab-color';
 
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   const_ConditionalStylePrefix      = 'ConditionalStyle_f';
@@ -439,6 +453,7 @@ type
     name: string;
     isColor: boolean;
     Color: TColor;
+    MasterPageName: string;
   end;
 
   TZODFTableArray = array of TZODFTableStyle;
@@ -535,6 +550,8 @@ end; //ODFGetSizeToStr
 {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
 
 procedure ODFWriteTableStyle(var XMLSS: TZEXMLSS; _xml: TZsspXMLWriterH; const StyleNum: integer; isDefaultStyle: boolean); forward;
+function ODFGetValueSizeMM(const value: string; out RetSize: real; isMultiply: boolean = true): boolean; forward;
+function GetBGColorForODS(const value: string): TColor; forward;
 
 ////::::::::::::: TZODFConditionalWriteHelper :::::::::::::::::////
 
@@ -922,8 +939,8 @@ var
         FPageCF[idx].StyleCFID[_kol - 1].ID[i].StyleCFID := _StyleID;
 
         _att.Clear();
-        _att.Add('style:name', 'ce' + IntToStr(_StyleID));
-        _att.Add('style:family', 'table-cell');
+        _att.Add(ZETag_Attr_StyleName, 'ce' + IntToStr(_StyleID));
+        _att.Add(ZETag_style_family, 'table-cell');
         _att.Add('style:parent-style-name', 'Default');
         xml.WriteTagNode(ZETag_StyleStyle, _att, true, true, false);
         ODFWriteTableStyle(FXMLSS, xml, _BeforeCFStyles[i], false);
@@ -2316,6 +2333,12 @@ begin
   FConditionReader := TZODFConditionalReadHelper.Create(AXMLSS);
   FConditionReader.ReadHelper := self;
   {$ENDIF}
+  FMasterPagesCount := 0;
+  SetLength(FMasterPages, 0);
+  SetLength(FMasterPagesNames, 0);
+  FPageLayoutsCount := 0;
+  SetLength(FPageLayouts, 0);
+  SetLength(FPageLayoutsNames, 0);
 end; //Create
 
 destructor TZEODFReadHelper.Destroy();
@@ -2334,6 +2357,18 @@ begin
     FreeAndNil(FConditionReader);
   {$ENDIF}
 
+  for i := 0 to FMasterPagesCount - 1 do
+    FreeAndNil(FMasterPages[i]);
+
+  SetLength(FMasterPages, 0);
+  SetLength(FMasterPagesNames, 0);
+
+  for i := 0 to FPageLayoutsCount - 1 do
+    FreeAndNil(FPageLayouts);
+
+  SetLength(FPageLayouts, 0);
+  SetLength(FPageLayoutsNames, 0);
+
   SetLength(FStyles, 0);
   SetLength(StylesProperties, 0);
   inherited;
@@ -2345,6 +2380,190 @@ begin
   if (num >= 0) and (num < FStylesCount) then
     result := FStyles[num];
 end; //GetStyle
+
+//Read <office:automatic-styles> </office:automatic-styles>
+// (Page layouts: paper size, orientation etc)
+procedure TZEODFReadHelper.ReadAutomaticStyles(xml: TZsspXMLReaderH);
+var
+  _PL: integer;
+  _w, _h, t: integer; //page width and height
+  s: string;
+  r: real;
+  _tmpColor: TColor;
+
+  function _GetPaperSize(w, h: integer): byte;
+  var
+    a: array [0..3] of integer;
+
+    function _Find(w, h: integer; out MinDeltaX, MinDeltaY): byte;
+    var
+      i: byte;
+
+    begin
+      Result := 0;
+      MinDeltaX := const_ODS_paper_sizes[1][0];
+      MinDeltaY := const_ODS_paper_sizes[1][1];
+      for i := 1 to const_ODS_paper_sizes_count - 1 do
+      begin
+        t := abs(w - const_ODS_paper_sizes[i][0]) + abs(h - const_ODS_paper_sizes[i][1]);
+
+        if (t < MinDeltaX + MinDeltaY) then
+        begin
+          Result := i;
+          MinDeltaX := abs(w - const_ODS_paper_sizes[i][0]);
+          MinDeltaY := abs(h - const_ODS_paper_sizes[i][1]);
+        end;
+      end;
+    end; //_Find
+
+  begin
+    if (w > h) then
+    begin
+      t := w;
+      w := h;
+      h := t;
+    end;
+
+    Result := _Find(w, h, a[0], a[1]);
+  end; //_GetPaperSize
+
+  procedure _GetAttrValue(const attrName: string; var retValue: integer; koef: integer = 100);
+  begin
+    s := xml.Attributes.ItemsByName[attrName];
+    if (s > '') then
+    begin
+      if (ODFGetValueSizeMM(s, r)) then
+        retValue := round(r * koef)
+    end;
+  end; //_GetAttrValue
+
+  function _GetMarginValue(const attrName: string; DefValue: integer): integer;
+  begin
+    Result := DefValue;
+    s := xml.Attributes.ItemsByName[attrName];
+    if (s > '') then
+    begin
+      if (ODFGetValueSizeMM(s, r)) then
+        result := round(r);
+    end;
+  end; //_GetMarginValue
+
+  procedure _ReadFooterHeader(const tagName: string; HeaderItem: TZSheetFooterHeader; isHeader: boolean);
+  begin
+    while (not xml.Eof()) do
+    begin
+      if (not xml.ReadTag()) then
+        break;
+
+      if (xml.TagName = ZETag_style_header_footer_properties) then
+      begin
+        s := xml.Attributes[ZETag_fo_background_color];
+        if (s > '') then
+          _tmpColor := GetBGColorForODS(s);
+
+        if (isHeader) then
+        begin
+          t := FPageLayouts[_PL].HeaderMargin;
+          _GetAttrValue(ZETag_fo_margin_top, t);
+          FPageLayouts[_PL].HeaderMargin := t;
+        end
+        else
+        begin
+          t := FPageLayouts[_PL].FooterMargin;
+          _GetAttrValue(ZETag_fo_margin_bottom, t);
+          FPageLayouts[_PL].FooterMargin := t;
+        end;
+      end;
+
+      if (xml.TagType = 6) and (xml.TagName = tagName) then
+        break;
+    end;
+  end; //_ReadFooterHeader
+
+  //<style:page-layout> .. </style:page-layout>
+  //  style:page-layout possible elements:
+  //    style:footer-style
+  //    style:header-style
+  //    style:page-layout-properties
+  procedure _ReadPageLayout();
+  begin
+    _PL := FPageLayoutsCount;
+    inc(FPageLayoutsCount);
+    SetLength(FPageLayouts, FPageLayoutsCount);
+    SetLength(FPageLayoutsNames, FPageLayoutsCount);
+    FPageLayoutsNames[_PL] := xml.Attributes.ItemsByName[ZETag_Attr_StyleName];
+    FPageLayouts[_PL] := TZSheetOptions.Create();
+    _w := -1;
+    _h := -1;
+    while (not xml.Eof()) do
+    begin
+      if (not xml.ReadTag()) then
+        break;
+
+      if ((xml.TagType in [4, 5]) and (xml.TagName = ZETag_style_page_layout_properties)) then
+      begin
+        //  fo:page-width
+        //  fo:page-height
+        //  style:num-format
+        //  style:print-orientation
+        //  fo:margin-top
+        //  fo:margin-bottom
+        //  fo:margin-left
+        //  fo:margin-right
+        //  fo:border
+        //  fo:padding
+        //  style:shadow
+        //  fo:background-color
+        //  style:writing-mode
+
+        _GetAttrValue(ZETag_fo_page_width, _w);
+        _GetAttrValue(ZETag_fo_page_height, _h);
+        FPageLayouts[_PL].PortraitOrientation := xml.Attributes[ZETag_style_print_orientation] = ZETag_portrait;
+
+        FPageLayouts[_PL].MarginTop := _GetMarginValue(ZETag_fo_margin_top, FPageLayouts[_PL].MarginTop);
+        FPageLayouts[_PL].MarginBottom := _GetMarginValue(ZETag_fo_margin_bottom, FPageLayouts[_PL].MarginBottom);
+        FPageLayouts[_PL].MarginLeft := _GetMarginValue(ZETag_fo_margin_left, FPageLayouts[_PL].MarginLeft);
+        FPageLayouts[_PL].MarginRight := _GetMarginValue(ZETag_fo_margin_right, FPageLayouts[_PL].MarginRight);
+      end; //if
+
+      if ((xml.TagType = 4) and (xml.TagName = ZETag_style_header_style)) then
+      begin
+        _tmpColor := FPageLayouts[_PL].HeaderBGColor;
+        _ReadFooterHeader(ZETag_style_header_style, FPageLayouts[_PL].Header, true);
+        FPageLayouts[_PL].HeaderBGColor := _tmpColor;
+      end;
+
+      if ((xml.TagType = 4) and (xml.TagName = ZETag_style_footer_style)) then
+      begin
+        _tmpColor := FPageLayouts[_PL].FooterBGColor;
+        _ReadFooterHeader(ZETag_style_footer_style, FPageLayouts[_PL].Footer, true);
+        FPageLayouts[_PL].FooterBGColor := _tmpColor;
+      end;
+
+      if ((xml.TagType = 6) and (xml.TagName = ZETag_style_page_layout)) then
+        break;
+    end; //while
+
+    if ((_h > 0) and (_w > 0)) then
+      FPageLayouts[_PL].PaperSize := _GetPaperSize(_w, _h);
+  end; //_ReadPageLayout
+
+begin
+  try
+    while (not xml.Eof()) do
+    begin
+      if (not xml.ReadTag()) then
+        break;
+
+      if ((xml.TagType = 6) and (xml.TagName = ZETag_office_automatic_styles)) then
+        break;
+
+      if ((xml.TagType = 4) and (xml.TagName = ZETag_style_page_layout)) then
+        _ReadPageLayout();
+    end; //while
+  finally
+  end;
+end; //ReadAutomaticStyles
 
 procedure TZEODFReadHelper.AddStyle();
 var
@@ -2375,7 +2594,7 @@ constructor TZEODFWriteHelper.Create(AXMLSS: TZEXMLSS;
                        const _names: TStringDynArray;
                        PagesCount: integer);
 var
-  i, t: integer;
+  i: integer;
   _a: array of integer;
 
   function _GetSheetOptions(PageNum: integer): TZSheetOptions;
@@ -2494,15 +2713,8 @@ begin
     for i := 0 to PagesCount - 1 do
       _a[i] := _GetPageLayoutIndex(AXMLSS.Sheets[_pages[i]].SheetOptions, i);
 
-    t := 0;
-    if (FMasterPagesCount > PagesCount) then
-    begin
-      t := 1;
-      FMasterPagesIndexes[0] := 0;
-    end;
-
     for i := 0 to PagesCount - 1 do
-      FMasterPagesIndexes[i + t] := _GetMasterPageIndex(AXMLSS.Sheets[_pages[i]].SheetOptions, i);
+      FMasterPagesIndexes[i] := _GetMasterPageIndex(AXMLSS.Sheets[_pages[i]].SheetOptions, i);
   finally
     SetLength(_a, 0);
   end;
@@ -2520,6 +2732,11 @@ begin
   SetLength(FMasterPagesNames, 0);
   SetLength(FMasterPagesIndexes, 0);
   inherited;
+end;
+
+function TZEODFWriteHelper.GetMasterPageName(PageNum: integer): string;
+begin
+  Result := FMasterPagesNames[FMasterPagesIndexes[PageNum]];
 end;
 
 //Write to XML all page layouts styles (<style:page-layout> .. </style:page-layout>)
@@ -2727,7 +2944,7 @@ begin
   begin
     xml.Attributes.Clear();
     xml.Attributes.Add(ZETag_Attr_StyleName, FMasterPagesNames[i], false);
-    xml.Attributes.Add(ZETag_style_page_layout_name, 'Mpm' + IntToStr(FUniquePageLayouts[FPageLayoutsIndexes[FMasterPagesIndexes[i]]] + 1));
+    xml.Attributes.Add(ZETag_style_page_layout_name, 'Mpm' + IntToStr(FPageLayoutsIndexes[i] + 1));
     xml.WriteTagNode(ZETag_style_master_page, true, true, false);
     _WriteMasterPage(FMasterPages[i]);
     xml.WriteEndTagNode(); //style:master-page
@@ -3410,7 +3627,7 @@ var
         begin
           _xml.Attributes.Clear();
           _xml.Attributes.Add(ZETag_Attr_StyleName, const_ConditionalStylePrefix + IntToStr(num));
-          _xml.Attributes.Add('style:family', 'table-cell', false);
+          _xml.Attributes.Add(ZETag_style_family, 'table-cell', false);
           _xml.WriteTagNode(ZETag_StyleStyle, true, true, true);
           ODFWriteTableStyle(XMLSS, _xml, _cf[j][k].ApplyStyleID, false);
           _xml.WriteEndTagNode();
@@ -3466,7 +3683,7 @@ begin
     //Стиль по-умолчанию
     _xml.Attributes.Clear();
     _xml.Attributes.Add(ZETag_Attr_StyleName, 'Default');
-    _xml.Attributes.Add('style:family', 'table-cell', false);
+    _xml.Attributes.Add(ZETag_style_family, 'table-cell', false);
     _xml.WriteTagNode(ZETag_StyleStyle, true, true, true);
     ODFWriteTableStyle(XMLSS, _xml, -1, true);
     _xml.WriteEndTagNode();
@@ -3682,7 +3899,7 @@ var
         exit;
       _xml.Attributes.Clear();
       _xml.Attributes.Add(ZETag_Attr_StyleName, 'co' + IntToStr(now_StyleNumber));
-      _xml.Attributes.Add('style:family', 'table-column', false);
+      _xml.Attributes.Add(ZETag_style_family, 'table-column', false);
       _xml.WriteTagNode(ZETag_StyleStyle, true, true, false);
 
       _xml.Attributes.Clear();
@@ -3732,7 +3949,7 @@ var
         exit;
       _xml.Attributes.Clear();
       _xml.Attributes.Add(ZETag_Attr_StyleName, 'ro' + IntToStr(now_StyleNumber));
-      _xml.Attributes.Add('style:family', 'table-row', false);
+      _xml.Attributes.Add(ZETag_style_family, 'table-row', false);
       _xml.WriteTagNode(ZETag_StyleStyle, true, true, false);
 
       _xml.Attributes.Clear();
@@ -3780,6 +3997,44 @@ var
         start_j := 0;
       end;
     end; //WriteRowStyle
+
+    procedure WriteTableStyle(num: integer);
+    begin
+      _xml.Attributes.Clear();
+      _xml.Attributes.Add(ZETag_Attr_StyleName, 'ta' + IntToStr(num + 1), false);
+      _xml.Attributes.Add(ZETag_style_family, 'table', false);
+      _xml.Attributes.Add(ZETag_style_master_page_name, WriteHelper.GetMasterPageName(num), false);
+      _xml.WriteTagNode(ZETag_StyleStyle, true, true, false);
+
+      _xml.Attributes.Clear();
+      //Possible attributes for <style:table-properties>
+      //    fo:background-color           ??
+      //    fo:break-after                ??
+      //    fo:break-before               ??
+      //    fo:keep-with-next             ??
+      //    fo:margin                     ??
+      //    fo:margin-bottom              ??
+      //    fo:margin-left                ??
+      //    fo:margin-right               ??
+      //    fo:margin-top                 ??
+      //    style:may-break-between-rows  ??
+      //    style:page-number             ??
+      //    style:rel-width               ??
+      //    style:shadow                  ??
+      //    style:width                   ??
+      //    style:writing-mode            ??
+      //    table:align                   ??
+      //    table:border-model            ??
+      //    table:display                 ??
+      //    tableooo:tab-color            ??
+      _xml.Attributes.Add('table:display', ODFBoolToStr(true), false);
+      if (XMLSS.Sheets[_pages[num]].TabColor <> clWindow) then
+        _xml.Attributes.Add(ZETag_tableooo_tab_color, '#' + ColorToHTMLHex(XMLSS.Sheets[_pages[num]].TabColor));
+
+      _xml.WriteEmptyTag(ZETag_style_table_properties, true, false);
+
+      _xml.WriteEndTagNode();
+    end; //WriteTableStyle
 
   begin
     ZEWriteHeaderCommon(_xml, CodePageName, BOM);
@@ -3837,7 +4092,7 @@ var
     begin
       _xml.Attributes.Clear();
       _xml.Attributes.Add(ZETag_Attr_StyleName, 'ce' + IntToStr(i));
-      _xml.Attributes.Add('style:family', 'table-cell', false);
+      _xml.Attributes.Add(ZETag_style_family, 'table-cell', false);
         //??style:parent-style-name = Default
       _xml.WriteTagNode(ZETag_StyleStyle, true, true, false);
       ODFWriteTableStyle(XMLSS, _xml, i, false);
@@ -3848,6 +4103,10 @@ var
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     _cfwriter.WriteCFStyles(_xml);
     {$ENDIF}
+
+    //****** Styles for tables
+    for i := 0 to PageCount - 1 do
+      WriteTableStyle(i);
 
     _xml.WriteEndTagNode(); //office:automatic-styles
   end; //WriteHeader
@@ -3919,6 +4178,7 @@ var
     //?   table:display     - признак отображаемости таблицы (мощнее печати, true - по-умолчани.)
     //?   table:print-ranges - диапазон печати
     _xml.Attributes.Add('table:name', Tablename, false);
+    _xml.Attributes.Add(ZETag_table_style_name, 'ta' + IntToStr(PageIndex + 1), false);
     b := ProcessedSheet.Protect;
     if (b) then
       _xml.Attributes.Add('table:protected', ODFBoolToStr(b), false);
@@ -3935,7 +4195,7 @@ var
     for i := 0 to ProcessedSheet.ColCount - 1 do
     begin
       _xml.Attributes.Clear();
-      _xml.Attributes.Add('table:style-name', 'co' + IntToStr(ColumnStyle[PageIndex][i]));
+      _xml.Attributes.Add(ZETag_table_style_name, 'co' + IntToStr(ColumnStyle[PageIndex][i]));
       //Видимость: table:visibility (visible | collapse | filter)
       if (ProcessedSheet.Columns[i].Hidden) then
         _xml.Attributes.Add('table:visibility', 'collapse', false); //или всё-таки filter?
@@ -3971,7 +4231,7 @@ var
     begin
       //table:table-row
       _xml.Attributes.Clear();
-      _xml.Attributes.Add('table:style-name', 'ro' + IntToStr(RowStyle[PageIndex][i]));
+      _xml.Attributes.Add(ZETag_table_style_name, 'ro' + IntToStr(RowStyle[PageIndex][i]));
       //?? table:number-rows-repeated - кол-во повторяемых строк
       // table:default-cell-style-name - стиль ячейки по-умолчанию
       k := ProcessedSheet.Rows[i].StyleID;
@@ -4040,7 +4300,7 @@ var
         _StyleID := ProcessedSheet.Cell[j, i].CellStyle;
         if ((_StyleID >= 0) and (_StyleID < XMLSS.Styles.Count)) then
         {$ENDIF}
-          _xml.Attributes.Add('table:style-name', 'ce' + IntToStr(_StyleID), false);
+          _xml.Attributes.Add(ZETag_table_style_name, 'ce' + IntToStr(_StyleID), false);
 
         //защита ячейки
         b := XMLSS.Styles[_StyleID].Protect;
@@ -4066,7 +4326,7 @@ var
             // всё остальное считаем строкой (потом подправить, возможно, добавить новые типы)
             {ZEansistring ZEError ZEDateTime}
         end;
-        
+
         if (ss > '') then
           _xml.Attributes.Add('office:value-type', ss, false);
 
@@ -4724,10 +4984,10 @@ begin
   if (su = 'm') then
     RetSize := r * 1000
   else
-  if (su='pt') then
+  if (su = 'pt') then
     RetSize := r * _PointToMM
   else
-  if (su='in') then
+  if (su = 'in') then
     RetSize := r * 25.4
   else
     result := false;
@@ -4960,13 +5220,13 @@ var
     i: integer;
 
   begin
-    if (xml.Attributes['style:family'] = 'table-cell') then
+    if (xml.Attributes[ZETag_style_family] = 'table-cell') then
     begin
       num := ReadHelper.StylesCount;
       ReadHelper.AddStyle();
       _Style := ReadHelper.Style[num];
 
-      ReadHelper.StylesProperties[num].name := xml.Attributes['style:name'];
+      ReadHelper.StylesProperties[num].name := xml.Attributes[ZETag_Attr_StyleName];
       s := xml.Attributes['style:parent-style-name'];
       ReadHelper.StylesProperties[num].ParentName := s;
       if (length(s) > 0) then
@@ -4995,6 +5255,9 @@ var
       //style:style - стиль
       if ((xml.TagName = ZETag_StyleStyle) and (xml.TagType = 4)) then
         _ReadOneStyle();
+      //office:automatic-styles (Page Layouts etc)
+      if ((xml.TagType = 4) and (xml.TagName = ZETag_office_automatic_styles)) then
+        ReadHelper.ReadAutomaticStyles(xml);
 
       //style:default-style - стиль по умолчанию
       //number:number-style - числовой стиль
@@ -5161,7 +5424,7 @@ var
 
         if (IfTag(ZETag_StyleStyle, 4)) then
         begin
-          _stylefamily := xml.Attributes.ItemsByName['style:family'];
+          _stylefamily := xml.Attributes.ItemsByName[ZETag_style_family];
           _stylename := xml.Attributes.ItemsByName[ZETag_Attr_StyleName];
 
           if (_stylefamily = 'table-column') then //столбец
@@ -5238,15 +5501,16 @@ var
             end;
             ODFTableStyles[TableStyleCount].name := _stylename;
             ODFTableStyles[TableStyleCount].isColor := false;
+            ODFTableStyles[TableStyleCount].MasterPageName := xml.Attributes.ItemsByName[ZETag_style_master_page_name];
             while (not ifTag(ZETag_StyleStyle, 6)) do
             begin
               if (xml.Eof()) then
                 break;
               xml.ReadTag();
 
-              if ((xml.TagName = 'style:table-properties') and (xml.TagType in [4, 5])) then
+              if ((xml.TagName = ZETag_style_table_properties) and (xml.TagType in [4, 5])) then
               begin
-                s := xml.Attributes.ItemsByName['tableooo:tab-color'];
+                s := xml.Attributes.ItemsByName[ZETag_tableooo_tab_color];
                 if (s > '') then
                 begin
                   ODFTableStyles[TableStyleCount].isColor := true;
@@ -5390,7 +5654,7 @@ var
         //      какой стиль нужно брать раньше: стиль столбца или строки?
         //      Пока пусть будет как для столбца. Или, может, если не указан стиль,
         //      то ставить дефолтный (-1)?
-        s := xml.Attributes.ItemsByName['table:style-name'];
+        s := xml.Attributes.ItemsByName[ZETag_table_style_name];
         _CurrCell.CellStyle := XMLSS.Sheets[_CurrentPage].Columns[_CurrentCol].StyleID;
         {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
         _CellStyleCFNumber := ReadHelper.ConditionReader.GetColumnCF(_CurrentCol);
@@ -5574,7 +5838,7 @@ var
     XMLSS.Sheets[_CurrentPage].Title := ZEReplaceEntity(xml.Attributes.ItemsByName['table:name']);
     XMLSS.Sheets[_CurrentPage].Protect := ZEStrToBoolean(xml.Attributes.ItemsByName['table:protected']);
 
-    s := xml.Attributes.ItemsByName['table:style-name'];
+    s := xml.Attributes.ItemsByName[ZETag_table_style_name];
     if (s > '') then
       for i := 0 to TableStyleCount - 1 do
       if (ODFTableStyles[i].name = s) then
@@ -5602,7 +5866,7 @@ var
         isRepeatRow := TryStrToInt(s, _RepeatRowCount);
         _IsHaveTextInRow := false;
         //стиль строки
-        s := xml.Attributes.ItemsByName['table:style-name'];
+        s := xml.Attributes.ItemsByName[ZETag_table_style_name];
 
         if (s > '') then
           for i := 0 to RowStyleCount - 1 do
@@ -5653,7 +5917,7 @@ var
       if ((xml.TagName = 'table:table-column') and (xml.TagType in [4, 5])) then
       begin
         CheckCol(_CurrentPage, _MaxCol + 1);
-        s := xml.Attributes.ItemsByName['table:style-name'];
+        s := xml.Attributes.ItemsByName[ZETag_table_style_name];
         for i := 0 to ColStyleCount - 1 do
           if (ODFColumnStyles[i].name = s) then
           begin
