@@ -392,6 +392,7 @@ type
     FDataLeft: string;
     FData: string;
     FDataRight: string;
+    FIsDisplay: boolean;
   public
     constructor Create();
     procedure Assign(Source: TPersistent); override;
@@ -400,6 +401,7 @@ type
     property DataLeft: string read FDataLeft write FDataLeft;
     property Data: string read FData write FData;
     property DataRight: string read FDataRight write FDataRight;
+    property IsDisplay: boolean read FIsDisplay write FIsDisplay;
   end;
 
   //WorkSheetOptions
@@ -2359,6 +2361,7 @@ begin
   FDataLeft := '';
   FData := '';
   FDataRight := '';
+  FIsDisplay := false;
 end;
 
 procedure TZSheetFooterHeader.Assign(Source: TPersistent);
@@ -2372,6 +2375,7 @@ begin
     FDataLeft := _t.DataLeft;
     FData := _t.Data;
     FDataRight := _t.DataRight;
+    FIsDisplay := _t.IsDisplay;
   end
   else
     inherited;
@@ -2386,7 +2390,8 @@ begin
   if (Source is TZSheetFooterHeader) then
   begin
     _t := Source as TZSheetFooterHeader;
-    result := (_t.DataLeft = FDataLeft) and
+    result := (_t.IsDisplay = FIsDisplay) and
+              (_t.DataLeft = FDataLeft) and
               (_t.Data = FData) and
               (_t.DataRight = FDataRight);
   end;

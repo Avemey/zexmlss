@@ -225,7 +225,9 @@ type
     constructor Create(AXMLSS: TZEXMLSS); override;
     destructor Destroy(); override;
     procedure ReadAutomaticStyles(xml: TZsspXMLReaderH);
+    procedure ReadMasterStyles(xml: TZsspXMLReaderH);
     procedure AddStyle();
+    procedure ApplyMasterPageStyle(SheetOptions: TZSheetOptions; const MasterPageName: string);
     property StylesCount: integer read FStylesCount;
     property Style[num: integer]: TZStyle read GetStyle;
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
@@ -366,6 +368,7 @@ const
   ZETag_style_region_center = 'style:region-center';
   ZETag_style_region_right  = 'style:region-right';
   ZETag_style_family        = 'style:family';
+  ZETag_style_display       = 'style:display';
   ZETag_style_master_page_name = 'style:master-page-name';
   ZETag_table_style_name    = 'table:style-name';
   ZETag_style_table_properties = 'style:table-properties';
@@ -2364,7 +2367,7 @@ begin
   SetLength(FMasterPagesNames, 0);
 
   for i := 0 to FPageLayoutsCount - 1 do
-    FreeAndNil(FPageLayouts);
+    FreeAndNil(FPageLayouts[i]);
 
   SetLength(FPageLayouts, 0);
   SetLength(FPageLayoutsNames, 0);
@@ -2394,8 +2397,9 @@ var
   function _GetPaperSize(w, h: integer): byte;
   var
     a: array [0..3] of integer;
+    r2: byte;
 
-    function _Find(w, h: integer; out MinDeltaX, MinDeltaY): byte;
+    function _Find(w, h: integer; out MinDeltaX, MinDeltaY: integer): byte;
     var
       i: byte;
 
@@ -2417,17 +2421,16 @@ var
     end; //_Find
 
   begin
-    if (w > h) then
-    begin
-      t := w;
-      w := h;
-      h := t;
-    end;
-
     Result := _Find(w, h, a[0], a[1]);
+    if ((a[0] <> 0) or (a[1] <> 0)) then
+    begin
+      r2 := _Find(h, w, a[2], a[3]);
+      if (a[0] + a[1] > a[2] + a[3]) then
+        Result := r2;
+    end;
   end; //_GetPaperSize
 
-  procedure _GetAttrValue(const attrName: string; var retValue: integer; koef: integer = 100);
+  procedure _GetAttrValue(const attrName: string; var retValue: integer; koef: integer = 10);
   begin
     s := xml.Attributes.ItemsByName[attrName];
     if (s > '') then
@@ -2549,21 +2552,223 @@ var
   end; //_ReadPageLayout
 
 begin
-  try
+  while (not xml.Eof()) do
+  begin
+    if (not xml.ReadTag()) then
+      break;
+
+    if ((xml.TagType = 6) and (xml.TagName = ZETag_office_automatic_styles)) then
+      break;
+
+    if ((xml.TagType = 4) and (xml.TagName = ZETag_style_page_layout)) then
+      _ReadPageLayout();
+  end; //while
+end; //ReadAutomaticStyles
+
+//Read <office:master-styles> .. </office:master-styles> -
+//  List of master pages
+//INPUT
+//    xml: TZsspXMLReaderH - reader
+procedure TZEODFReadHelper.ReadMasterStyles(xml: TZsspXMLReaderH);
+var
+  _pagelayoutname: string;
+  _MP: TZSheetOptions;
+  s: string;
+
+  //Read <text:p> .. </text:p> and return text
+  function _ReadTextP(): string;
+  begin
+    //Possible child elements:
+    //    text:date                       ??
+    //    text:time                       ??
+    //    text:page-number
+    //    text:page-continuation          ??
+    //    text:sender-firstname           ??
+    //    text:sender-lastname            ??
+    //    text:sender-initials            ??
+    //    text:sender-title               ??
+    //    text:sender-position            ??
+    //    text:sender-email               ??
+    //    text:sender-phone-private       ??
+    //    text:sender-fax                 ??
+    //    text:sender-company             ??
+    //    text:sender-phone-work          ??
+    //    text:sender-street              ??
+    //    text:sender-city                ??
+    //    text:sender-postal-code         ??
+    //    text:sender-country             ??
+    //    text:sender-state-or-province   ??
+    //    text:author-name                ??
+    //    text:author-initials            ??
+    //    text:chapter                    ??
+    //    text:file-name
+    //    text:template-name              ??
+    //    text:sheet-name
+    Result := '';
     while (not xml.Eof()) do
     begin
       if (not xml.ReadTag()) then
         break;
 
-      if ((xml.TagType = 6) and (xml.TagName = ZETag_office_automatic_styles)) then
+      Result := Result + xml.TextBeforeTag;
+
+      if ((xml.TagType = 6) and (xml.TagName = ZETag_text_p)) then
+        break;
+    end; //while
+  end; //_ReadTextP()
+
+  function _ReadLCR(const TagName: string): string;
+  begin
+    Result := '';
+    while (not xml.Eof()) do
+    begin
+      if (not xml.ReadTag()) then
         break;
 
-      if ((xml.TagType = 4) and (xml.TagName = ZETag_style_page_layout)) then
-        _ReadPageLayout();
+      if ((xml.TagType = 4) and (xml.TagName = ZETag_text_p)) then
+        Result := _ReadTextP();
+
+      if ((xml.TagType = 6) and (xml.TagName = TagName)) then
+        break;
     end; //while
-  finally
-  end;
-end; //ReadAutomaticStyles
+  end; //_ReadLCR
+
+  procedure _ReadFooterHeader(const TagName: string; FooterHeader: TZSheetFooterHeader);
+  begin
+    FooterHeader.IsDisplay := true; //By default
+    s := xml.Attributes[ZETag_style_display];
+    if (s <> '') then
+      FooterHeader.IsDisplay := ZEStrToBoolean(s);
+    if (xml.TagType = 4) then
+    begin
+      while (not xml.Eof()) do
+      begin
+        if (not xml.ReadTag()) then
+          break;
+
+        if ((xml.TagType = 4) and (xml.TagName = ZETag_text_p)) then
+          FooterHeader.Data := _ReadTextP();
+
+        if (xml.TagType = 4) then
+        begin
+          if (xml.TagName = ZETag_style_region_left) then
+            FooterHeader.DataLeft := _ReadLCR(ZETag_style_region_left);
+          if (xml.TagName = ZETag_style_region_center) then
+            FooterHeader.Data := _ReadLCR(ZETag_style_region_center);
+          if (xml.TagName = ZETag_style_region_right) then
+            FooterHeader.DataRight := _ReadLCR(ZETag_style_region_right);
+        end;
+
+        if ((xml.TagType = 6) and (xml.TagName = TagName)) then
+          break;
+      end;
+    end;
+  end; //_ReadFooterHeader
+
+  //<style:master-page> .. </style:master-page>
+  procedure _ReadMasterPageStyle();
+  var
+    i: integer;
+
+  begin
+    //Possible attributes:
+    //    draw:style-name           ??
+    //    style:display-name        ??
+    //    style:name                *
+    //    style:next-style-name     ??
+    //    style:page-layout-name    *
+    _pagelayoutname := xml.Attributes[ZETag_style_page_layout_name];
+
+    inc(FMasterPagesCount);
+    SetLength(FMasterPages, FMasterPagesCount);
+    SetLength(FMasterPagesNames, FMasterPagesCount);
+    FMasterPages[FMasterPagesCount - 1] := TZSheetOptions.Create();
+    _MP := FMasterPages[FMasterPagesCount - 1];
+
+    FMasterPagesNames[FMasterPagesCount - 1] := xml.Attributes[ZETag_Attr_StyleName];
+
+    for i := 0 to FPageLayoutsCount - 1 do
+      if (FPageLayoutsNames[i] = _pagelayoutname) then
+      begin
+        _MP.Assign(FPageLayouts[i]);
+        break;
+      end;
+
+    //Possible elements:
+    //      anim:animate              ??
+    //      anim:animateColor         ??
+    //      anim:animateMotion        ??
+    //      anim:animateTransform     ??
+    //      anim:audio                ??
+    //      anim:command              ??
+    //      anim:iterate              ??
+    //      anim:par                  ??
+    //      anim:seq                  ??
+    //      anim:set                  ??
+    //      anim:transitionFilter     ??
+    //      dr3d:scene                ??
+    //      draw:a                    ??
+    //      draw:caption              ??
+    //      draw:circle               ??
+    //      draw:connector            ??
+    //      draw:control              ??
+    //      draw:custom-shape         ??
+    //      draw:ellipse              ??
+    //      draw:frame                ??
+    //      draw:layer-set            ??
+    //      draw:line                 ??
+    //      draw:measure              ??
+    //      draw:page-thumbnail       ??
+    //      draw:path                 ??
+    //      draw:polygon              ??
+    //      draw:polyline             ??
+    //      draw:rect                 ??
+    //      draw:regular-polygon      ??
+    //      office:forms              ??
+    //      presentation:notes        ??
+    //      style:footer              *
+    //      style:footer-left         *
+    //      style:header              *
+    //      style:header-left         *
+    while (not xml.Eof()) do
+    begin
+      if (not xml.ReadTag()) then
+        break;
+
+      if (xml.TagType in [4, 5]) then
+      begin
+        if (xml.TagName = ZETag_style_header) then
+          _ReadFooterHeader(xml.TagName, _MP.Header);
+        if (xml.TagName = ZETag_style_header_left) then
+          _ReadFooterHeader(xml.TagName, _MP.EvenHeader);
+        if (xml.TagName = ZETag_style_footer) then
+          _ReadFooterHeader(xml.TagName, _MP.Footer);
+        if (xml.TagName = ZETag_style_footer_left) then
+          _ReadFooterHeader(xml.TagName, _MP.EvenFooter);
+      end;
+
+      if ((xml.TagType = 6) and (xml.TagName = ZETag_style_master_page)) then
+        break;
+    end; //while
+  end;  //_ReadMasterPageStyle
+
+begin
+  //TODO: there are potential trouble:
+  //    if element "office:master-styles" will be before "office:automatic-styles"
+  //    in xml, then master styles will be wrong page layouts! Solution: read master pages data
+  //    to tmp variables and apply at the end of xml.
+  while (not xml.Eof()) do
+  begin
+    if (not xml.ReadTag()) then
+      break;
+
+    if ((xml.TagType = 4) and (xml.TagName = ZETag_style_master_page)) then
+      _ReadMasterPageStyle();
+
+    if ((xml.TagType = 6) and (xml.TagName = ZETag_office_master_styles)) then
+      break;
+  end; //while
+end; //ReadMasterStyles
 
 procedure TZEODFReadHelper.AddStyle();
 var
@@ -2579,6 +2784,23 @@ begin
     FStyles[num].Assign(XMLSS.Styles.DefaultStyle);
   ODFClearStyleProperties(StylesProperties[num]);
 end; //AddStyle
+
+//Apply for SheetOptions master page settings by name
+//INPUT
+//    SheetOptions: TZSheetOptions  - sheet options
+//  const MasterPageName: string    - name of Master Page
+procedure TZEODFReadHelper.ApplyMasterPageStyle(SheetOptions: TZSheetOptions; const MasterPageName: string);
+var
+  i: integer;
+
+begin
+  for i := 0 to FMasterPagesCount - 1 do
+    if (MasterPageName = FMasterPagesNames[i]) then
+    begin
+      SheetOptions.Assign(FMasterPages[i]);
+      break;
+    end;
+end; //ApplyMasterPageStyle
 
 ///////////////////////////////////////////////////////////////////
 ////::::::::::::::::: END TZEODFReadHelper ::::::::::::::::::::////
@@ -5252,12 +5474,18 @@ var
       if (not xml.ReadTag()) then
         break;
 
-      //style:style - стиль
-      if ((xml.TagName = ZETag_StyleStyle) and (xml.TagType = 4)) then
-        _ReadOneStyle();
-      //office:automatic-styles (Page Layouts etc)
-      if ((xml.TagType = 4) and (xml.TagName = ZETag_office_automatic_styles)) then
-        ReadHelper.ReadAutomaticStyles(xml);
+      if (xml.TagType = 4) then
+      begin
+        //style:style - стиль
+        if (xml.TagName = ZETag_StyleStyle) then
+          _ReadOneStyle();
+        //office:automatic-styles (Page Layouts etc)
+        if (xml.TagName = ZETag_office_automatic_styles) then
+          ReadHelper.ReadAutomaticStyles(xml);
+        //office:master-styles
+        if (xml.TagName = ZETag_office_master_styles) then
+          ReadHelper.ReadMasterStyles(xml);
+      end; //if
 
       //style:default-style - стиль по умолчанию
       //number:number-style - числовой стиль
@@ -5303,6 +5531,7 @@ var
   StyleCount, MaxStyleCount: integer;
   TableStyleCount, MaxTableStyleCount: integer;
   _celltext: string;
+  _Sheet: TZSheet;                      //Current reading sheet
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   _RowDefaultStyleCFNumber: integer;    //явл€етс€ ли стиль по умолчанию дл€ €чейки в строке условным стилем
   _CellStyleCFNumber: integer;          //явл€етс€ ли стиль €чейки условным (номер в массиве)
@@ -5594,14 +5823,13 @@ var
         // до 512 раз
         if ((not _IsHaveTextInRow) and (_RepeatRowCount > 512)) then
           _RepeatRowCount := 512;
-        n := XMLSS.Sheets[_CurrentPage].ColCount - 1;
+        n := _Sheet.ColCount - 1;
         z := _CurrentRow - 1;
         CheckRow(_CurrentPage, _CurrentRow + _RepeatRowCount);
         for i := 1 to _RepeatRowCount do
         begin
           for j := 0 to n do
-          with XMLSS.Sheets[_CurrentPage] do
-            Cell[j, _CurrentRow].Assign(Cell[j, z]);
+            _Sheet.Cell[j, _CurrentRow].Assign(_Sheet.Cell[j, z]);
         end;
         inc(_CurrentRow, _RepeatRowCount - 1);
       end; //if
@@ -5620,7 +5848,7 @@ var
       if (((xml.TagName = 'table:table-cell') or (xml.TagName = 'table:covered-table-cell')) and (xml.TagType in [4, 5])) then
       begin
         CheckCol(_CurrentPage, _CurrentCol + 1);
-        _CurrCell := XMLSS.Sheets[_CurrentPage].Cell[_CurrentCol, _CurrentRow];
+        _CurrCell := _Sheet.Cell[_CurrentCol, _CurrentRow];
         s := xml.Attributes.ItemsByName['table:number-columns-repeated'];
         isRepeatCell := TryStrToInt(s, _RepeatCellCount);
         if (not isRepeatCell) then
@@ -5646,7 +5874,7 @@ var
         begin
           CheckCol(_CurrentPage, _CurrentCol + _numX + 1);
           CheckRow(_CurrentPage, _CurrentRow + _numY + 1);
-          XMLSS.Sheets[_CurrentPage].MergeCells.AddRectXY(_CurrentCol, _CurrentRow, _CurrentCol + _numX, _CurrentRow + _numY);
+          _Sheet.MergeCells.AddRectXY(_CurrentCol, _CurrentRow, _CurrentCol + _numX, _CurrentRow + _numY);
         end;
 
         //стиль €чейки
@@ -5655,7 +5883,7 @@ var
         //      ѕока пусть будет как дл€ столбца. »ли, может, если не указан стиль,
         //      то ставить дефолтный (-1)?
         s := xml.Attributes.ItemsByName[ZETag_table_style_name];
-        _CurrCell.CellStyle := XMLSS.Sheets[_CurrentPage].Columns[_CurrentCol].StyleID;
+        _CurrCell.CellStyle := _Sheet.Columns[_CurrentCol].StyleID;
         {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
         _CellStyleCFNumber := ReadHelper.ConditionReader.GetColumnCF(_CurrentCol);
         {$ENDIF}
@@ -5816,7 +6044,7 @@ var
           begin
             CheckCol(_CurrentPage, _CurrentCol + _RepeatCellCount + 1);
             for i := 1 to _RepeatCellCount do
-              XMLSS.Sheets[_CurrentPage].Cell[_CurrentCol + i, _CurrentRow].Assign(_CurrCell);
+              _Sheet.Cell[_CurrentCol + i, _CurrentRow].Assign(_CurrCell);
             //-1, т.к. нужно учитывать, что номер €чейки увеличиваетс€ на 1 каждый раз
             inc(_CurrentCol, _RepeatCellCount - 1);
           end;
@@ -5834,9 +6062,10 @@ var
     _MaxCol := 0;
     _CurrentPage := XMLSS.Sheets.Count;
     XMLSS.Sheets.Count := _CurrentPage + 1;
-    XMLSS.Sheets[_CurrentPage].RowCount := 1;
-    XMLSS.Sheets[_CurrentPage].Title := ZEReplaceEntity(xml.Attributes.ItemsByName['table:name']);
-    XMLSS.Sheets[_CurrentPage].Protect := ZEStrToBoolean(xml.Attributes.ItemsByName['table:protected']);
+    _Sheet := XMLSS.Sheets[_CurrentPage];
+    _Sheet.RowCount := 1;
+    _Sheet.Title := ZEReplaceEntity(xml.Attributes.ItemsByName['table:name']);
+    _Sheet.Protect := ZEStrToBoolean(xml.Attributes.ItemsByName['table:protected']);
 
     s := xml.Attributes.ItemsByName[ZETag_table_style_name];
     if (s > '') then
@@ -5844,7 +6073,8 @@ var
       if (ODFTableStyles[i].name = s) then
       begin
         if (ODFTableStyles[i].isColor) then
-          XMLSS.Sheets[_CurrentPage].TabColor := ODFTableStyles[i].Color;
+          _Sheet.TabColor := ODFTableStyles[i].Color;
+        ReadHelper.ApplyMasterPageStyle(_Sheet.SheetOptions, ODFTableStyles[i].MasterPageName);
         break;
       end;
 
@@ -5873,9 +6103,9 @@ var
             if (ODFRowStyles[i].name = s) then
             begin
               CheckRow(_CurrentPage, _CurrentRow + 1);
-              XMLSS.Sheets[_CurrentPage].Rows[_CurrentRow].Breaked := ODFRowStyles[i].breaked;
+              _Sheet.Rows[_CurrentRow].Breaked := ODFRowStyles[i].breaked;
               if (ODFRowStyles[i].height >= 0) then
-                XMLSS.Sheets[_CurrentPage].Rows[_CurrentRow].HeightMM := ODFRowStyles[i].height;
+                _Sheet.Rows[_CurrentRow].HeightMM := ODFRowStyles[i].height;
             end;
 
         //стиль €чейки по умолчанию
@@ -5883,7 +6113,7 @@ var
         if (Length(s) > 0) then
         begin
           _RowDefaultStyleID := _FindStyleID(s {$IFDEF ZUSE_CONDITIONAL_FORMATTING}, _RowDefaultStyleCFNumber {$ENDIF});
-          XMLSS.Sheets[_CurrentRow].Rows[_CurrentRow].StyleID := _RowDefaultStyleID;
+          _Sheet.Rows[_CurrentRow].StyleID := _RowDefaultStyleID;
         end else
         begin
           //_RowDefaultStyleID := -1;
@@ -5895,7 +6125,7 @@ var
         //¬идимость: visible | collapse | filter
         s := xml.Attributes.ItemsByName['table:visibility'];
         if (s = 'collapse') then
-          XMLSS.Sheets[_CurrentRow].Rows[_CurrentRow].Hidden := true;
+          _Sheet.Rows[_CurrentRow].Hidden := true;
 
         if (xml.TagType = 5) then
         begin
@@ -5921,9 +6151,9 @@ var
         for i := 0 to ColStyleCount - 1 do
           if (ODFColumnStyles[i].name = s) then
           begin
-            XMLSS.Sheets[_CurrentPage].Columns[_MaxCol].Breaked := ODFColumnStyles[i].breaked;
+            _Sheet.Columns[_MaxCol].Breaked := ODFColumnStyles[i].breaked;
             if (ODFColumnStyles[i].width >= 0) then
-              XMLSS.Sheets[_CurrentPage].Columns[_MaxCol].WidthMM := ODFColumnStyles[i].width;
+              _Sheet.Columns[_MaxCol].WidthMM := ODFColumnStyles[i].width;
             break;
           end;
 
@@ -5931,13 +6161,13 @@ var
         if (s > '') then
         {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
         begin
-          XMLSS.Sheets[_CurrentPage].Columns[_MaxCol].StyleID := _FindStyleID(s, _tmpNum);
+          _Sheet.Columns[_MaxCol].StyleID := _FindStyleID(s, _tmpNum);
           if (_tmpNum >= 0) then
             ReadHelper.ConditionReader.AddColumnCF(_MaxCol, _tmpNum);
         end else
           _tmpNum := -1;
         {$ELSE}
-          XMLSS.Sheets[_CurrentPage].Columns[_MaxCol].StyleID := _FindStyleID(s);
+          _Sheet.Columns[_MaxCol].StyleID := _FindStyleID(s);
         {$ENDIF}
 
         s := xml.Attributes.ItemsByName['table:number-columns-repeated'];
@@ -5949,7 +6179,7 @@ var
               CheckCol(_CurrentPage, _MaxCol + t + 1);
               for i := 1 to t do
               begin
-                XMLSS.Sheets[_CurrentPage].Columns[_MaxCol + i].Assign(XMLSS.Sheets[_CurrentPage].Columns[_MaxCol]);
+                _Sheet.Columns[_MaxCol + i].Assign(XMLSS.Sheets[_CurrentPage].Columns[_MaxCol]);
                 {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
                 if (_tmpNum >= 0) then
                   ReadHelper.ConditionReader.AddColumnCF(_MaxCol + i, _tmpNum);
@@ -5979,8 +6209,8 @@ var
                                                            StyleCount);
     {$ENDIF}
 
-    for i := 0 to XMLSS.Sheets[_CurrentPage].ColCount - 1 do
-      XMLSS.Sheets[_CurrentPage].Columns[i].StyleID := -1;
+    for i := 0 to _Sheet.ColCount - 1 do
+      _Sheet.Columns[i].StyleID := -1;
   end; //_ReadTable
 
   procedure _ReadDocument();
