@@ -5039,6 +5039,8 @@ var
     b: boolean;
     s: string;
     _r: TRect;
+    k1, k2, k: integer;
+    _in_merge_not_top: boolean; //if cell in merge area, but not top left
     
   begin
     _xml.Attributes.Clear();
@@ -5064,8 +5066,24 @@ var
         b := (_sheet.Cell[j, i].Data > '') or
              (_sheet.Cell[j, i].Formula > '');
         _xml.Attributes.Add('r', ZEGetA1byCol(j) + IntToStr(i + 1));
-        if (_sheet.Cell[j, i].CellStyle >= -1) and (_sheet.Cell[j, i].CellStyle < XMLSS.Styles.Count) then
-          s := IntToStr(_sheet.Cell[j, i].CellStyle + 1)
+        _in_merge_not_top := false;
+        k := _sheet.MergeCells.InMergeRange(j, i);
+        if (k >= 0) then
+          _in_merge_not_top := _sheet.MergeCells.InLeftTopCorner(j, i) < 0;
+
+        if (_in_merge_not_top) then
+        begin
+          k1 := _sheet.MergeCells.Items[k].Left;
+          k2 := _sheet.MergeCells.Items[k].top;
+        end
+        else
+        begin
+          k1 := j;
+          k2 := i;
+        end;
+
+        if (_sheet.Cell[k1, k2].CellStyle >= -1) and (_sheet.Cell[k1, k2].CellStyle < XMLSS.Styles.Count) then
+          s := IntToStr(_sheet.Cell[k1, k2].CellStyle + 1)
         else
           s := '0';
         _xml.Attributes.Add('s', s, false);
