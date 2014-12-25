@@ -7,8 +7,8 @@
 // Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
 // e-mail: avemey(мяу)tut(точка)by
 // URL:    http://avemey.com
-// Ver:    0.4
-// Last update:	 2012.08.04
+// Ver:    0.5
+// Last update:	 2014.12.25
 //----------------------------------------------------------------
 // Да, кстати, автор не гарантирует правильную работу компонента и
 // не несет ответственности за возможный ущерб в результате
@@ -2520,7 +2520,7 @@ var
   t2: TGridRect;
 
 begin
-  if (goEditing in Options)and(not (goRowSelect in Options))and (goAlwaysShowEditor in Options) then
+  if (goEditing in Options) and (not (goRowSelect in Options)) and (goAlwaysShowEditor in Options) then
   begin
     t := MouseCoord(x, y);
     if (Col <> t.y) or (Row <> t.x) then ShowEditorfirst;
@@ -2552,6 +2552,7 @@ procedure TZColorStringGrid.MouseMove(Shift: TShiftState; X, Y: Integer);
 var
   oldsel, sel: TGridRect;
   t, t1 : TGridCoord;
+  z: TPoint;
 
 begin
   oldsel := selection;
@@ -2566,8 +2567,13 @@ begin
     oldsel := self.MergeCells.GetSelectedArea(false);
     if goRowSelect in Options then
     begin
+      z := MergeCells.GetMergeYY(Row);
       oldsel.Left := self.FixedCols;
       oldsel.Right := self.ColCount - 1;
+      if (z.X < oldsel.Top) then
+        oldsel.Top := z.X;
+      if (z.Y > oldsel.Bottom) then
+        oldsel.Bottom := z.Y;
     end;
     if (sel.Left <> oldsel.Left) or (sel.right <> oldsel.right) or
        (sel.top <> oldsel.top)   or (sel.bottom <> oldsel.bottom) then
@@ -2593,7 +2599,7 @@ begin
       invalidate;
     end;
   end;
-  RowSelectYY(VK_DOWN);
+ // RowSelectYY(VK_DOWN);
 end;
 
 procedure TZColorStringGrid.HideEditor;
