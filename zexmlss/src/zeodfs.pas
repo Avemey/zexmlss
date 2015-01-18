@@ -352,6 +352,7 @@ const
   ZETag_style_print_orientation = 'style:print-orientation';
   ZETag_fo_page_width       = 'fo:page-width';
   ZETag_fo_page_height      = 'fo:page-height';
+  ZETag_fo_min_height       = 'fo:min-height';
   ZETag_style_header_style  = 'style:header-style';
   ZETag_style_footer_style  = 'style:footer-style';
   ZETag_fo_background_color = 'fo:background-color';
@@ -370,6 +371,11 @@ const
   ZETag_style_family        = 'style:family';
   ZETag_style_display       = 'style:display';
   ZETag_style_master_page_name = 'style:master-page-name';
+  ZETag_svg_height          = 'svg:height';
+
+  ZETag_style_scale_to      = 'style:scale-to';
+  ZETag_style_scale_to_pages = 'style:scale-to-pages';
+
   ZETag_table_style_name    = 'table:style-name';
   ZETag_style_table_properties = 'style:table-properties';
   ZETag_tableooo_tab_color  = 'tableooo:tab-color';
@@ -2466,16 +2472,36 @@ var
 
         if (isHeader) then
         begin
-          t := FPageLayouts[_PL].HeaderMargin;
+          t := FPageLayouts[_PL].HeaderMargins.MarginTopBottom;
           _GetAttrValue(ZETag_fo_margin_top, t);
-          FPageLayouts[_PL].HeaderMargin := t;
+          FPageLayouts[_PL].HeaderMargins.MarginTopBottom := t;
         end
         else
         begin
-          t := FPageLayouts[_PL].FooterMargin;
+          t := FPageLayouts[_PL].FooterMargins.MarginTopBottom;
           _GetAttrValue(ZETag_fo_margin_bottom, t);
-          FPageLayouts[_PL].FooterMargin := t;
+          FPageLayouts[_PL].FooterMargins.MarginTopBottom := t;
         end;
+
+        FPageLayouts[_PL].FooterMargins.UseAutoFitHeight := true;
+        t := FPageLayouts[_PL].FooterMargins.Height;
+        _GetAttrValue(ZETag_fo_min_height, t, 1);
+
+        s := xml.Attributes[ZETag_svg_height];
+        if (s <> '') then
+        begin
+          FPageLayouts[_PL].FooterMargins.UseAutoFitHeight := false;
+          _GetAttrValue(ZETag_svg_height, t, 1);
+        end;
+        FPageLayouts[_PL].FooterMargins.Height := t;
+
+        t := FPageLayouts[_PL].FooterMargins.MarginLeft;
+        _GetAttrValue(ZETag_fo_margin_left, t, 1);
+        FPageLayouts[_PL].FooterMargins.MarginLeft := t;
+
+        t := FPageLayouts[_PL].FooterMargins.MarginRight;
+        _GetAttrValue(ZETag_fo_margin_right, t, 1);
+        FPageLayouts[_PL].FooterMargins.MarginRight := t;
       end;
 
       if (xml.TagType = 6) and (xml.TagName = tagName) then
@@ -2521,12 +2547,25 @@ var
 
         _GetAttrValue(ZETag_fo_page_width, _w);
         _GetAttrValue(ZETag_fo_page_height, _h);
-        FPageLayouts[_PL].PortraitOrientation := xml.Attributes[ZETag_style_print_orientation] = ZETag_portrait;
+
+        //portrait by default
+        s := xml.Attributes[ZETag_style_print_orientation];
+        FPageLayouts[_PL].PortraitOrientation := (s = '') or (s = ZETag_portrait);
 
         FPageLayouts[_PL].MarginTop := _GetMarginValue(ZETag_fo_margin_top, FPageLayouts[_PL].MarginTop);
         FPageLayouts[_PL].MarginBottom := _GetMarginValue(ZETag_fo_margin_bottom, FPageLayouts[_PL].MarginBottom);
         FPageLayouts[_PL].MarginLeft := _GetMarginValue(ZETag_fo_margin_left, FPageLayouts[_PL].MarginLeft);
         FPageLayouts[_PL].MarginRight := _GetMarginValue(ZETag_fo_margin_right, FPageLayouts[_PL].MarginRight);
+
+        s := xml.Attributes[ZETag_style_scale_to];
+        if (s <> '') then
+          if (TryStrToIntPercent(s, t)) then
+            FPageLayouts[_PL].ScaleToPercent := t;
+
+        s := xml.Attributes[ZETag_style_scale_to_pages];
+        if (s <> '') then
+          if (TryStrToInt(s, t)) then
+            FPageLayouts[_PL].ScaleToPages := t;
       end; //if
 
       if ((xml.TagType = 4) and (xml.TagName = ZETag_style_header_style)) then
@@ -2548,7 +2587,11 @@ var
     end; //while
 
     if ((_h > 0) and (_w > 0)) then
+    begin
       FPageLayouts[_PL].PaperSize := _GetPaperSize(_w, _h);
+      FPageLayouts[_PL].PaperWidth := _w div 10;
+      FPageLayouts[_PL].PaperHeight := _h div 10;
+    end;
   end; //_ReadPageLayout
 
 begin
@@ -2740,11 +2783,17 @@ var
         if (xml.TagName = ZETag_style_header) then
           _ReadFooterHeader(xml.TagName, _MP.Header);
         if (xml.TagName = ZETag_style_header_left) then
+        begin
           _ReadFooterHeader(xml.TagName, _MP.EvenHeader);
+          _MP.IsEvenHeaderEqual := false;
+        end;
         if (xml.TagName = ZETag_style_footer) then
           _ReadFooterHeader(xml.TagName, _MP.Footer);
         if (xml.TagName = ZETag_style_footer_left) then
+        begin
           _ReadFooterHeader(xml.TagName, _MP.EvenFooter);
+          _MP.IsEvenFooterEqual := false;
+        end;
       end;
 
       if ((xml.TagType = 6) and (xml.TagName = ZETag_style_master_page)) then
@@ -2851,8 +2900,8 @@ var
            (_SO.MarginRight = SheetOptions.MarginRight) and
            (_SO.PaperSize = SheetOptions.PaperSize) and
            (_SO.PortraitOrientation = SheetOptions.PortraitOrientation) and
-           (_SO.HeaderMargin = SheetOptions.HeaderMargin) and
-           (_SO.FooterMargin = SheetOptions.FooterMargin) and
+           (_SO.HeaderMargins.IsEqual(SheetOptions.HeaderMargins)) and
+           (_SO.FooterMargins.IsEqual(SheetOptions.FooterMargins)) and
            (_SO.HeaderBGColor = SheetOptions.HeaderBGColor) and
            (_SO.FooterBGColor = SheetOptions.FooterBGColor)
            ;
@@ -2895,7 +2944,7 @@ var
            (_SO.Footer.IsEqual(SheetOptions.Footer)) and
            (_SO.IsEvenFooterEqual = SheetOptions.IsEvenFooterEqual) and
            (_SO.IsEvenHeaderEqual = SheetOptions.IsEvenHeaderEqual) and
-           (FPageLayoutsIndexes[FMasterPages[i]] = _a[PageNum]);
+           (FPageLayoutsIndexes[FMasterPages[i + 1]] = _a[PageNum]);
       if (b) then
       begin
         Result := i;
@@ -2936,7 +2985,7 @@ begin
       _a[i] := _GetPageLayoutIndex(AXMLSS.Sheets[_pages[i]].SheetOptions, i);
 
     for i := 0 to PagesCount - 1 do
-      FMasterPagesIndexes[i] := _GetMasterPageIndex(AXMLSS.Sheets[_pages[i]].SheetOptions, i);
+      FMasterPagesIndexes[i + 1] := _GetMasterPageIndex(AXMLSS.Sheets[_pages[i]].SheetOptions, i);
   finally
     SetLength(_a, 0);
   end;
@@ -2958,7 +3007,7 @@ end;
 
 function TZEODFWriteHelper.GetMasterPageName(PageNum: integer): string;
 begin
-  Result := FMasterPagesNames[FMasterPagesIndexes[PageNum]];
+  Result := FMasterPagesNames[FMasterPagesIndexes[PageNum + 1]];
 end;
 
 //Write to XML all page layouts styles (<style:page-layout> .. </style:page-layout>)
@@ -2979,11 +3028,23 @@ var
       xml.Attributes.Add(AttrName, ODFGetSizeToStr(Value * 0.1), false);
   end;
 
-  procedure _AddHeaderFooter(const ATagName, AAttrName: string; Value: integer; Color: TColor);
+  procedure _AddHeaderFooter(const ATagName, AAttrName: string; const HF: TZHeaderFooterMargins; Color: TColor);
   begin
     xml.Attributes.Clear();
     xml.WriteTagNode(ATagName, true, true, false);
-    _AddAttrSize(AAttrName, Value, -1);
+    tmp := HF.Height;
+    if (tmp = 0) then
+      tmp := 3;
+
+    if (HF.UseAutoFitHeight) then
+      _AddAttrSize(ZETag_fo_min_height, tmp, -1)
+    else
+      _AddAttrSize(ZETag_svg_height, tmp, -1);
+
+    _AddAttrSize(AAttrName, HF.MarginTopBottom, -1);
+    _AddAttrSize(ZETag_fo_margin_left, HF.MarginLeft, -1);
+    _AddAttrSize(ZETag_fo_margin_right, HF.MarginRight, -1);
+
     if (Color <> clWindow) then
       xml.Attributes.Add(ZETag_fo_background_color, '#' + ColorToHTMLHex(Color), false);
 
@@ -2996,10 +3057,10 @@ var
   //<style:page-layout-properties>..</style:page-layout-properties>
   procedure _AddPageLayoutProperties(num: integer);
   begin
-    if (FUniquePageLayouts[num] < 0) then
+    if (num < 0) then
       _SO := FXMLSS.DefaultSheetOptions
     else
-      _SO := FXMLSS.Sheets[_pages[FUniquePageLayouts[num]]].SheetOptions;
+      _SO := FXMLSS.Sheets[_pages[num]].SheetOptions;
 
     xml.Attributes.Clear();
 
@@ -3053,8 +3114,8 @@ var
     //  style:print-page-order              ???
     //  style:register-truth-ref-style-name ???
 
-    //  style:scale-to                      ???  for printing, default 100%
-    //  style:scale-to-pages                ???  for printing, number of pages on witch a document shoud be printed, default 1
+    //  style:scale-to                      +  for printing, default 100%
+    //  style:scale-to-pages                +  for printing, number of pages on witch a document shoud be printed, default 1
     //  style:table-centering               ???
 
     //Default margins (t/r/b/l) in mm: 20/20/20/20
@@ -3065,6 +3126,11 @@ var
 
     s := IfThen(_SO.PortraitOrientation, ZETag_portrait, ZETag_landscape);
     xml.Attributes.Add(ZETag_style_print_orientation, s, false);
+
+    if (_SO.ScaleToPercent <> 100) then
+      xml.Attributes.Add(ZETag_style_scale_to, IntToStr(_SO.ScaleToPercent) + '%');
+    if (_SO.ScaleToPages <> 1) then
+      xml.Attributes.Add(ZETag_style_scale_to_pages, IntToStr(_SO.ScaleToPages));
 
     if (_SO.PaperSize > 0) and (_so.PaperSize < const_ODS_paper_sizes_count) then
     begin
@@ -3096,8 +3162,8 @@ var
     //  style:footnote-sep
     xml.WriteEndTagNode(); //style:page-layout-properties
 
-    _AddHeaderFooter(ZETag_style_header_style, ZETag_fo_margin_bottom, _SO.HeaderMargin, _SO.HeaderBGColor);
-    _AddHeaderFooter(ZETag_style_footer_style, ZETag_fo_margin_top, _SO.FooterMargin, _SO.FooterBGColor);
+    _AddHeaderFooter(ZETag_style_header_style, ZETag_fo_margin_bottom, _SO.HeaderMargins, _SO.HeaderBGColor);
+    _AddHeaderFooter(ZETag_style_footer_style, ZETag_fo_margin_top, _SO.FooterMargins, _SO.FooterBGColor);
   end; //_AddPageLayoutProperties
 
 begin
@@ -3106,7 +3172,7 @@ begin
     xml.Attributes.Clear();
     xml.Attributes.Add(ZETag_Attr_StyleName, 'Mpm' + IntToStr(i + 1), false);
     xml.WriteTagNode(ZETag_style_page_layout, true, true, false);
-    _AddPageLayoutProperties(_Pages[FUniquePageLayouts[i]]);
+    _AddPageLayoutProperties(FUniquePageLayouts[i]);
     xml.WriteEndTagNode(); // style:page-layout
   end;
 end; //WriteStylesPageLayouts
@@ -3131,7 +3197,10 @@ var
   procedure _WriteHFItem(const TagName: string; const HFItem: TZSheetFooterHeader);
   begin
     xml.Attributes.Clear();
+    if (not HFItem.IsDisplay) then
+      xml.Attributes.Add(ZETag_style_display, 'false');
     xml.WriteTagNode(TagName, true, true, false);
+    xml.Attributes.Clear();
     if ((HFItem.DataLeft = HFItem.DataRight) and (HFItem.DataLeft = '')) then
     begin
       xml.WriteTag(ZETag_text_p, HFItem.Data, true, false, true);
@@ -3161,16 +3230,31 @@ var
       _WriteHFItem(ZETag_style_footer_left, _SO.EvenFooter);
   end; //_WriteMasterPage
 
+  function _ifUniqueStyle(id: integer): boolean;
+  var
+    i: integer;
+
+  begin
+    result := true;
+    for i := 0 to id - 1 do
+      if (FMasterPages[i] = FMasterPages[id]) then
+      begin
+        result := false;
+        break;
+      end;
+  end; //_ifUniqueStyle
+
 begin
   for i := 0 to FMasterPagesCount - 1 do
-  begin
-    xml.Attributes.Clear();
-    xml.Attributes.Add(ZETag_Attr_StyleName, FMasterPagesNames[i], false);
-    xml.Attributes.Add(ZETag_style_page_layout_name, 'Mpm' + IntToStr(FPageLayoutsIndexes[i] + 1));
-    xml.WriteTagNode(ZETag_style_master_page, true, true, false);
-    _WriteMasterPage(FMasterPages[i]);
-    xml.WriteEndTagNode(); //style:master-page
-  end;
+    if (_ifUniqueStyle(i)) then
+    begin
+      xml.Attributes.Clear();
+      xml.Attributes.Add(ZETag_Attr_StyleName, FMasterPagesNames[i], false);
+      xml.Attributes.Add(ZETag_style_page_layout_name, 'Mpm' + IntToStr(FPageLayoutsIndexes[i] + 1));
+      xml.WriteTagNode(ZETag_style_master_page, true, true, false);
+      _WriteMasterPage(FMasterPages[i]);
+      xml.WriteEndTagNode(); //style:master-page
+    end;
 end; //WriteStylesMasterPages
 
 //BooleanToStr для ODF //TODO: потом заменить

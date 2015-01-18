@@ -80,6 +80,9 @@ function ZENormalizeAngle180(const value: TZCellTextRotate): integer;
 // single place to update version et all
 function ZELibraryName: string;
 
+//Trying to convert string like "n%" to integer
+function TryStrToIntPercent(s: string; out Value: integer): boolean;
+
 const ZELibraryVersion = '0.0.7';
       ZELibraryFork = '';//'Arioch';  // or empty str   // URL ?
 
@@ -621,5 +624,23 @@ begin
   ZECorrectTitles(_names);
   result := true;
 end; //ZECheckTablesTitle
+
+//Trying to convert string like "n%" to integer
+//INPUT
+//      s: string     - input string
+//  out Value: integer  - returned value
+//RETURN
+//      boolean - true - Ok
+function TryStrToIntPercent(s: string; out Value: integer): boolean;
+var
+  l: integer;
+
+begin
+  l := length(s);
+  if (l > 1) then
+    if (s[l] = '%') then
+      Delete(s, l, 1);
+  result := TryStrToInt(s, Value);
+end; //TryStrToIntPercent
 
 end.

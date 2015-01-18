@@ -2208,10 +2208,10 @@ begin
           _currSheet.SheetOptions.MarginBottom := round(_tmpr);
         s := xml.Attributes.ItemsByName['footer'];
         if (_StrToMM(s, _tmpr)) then
-          _currSheet.SheetOptions.FooterMargin := round(_tmpr);
+          _currSheet.SheetOptions.FooterMargins.Height := abs(round(_tmpr));
         s := xml.Attributes.ItemsByName['header'];
         if (_StrToMM(s, _tmpr)) then
-          _currSheet.SheetOptions.HeaderMargin := round(_tmpr);
+          _currSheet.SheetOptions.HeaderMargins.Height := abs(round(_tmpr));
         s := xml.Attributes.ItemsByName['left'];
         if (_StrToMM(s, _tmpr)) then
           _currSheet.SheetOptions.MarginLeft := round(_tmpr);
@@ -5157,8 +5157,8 @@ var
     _xml.Attributes.Add('right',  ZEFloatSeparator(FormatFloat(s, _sheet.SheetOptions.MarginRight / ZE_MMinInch)),  false);
     _xml.Attributes.Add('top',    ZEFloatSeparator(FormatFloat(s, _sheet.SheetOptions.MarginTop / ZE_MMinInch)),    false);
     _xml.Attributes.Add('bottom', ZEFloatSeparator(FormatFloat(s, _sheet.SheetOptions.MarginBottom / ZE_MMinInch)), false);
-    _xml.Attributes.Add('header', ZEFloatSeparator(FormatFloat(s, _sheet.SheetOptions.HeaderMargin / ZE_MMinInch)), false);
-    _xml.Attributes.Add('footer', ZEFloatSeparator(FormatFloat(s, _sheet.SheetOptions.FooterMargin / ZE_MMinInch)), false);
+    _xml.Attributes.Add('header', ZEFloatSeparator(FormatFloat(s, _sheet.SheetOptions.HeaderMargins.Height / ZE_MMinInch)), false);
+    _xml.Attributes.Add('footer', ZEFloatSeparator(FormatFloat(s, _sheet.SheetOptions.FooterMargins.Height / ZE_MMinInch)), false);
     _xml.WriteEmptyTag('pageMargins', true, false);
 
     _xml.Attributes.Clear();

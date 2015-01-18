@@ -1800,8 +1800,8 @@ var
       Attributes.Clear();
       if (ProcessedSheet.SheetOptions.HeaderData > '') then
       begin
-        if ProcessedSheet.SheetOptions.HeaderMargin <> 13 then
-          Attributes.Add('x:Margin', ZEFloatSeparator(FormatFloat('0.##',ProcessedSheet.SheetOptions.HeaderMargin / ZE_MMinInch)));
+        if (ProcessedSheet.SheetOptions.HeaderMargins.Height) <> 13 then
+          Attributes.Add('x:Margin', ZEFloatSeparator(FormatFloat('0.##', ProcessedSheet.SheetOptions.HeaderMargins.Height / ZE_MMinInch)));
         Attributes.Add('x:Data', ProcessedSheet.SheetOptions.HeaderData, false);
         WriteEmptyTag('Header', true, true);
       end;
@@ -1810,8 +1810,8 @@ var
       Attributes.Clear();
       if (ProcessedSheet.SheetOptions.FooterData > '') then
       begin
-        if ProcessedSheet.SheetOptions.FooterMargin <> 13 then
-          Attributes.Add('x:Margin', ZEFloatSeparator(FormatFloat('0.##',ProcessedSheet.SheetOptions.FooterMargin / ZE_MMinInch)));
+        if ProcessedSheet.SheetOptions.FooterMargins.Height <> 13 then
+          Attributes.Add('x:Margin', ZEFloatSeparator(FormatFloat('0.##', ProcessedSheet.SheetOptions.FooterMargins.Height / ZE_MMinInch)));
         Attributes.Add('x:Data', ProcessedSheet.SheetOptions.FooterData, false);
         WriteEmptyTag('Footer', true, true);
       end;
@@ -2557,14 +2557,14 @@ var
         begin
           s := _xml.Attributes.ItemsByName['x:Margin'];
           if (s > '') then
-            _SheetOptions.HeaderMargin := round(ZETryStrToFloat(s)*25.4);
+            _SheetOptions.HeaderMargins.Height := abs(round(ZETryStrToFloat(s)*25.4));
           _SheetOptions.HeaderData := _xml.Attributes.ItemsByName['x:Data'];
         end else
         if IfTag('Footer', 5) then
         begin
           s := _xml.Attributes.ItemsByName['x:Margin'];
           if (s > '') then
-            _SheetOptions.FooterMargin := round(ZETryStrToFloat(s)*25.4);
+            _SheetOptions.FooterMargins.Height := abs(round(ZETryStrToFloat(s)*25.4));
           _SheetOptions.FooterData := _xml.Attributes.ItemsByName['x:Data'];
         end;
       end else
