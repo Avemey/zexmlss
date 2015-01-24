@@ -5,9 +5,9 @@
 // Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
 // e-mail: avemey(мяу)tut(точка)by
 // URL:    http://avemey.com
-// Ver:    0.0.7
+// Ver:    0.0.8
 // Лицензия: zlib
-// Last update: 2014.07.20
+// Last update: 2015.01.24
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
