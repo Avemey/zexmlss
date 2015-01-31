@@ -622,8 +622,8 @@ type
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
-    procedure Add(); overload;
-    procedure Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer); overload;
+    function Add(): TZConditionalAreaItem; overload;
+    function Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer): TZConditionalAreaItem; overload;
     procedure Assign(Source: TPersistent); override;
     procedure Delete(num: integer);
     function IsCellInArea(ColumnNum, RowNum: integer): boolean;
@@ -673,6 +673,8 @@ type
     function Add(): TZConditionalStyle; overload;
     function Add(Style: TZConditionalStyle): TZConditionalStyle; overload;
     function Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer): TZConditionalStyle; overload;
+    procedure Clear();
+    function Delete(num: integer): boolean;
     procedure Assign(Source: TPersistent); override;
     function IsEqual(Source: TPersistent): boolean; virtual;
     property Count: integer read FCount write SetCount;
@@ -3336,7 +3338,7 @@ end;
 
 procedure TZConditionalStyleItem.Clear();
 begin
-  FCondition := ZCFCellContentIsBetween;
+  FCondition := ZCFCellContentOperator;
   FConditionOperator := ZCFOpEqual;
   FApplyStyleID := -1;
   FValue1 := '';
@@ -3695,18 +3697,19 @@ begin
       FItems[num].Assign(Value);
 end; //SetItem
 
-procedure TZConditionalAreas.Add();
+function TZConditionalAreas.Add(): TZConditionalAreaItem;
 begin
   SetCount(FCount + 1);
+  Result  := FItems[FCount - 1];
 end; //Add
 
-procedure TZConditionalAreas.Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer);
+function TZConditionalAreas.Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer): TZConditionalAreaItem;
 begin
-  Add();
-  FItems[Count - 1].Row := RowNum;
-  FItems[Count - 1].Column := ColumnNum;
-  FItems[Count - 1].Width := AreaWidth;
-  FItems[Count - 1].Height := AreaHeight;
+  Result := Add();
+  Result.Row := RowNum;
+  Result.Column := ColumnNum;
+  Result.Width := AreaWidth;
+  Result.Height := AreaHeight;
 end; //Add
 
 procedure TZConditionalAreas.Assign(Source: TPersistent);
@@ -3879,6 +3882,31 @@ begin
   t.Width := AreaWidth;
   t.Height := AreaHeight;
 end; //add
+
+procedure TZConditionalFormatting.Clear();
+begin
+  SetCount(0);
+end; //Clear
+
+//Delete condition formatting item
+//INPUT
+//      num: integer - number of CF item
+//RETURN
+//      boolean - true - item deleted
+function TZConditionalFormatting.Delete(num: integer): boolean;
+var
+  i: integer;
+
+begin
+  Result := false;
+  if (num >= 0) and (num < Count) then
+  begin
+    FreeAndNil(FStyles[num]);
+    for i := num to FCount - 2 do
+      FStyles[num] := FStyles[num + 1];
+    Dec(FCount);
+  end;
+end; //Delete
 
 procedure TZConditionalFormatting.Assign(Source: TPersistent);
 var
