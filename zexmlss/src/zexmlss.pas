@@ -501,8 +501,8 @@ type
     property FooterMargins: TZHeaderFooterMargins read FFooterMargins;
     property IsEvenFooterEqual: boolean read FIsEvenFooterEqual write FIsEvenFooterEqual default true;
     property IsEvenHeaderEqual: boolean read FIsEvenHeaderEqual write FIsEvenHeaderEqual default true;
-    property HeaderData: string read GetHeaderData write SetHeaderData;
-    property FooterData: string read GetFooterData write SetFooterData;
+    property HeaderData: string read GetHeaderData write SetHeaderData; //deprecated
+    property FooterData: string read GetFooterData write SetFooterData; //deprecated
     property Header: TZSheetFooterHeader read FHeader;
     property Footer: TZSheetFooterHeader read FFooter;
     property EvenHeader: TZSheetFooterHeader read FEvenHeader;
