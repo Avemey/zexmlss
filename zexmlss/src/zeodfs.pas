@@ -269,18 +269,18 @@ type
   end;
 
 //—охран€ет незапакованный документ в формате Open Document
-function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
+function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 //—охран€ет незапакованный документ в формате Open Document
-function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
+function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
                          const SheetsNames: array of string): integer; overload;
 //—охран€ет незапакованный документ в формате Open Document
 function SaveXmlssToODFSPath(var XMLSS: TZEXMLSS; PathName: string): integer; overload;
 
 {$IFDEF FPC}
-function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
+function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
-function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
+function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
                          const SheetsNames: array of string): integer; overload;
 function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
 {$ENDIF}
@@ -1131,7 +1131,7 @@ var
           ZCFDuplicate:       result := _GetSimpleText('duplicate', retCondition);
           ZCFUnique:          result := _GetSimpleText('unique', retCondition);
           ZCFAboveAverage:    result := _GetSimpleText('above-average', retCondition);
-          ZCFBellowAverrage:  result := _GetSimpleText('below-average', retCondition);
+          ZCFBellowAverage:   result := _GetSimpleText('below-average', retCondition);
           ZCFAboveEqualAverage: result := _GetSimpleText('above-equal-average', retCondition);
           ZCFBelowEqualAverage: result := _GetSimpleText('below-equal-average', retCondition);
           ZCFTopElements:     result := _GetConditionOneNumber('top-elements', retCondition);
@@ -1595,7 +1595,7 @@ var
       result := _getSimpleCondition(ZCFAboveAverage)
     else
     if (s = 'below-average') then
-      result := _getSimpleCondition(ZCFBellowAverrage)
+      result := _getSimpleCondition(ZCFBellowAverage)
     else
     if (s = 'above-equal-average') then
       result := _getSimpleCondition(ZCFAboveEqualAverage)

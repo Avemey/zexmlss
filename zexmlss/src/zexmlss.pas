@@ -537,7 +537,7 @@ type
                  ZCFDuplicate,
                  ZCFUnique,
                  ZCFAboveAverage,
-                 ZCFBellowAverrage,
+                 ZCFBellowAverage,
                  ZCFAboveEqualAverage,
                  ZCFBelowEqualAverage,
                  ZCFTopElements,
