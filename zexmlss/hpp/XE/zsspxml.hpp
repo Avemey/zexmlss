@@ -22,11 +22,11 @@
 namespace Zsspxml
 {
 //-- type declarations -------------------------------------------------------
-typedef System::AnsiString __fastcall (*TAnsiToCPConverter)(System::AnsiString AnsiText);
+typedef System::AnsiString __fastcall (*TAnsiToCPConverter)(const System::AnsiString AnsiText);
 
 typedef void __fastcall (__closure *TReadCPCharObj)(System::AnsiString &RetChar, bool &_eof);
 
-typedef void __fastcall (*TReadCPChar)(TReadCPCharObj ReadCPChar, System::AnsiString &text, bool &_eof);
+typedef void __fastcall (*TReadCPChar)(const TReadCPCharObj ReadCPChar, System::AnsiString &text, bool &_eof);
 
 typedef TAnsiToCPConverter TCPToAnsiConverter;
 
@@ -51,29 +51,33 @@ private:
 	
 	
 public:
-	System::AnsiString operator[](System::AnsiString Att) { return ItemsByName[Att]; }
+	System::AnsiString operator[](const System::AnsiString Att) { return ItemsByName[Att]; }
 	
 private:
 	int FCount;
+	int FMaxCount;
 	_TZAttributes__1 FItems;
-	System::AnsiString __fastcall GetAttrS(System::AnsiString Att);
-	void __fastcall SetAttrS(System::AnsiString Att, System::AnsiString Value);
+	System::AnsiString __fastcall GetAttrS(const System::AnsiString Att);
+	void __fastcall SetAttrS(const System::AnsiString Att, const System::AnsiString Value);
 	System::AnsiString __fastcall GetAttrI(int num);
-	void __fastcall SetAttrI(int num, System::AnsiString Value);
+	void __fastcall SetAttrI(int num, const System::AnsiString Value);
 	TZAttrArray __fastcall GetAttr(int num);
-	void __fastcall SetAttr(int num, System::AnsiString *Value);
+	void __fastcall SetAttr(int num, System::AnsiString const *Value);
+	
+protected:
+	void __fastcall ResizeItemsArray(int NewSize);
 	
 public:
 	__fastcall TZAttributes(void);
 	__fastcall virtual ~TZAttributes(void);
-	void __fastcall Add(System::AnsiString AttrName, System::AnsiString Value, bool TestMatch = true)/* overload */;
-	void __fastcall Add(System::AnsiString *Attr, bool TestMatch = true)/* overload */;
+	void __fastcall Add(const System::AnsiString AttrName, const System::AnsiString Value, bool TestMatch = true)/* overload */;
+	void __fastcall Add(System::AnsiString const *Attr, bool TestMatch = true)/* overload */;
 	void __fastcall Add(TZAttrArray *Att, const int Att_Size, bool TestMatch = true)/* overload */;
 	virtual void __fastcall Assign(Classes::TPersistent* Source);
 	void __fastcall Clear(void);
 	void __fastcall DeleteItem(int Index);
-	void __fastcall Insert(int Index, System::AnsiString AttrName, System::AnsiString Value, bool TestMatch = true)/* overload */;
-	void __fastcall Insert(int Index, System::AnsiString *Attr, bool TestMatch = true)/* overload */;
+	void __fastcall Insert(int Index, const System::AnsiString AttrName, const System::AnsiString Value, bool TestMatch = true)/* overload */;
+	void __fastcall Insert(int Index, System::AnsiString const *Attr, bool TestMatch = true)/* overload */;
 	HIDESBASE virtual System::AnsiString __fastcall ToString(char quote, bool CheckEntity, bool addempty)/* overload */;
 	HIDESBASE virtual System::AnsiString __fastcall ToString(char quote, bool CheckEntity)/* overload */;
 	HIDESBASE virtual System::AnsiString __fastcall ToString(char quote)/* overload */;
@@ -81,7 +85,7 @@ public:
 	HIDESBASE virtual System::AnsiString __fastcall ToString(void)/* overload */;
 	__property int Count = {read=FCount, nodefault};
 //	__property TZAttrArray Items[int num] = {read=GetAttr, write=SetAttr};
-	__property System::AnsiString ItemsByName[System::AnsiString Att] = {read=GetAttrS, write=SetAttrS/*, default*/};
+	__property System::AnsiString ItemsByName[const System::AnsiString Att] = {read=GetAttrS, write=SetAttrS/*, default*/};
 	__property System::AnsiString ItemsByNum[int num] = {read=GetAttrI, write=SetAttrI};
 };
 
@@ -100,6 +104,7 @@ private:
 	TZAttributes* FAttributes;
 	_TZsspXMLWriter__1 FTags;
 	int FTagCount;
+	int FMaxTagCount;
 	System::AnsiString FBuffer;
 	int FMaxBufferLength;
 	bool FInProcess;
@@ -124,48 +129,50 @@ private:
 	void __fastcall SetAttributes(TZAttributes* Value);
 	
 protected:
-	void __fastcall AddText(System::AnsiString Text, bool UseConverter = true);
-	void __fastcall AddNode(System::AnsiString TagName, bool CloseTagNewLine);
+	void __fastcall AddText(const System::AnsiString Text, bool UseConverter = true);
+	void __fastcall AddNode(const System::AnsiString TagName, bool CloseTagNewLine);
 	System::AnsiString __fastcall GetTab(int num = 0x0);
-	void __fastcall _AddTag(System::AnsiString _begin, System::AnsiString text, System::AnsiString _end, bool StartNewLine, int _tab = 0x0);
+	void __fastcall _AddTag(const System::AnsiString _begin, System::AnsiString text, const System::AnsiString _end, bool StartNewLine, int _tab = 0x0);
+	void __fastcall ResizeTagArray(int NewSize);
 	
 public:
 	__fastcall virtual TZsspXMLWriter(void);
 	__fastcall virtual ~TZsspXMLWriter(void);
 	bool __fastcall BeginSaveToStream(Classes::TStream* Stream);
-	bool __fastcall BeginSaveToFile(System::UnicodeString FileName);
+	bool __fastcall BeginSaveToFile(const System::UnicodeString FileName);
 	bool __fastcall BeginSaveToString(void);
 	void __fastcall EndSaveTo(void);
 	void __fastcall FlushBuffer(void);
 	void __fastcall WriteCDATA(System::AnsiString CDATA, bool CorrectCDATA, bool StartNewLine = true)/* overload */;
-	void __fastcall WriteCDATA(System::AnsiString CDATA)/* overload */;
-	void __fastcall WriteComment(System::AnsiString Comment, bool StartNewLine = true);
-	void __fastcall WriteEmptyTag(System::AnsiString TagName, TZAttributes* SAttributes, bool StartNewLine, bool CheckEntity = true)/* overload */;
-	void __fastcall WriteEmptyTag(System::AnsiString TagName, TZAttrArray *AttrArray, const int AttrArray_Size, bool StartNewLine, bool CheckEntity = true)/* overload */;
-	void __fastcall WriteEmptyTag(System::AnsiString TagName, bool StartNewLine, bool CheckEntity = true)/* overload */;
-	void __fastcall WriteEmptyTag(System::AnsiString TagName, TZAttributes* SAttributes)/* overload */;
-	void __fastcall WriteEmptyTag(System::AnsiString TagName, TZAttrArray *AttrArray, const int AttrArray_Size)/* overload */;
-	void __fastcall WriteEmptyTag(System::AnsiString TagName)/* overload */;
-	void __fastcall WriteEndTagNode(void);
-	void __fastcall WriteInstruction(System::AnsiString InstructionName, TZAttributes* SAttributes, bool StartNewLine, bool CheckEntity = true)/* overload */;
-	void __fastcall WriteInstruction(System::AnsiString InstructionName, TZAttrArray *AttrArray, const int AttrArray_Size, bool StartNewLine, bool CheckEntity = true)/* overload */;
-	void __fastcall WriteInstruction(System::AnsiString InstructionName, bool StartNewLine, bool CheckEntity = true)/* overload */;
-	void __fastcall WriteInstruction(System::AnsiString InstructionName, TZAttributes* SAttributes)/* overload */;
-	void __fastcall WriteInstruction(System::AnsiString InstructionName, TZAttrArray *AttrArray, const int AttrArray_Size)/* overload */;
-	void __fastcall WriteInstruction(System::AnsiString InstructionName)/* overload */;
+	void __fastcall WriteCDATA(const System::AnsiString CDATA)/* overload */;
+	void __fastcall WriteComment(const System::AnsiString Comment, bool StartNewLine = true);
+	void __fastcall WriteEmptyTag(const System::AnsiString TagName, TZAttributes* SAttributes, bool StartNewLine, bool CheckEntity = true)/* overload */;
+	void __fastcall WriteEmptyTag(const System::AnsiString TagName, TZAttrArray *AttrArray, const int AttrArray_Size, bool StartNewLine, bool CheckEntity = true)/* overload */;
+	void __fastcall WriteEmptyTag(const System::AnsiString TagName, bool StartNewLine, bool CheckEntity = true)/* overload */;
+	void __fastcall WriteEmptyTag(const System::AnsiString TagName, TZAttributes* SAttributes)/* overload */;
+	void __fastcall WriteEmptyTag(const System::AnsiString TagName, TZAttrArray *AttrArray, const int AttrArray_Size)/* overload */;
+	void __fastcall WriteEmptyTag(const System::AnsiString TagName)/* overload */;
+	void __fastcall WriteEndTagNode(void)/* overload */;
+	void __fastcall WriteEndTagNode(bool isForce, bool CloseTagNewLine)/* overload */;
+	void __fastcall WriteInstruction(const System::AnsiString InstructionName, TZAttributes* SAttributes, bool StartNewLine, bool CheckEntity = true)/* overload */;
+	void __fastcall WriteInstruction(const System::AnsiString InstructionName, TZAttrArray *AttrArray, const int AttrArray_Size, bool StartNewLine, bool CheckEntity = true)/* overload */;
+	void __fastcall WriteInstruction(const System::AnsiString InstructionName, bool StartNewLine, bool CheckEntity = true)/* overload */;
+	void __fastcall WriteInstruction(const System::AnsiString InstructionName, TZAttributes* SAttributes)/* overload */;
+	void __fastcall WriteInstruction(const System::AnsiString InstructionName, TZAttrArray *AttrArray, const int AttrArray_Size)/* overload */;
+	void __fastcall WriteInstruction(const System::AnsiString InstructionName)/* overload */;
 	void __fastcall WriteRaw(System::AnsiString Text, bool UseConverter, bool StartNewLine = true);
-	void __fastcall WriteTag(System::AnsiString TagName, System::AnsiString Text, TZAttributes* SAttributes, bool StartNewLine, bool CloseTagNewLine, bool CheckEntity = true)/* overload */;
-	void __fastcall WriteTag(System::AnsiString TagName, System::AnsiString Text, TZAttrArray *AttrArray, const int AttrArray_Size, bool StartNewLine, bool CloseTagNewLine, bool CheckEntity = true)/* overload */;
-	void __fastcall WriteTag(System::AnsiString TagName, System::AnsiString Text, bool StartNewLine, bool CloseTagNewLine, bool CheckEntity = true)/* overload */;
-	void __fastcall WriteTag(System::AnsiString TagName, System::AnsiString Text, TZAttributes* SAttributes)/* overload */;
-	void __fastcall WriteTag(System::AnsiString TagName, System::AnsiString Text, TZAttrArray *AttrArray, const int AttrArray_Size)/* overload */;
-	void __fastcall WriteTag(System::AnsiString TagName, System::AnsiString Text)/* overload */;
-	void __fastcall WriteTagNode(System::AnsiString TagName, TZAttributes* SAttributes, bool StartNewLine, bool CloseTagNewLine, bool CheckEntity = true)/* overload */;
-	void __fastcall WriteTagNode(System::AnsiString TagName, TZAttrArray *AttrArray, const int AttrArray_Size, bool StartNewLine, bool CloseTagNewLine, bool CheckEntity = true)/* overload */;
-	void __fastcall WriteTagNode(System::AnsiString TagName, bool StartNewLine, bool CloseTagNewLine, bool CheckEntity = true)/* overload */;
-	void __fastcall WriteTagNode(System::AnsiString TagName, TZAttributes* SAttributes)/* overload */;
-	void __fastcall WriteTagNode(System::AnsiString TagName, TZAttrArray *AttrArray, const int AttrArray_Size)/* overload */;
-	void __fastcall WriteTagNode(System::AnsiString TagName)/* overload */;
+	void __fastcall WriteTag(const System::AnsiString TagName, const System::AnsiString Text, TZAttributes* SAttributes, bool StartNewLine, bool CloseTagNewLine, bool CheckEntity = true)/* overload */;
+	void __fastcall WriteTag(const System::AnsiString TagName, const System::AnsiString Text, TZAttrArray *AttrArray, const int AttrArray_Size, bool StartNewLine, bool CloseTagNewLine, bool CheckEntity = true)/* overload */;
+	void __fastcall WriteTag(const System::AnsiString TagName, const System::AnsiString Text, bool StartNewLine, bool CloseTagNewLine, bool CheckEntity = true)/* overload */;
+	void __fastcall WriteTag(const System::AnsiString TagName, const System::AnsiString Text, TZAttributes* SAttributes)/* overload */;
+	void __fastcall WriteTag(const System::AnsiString TagName, const System::AnsiString Text, TZAttrArray *AttrArray, const int AttrArray_Size)/* overload */;
+	void __fastcall WriteTag(const System::AnsiString TagName, const System::AnsiString Text)/* overload */;
+	void __fastcall WriteTagNode(const System::AnsiString TagName, TZAttributes* SAttributes, bool StartNewLine, bool CloseTagNewLine, bool CheckEntity = true)/* overload */;
+	void __fastcall WriteTagNode(const System::AnsiString TagName, TZAttrArray *AttrArray, const int AttrArray_Size, bool StartNewLine, bool CloseTagNewLine, bool CheckEntity = true)/* overload */;
+	void __fastcall WriteTagNode(const System::AnsiString TagName, bool StartNewLine, bool CloseTagNewLine, bool CheckEntity = true)/* overload */;
+	void __fastcall WriteTagNode(const System::AnsiString TagName, TZAttributes* SAttributes)/* overload */;
+	void __fastcall WriteTagNode(const System::AnsiString TagName, TZAttrArray *AttrArray, const int AttrArray_Size)/* overload */;
+	void __fastcall WriteTagNode(const System::AnsiString TagName)/* overload */;
 	__property TZAttributes* Attributes = {read=FAttributes, write=SetAttributes};
 	__property char AttributeQuote = {read=FAttributeQuote, write=SetAttributeQuote, nodefault};
 	__property System::AnsiString Buffer = {read=FBuffer};
@@ -195,6 +202,7 @@ private:
 	Classes::TStream* FStream;
 	_TZsspXMLReader__1 FTags;
 	int FTagCount;
+	int FMaxTagCount;
 	System::AnsiString FBuffer;
 	int FMaxBufferLength;
 	bool FInProcess;
@@ -211,13 +219,17 @@ private:
 	TAnsiToCPConverter FCharConverter;
 	bool FStreamEnd;
 	bool FIgnoreCase;
+	bool FQuotesEqual;
+	bool FAttributesMatch;
 	System::AnsiString __fastcall GetTag(int num);
 	void __fastcall SetMaxBufferLength(int Value);
 	void __fastcall SetAttributes(TZAttributes* Value);
-	void __fastcall AddTag(System::AnsiString Value);
+	void __fastcall AddTag(const System::AnsiString Value);
 	void __fastcall DeleteClosedTag(void);
 	void __fastcall DeleteTag(void);
 	void __fastcall SetIgnoreCase(bool Value);
+	void __fastcall SetQuotesEqual(bool Value);
+	void __fastcall SetAttributesMatch(bool Value);
 	
 protected:
 	void __fastcall Clear(void);
@@ -225,6 +237,7 @@ protected:
 	void __fastcall RecognizeEncoding(System::AnsiString &txt);
 	void __fastcall ReadBuffer(void);
 	void __fastcall GetOneChar(System::AnsiString &OneChar, bool &err);
+	void __fastcall ResizeTagArray(int NewSize);
 	
 public:
 	__fastcall virtual TZsspXMLReader(void);
@@ -236,6 +249,7 @@ public:
 	void __fastcall EndRead(void);
 	virtual bool __fastcall Eof(void);
 	__property TZAttributes* Attributes = {read=FAttributes};
+	__property bool AttributesMatch = {read=FAttributesMatch, write=SetAttributesMatch, nodefault};
 	__property bool InProcess = {read=FInProcess, nodefault};
 	__property System::AnsiString RawTextTag = {read=FRawTextTag};
 	__property int ErrorCode = {read=FErrorCode, nodefault};
@@ -247,6 +261,7 @@ public:
 	__property System::AnsiString Tags[int num] = {read=GetTag};
 	__property System::AnsiString TextBeforeTag = {read=FTextBeforeTag};
 	__property int MaxBufferLength = {read=FMaxBufferLength, write=SetMaxBufferLength, nodefault};
+	__property bool QuotesEqual = {read=FQuotesEqual, write=SetQuotesEqual, nodefault};
 };
 
 
@@ -264,23 +279,23 @@ private:
 	TZAttributes* FAttributes;
 	int __fastcall GetAttrCount(void);
 	System::UnicodeString __fastcall GetAttrS(System::UnicodeString Att);
-	void __fastcall SetAttrS(System::UnicodeString Att, System::UnicodeString Value);
+	void __fastcall SetAttrS(System::UnicodeString Att, const System::UnicodeString Value);
 	System::UnicodeString __fastcall GetAttrI(int num);
-	void __fastcall SetAttrI(int num, System::UnicodeString Value);
+	void __fastcall SetAttrI(int num, const System::UnicodeString Value);
 	TZAttrArrayH __fastcall GetAttr(int num);
-	void __fastcall SetAttr(int num, System::UnicodeString *Value);
+	void __fastcall SetAttr(int num, System::UnicodeString const *Value);
 	
 public:
 	__fastcall TZAttributesH(void);
 	__fastcall virtual ~TZAttributesH(void);
-	void __fastcall Add(System::UnicodeString AttrName, System::UnicodeString Value, bool TestMatch = true)/* overload */;
-	void __fastcall Add(System::UnicodeString *Attr, bool TestMatch = true)/* overload */;
+	void __fastcall Add(const System::UnicodeString AttrName, const System::UnicodeString Value, bool TestMatch = true)/* overload */;
+	void __fastcall Add(System::UnicodeString const *Attr, bool TestMatch = true)/* overload */;
 	void __fastcall Add(TZAttrArrayH *Att, const int Att_Size, bool TestMatch = true)/* overload */;
 	virtual void __fastcall Assign(Classes::TPersistent* Source);
 	void __fastcall Clear(void);
 	void __fastcall DeleteItem(int Index);
-	void __fastcall Insert(int Index, System::UnicodeString AttrName, System::UnicodeString Value, bool TestMatch = true)/* overload */;
-	void __fastcall Insert(int Index, System::UnicodeString *Attr, bool TestMatch = true)/* overload */;
+	void __fastcall Insert(int Index, const System::UnicodeString AttrName, const System::UnicodeString Value, bool TestMatch = true)/* overload */;
+	void __fastcall Insert(int Index, System::UnicodeString const *Attr, bool TestMatch = true)/* overload */;
 	HIDESBASE virtual System::UnicodeString __fastcall ToString(System::WideChar quote, bool CheckEntity, bool addempty)/* overload */;
 	HIDESBASE virtual System::UnicodeString __fastcall ToString(System::WideChar quote, bool CheckEntity)/* overload */;
 	HIDESBASE virtual System::UnicodeString __fastcall ToString(System::WideChar quote)/* overload */;
@@ -338,7 +353,8 @@ public:
 	void __fastcall WriteEmptyTag(System::UnicodeString TagName, TZAttributesH* SAttributes)/* overload */;
 	void __fastcall WriteEmptyTag(System::UnicodeString TagName, TZAttrArrayH *AttrArray, const int AttrArray_Size)/* overload */;
 	void __fastcall WriteEmptyTag(System::UnicodeString TagName)/* overload */;
-	void __fastcall WriteEndTagNode(void);
+	void __fastcall WriteEndTagNode(void)/* overload */;
+	void __fastcall WriteEndTagNode(bool isForce, bool CloseTagNewLine)/* overload */;
 	void __fastcall WriteInstruction(System::UnicodeString InstructionName, TZAttributesH* SAttributes, bool StartNewLine, bool CheckEntity = true)/* overload */;
 	void __fastcall WriteInstruction(System::UnicodeString InstructionName, TZAttrArrayH *AttrArray, const int AttrArray_Size, bool StartNewLine, bool CheckEntity = true)/* overload */;
 	void __fastcall WriteInstruction(System::UnicodeString InstructionName, bool StartNewLine, bool CheckEntity = true)/* overload */;
@@ -397,6 +413,10 @@ private:
 	int __fastcall GetMaxBufferLength(void);
 	void __fastcall SetAttributes(TZAttributesH* Value);
 	void __fastcall SetIgnoreCase(bool Value);
+	void __fastcall SetQuotesEqual(bool Value);
+	bool __fastcall GetQuotesEqual(void);
+	void __fastcall SetAttributesMatch(bool Value);
+	bool __fastcall GetAttributesMatch(void);
 	
 public:
 	__fastcall virtual TZsspXMLReaderH(void);
@@ -408,6 +428,7 @@ public:
 	void __fastcall EndRead(void);
 	virtual bool __fastcall Eof(void);
 	__property TZAttributesH* Attributes = {read=GetAttributes};
+	__property bool AttributesMatch = {read=GetAttributesMatch, write=SetAttributesMatch, nodefault};
 	__property bool InProcess = {read=GetInProcess, nodefault};
 	__property System::UnicodeString RawTextTag = {read=GetRawTextTag};
 	__property int ErrorCode = {read=GetErrorCode, nodefault};
@@ -419,6 +440,7 @@ public:
 	__property System::UnicodeString Tags[int num] = {read=GetTag};
 	__property System::UnicodeString TextBeforeTag = {read=GetTextBeforeTag};
 	__property int MaxBufferLength = {read=GetMaxBufferLength, write=SetMaxBufferLength, nodefault};
+	__property bool QuotesEqual = {read=GetQuotesEqual, write=SetQuotesEqual, nodefault};
 };
 
 
@@ -428,27 +450,28 @@ public:
 #define BOMUTF16LE L"\u044f\u044e"
 #define BOMUTF32BE L"\u0000\u0000\u044e\u044f"
 #define BOMUTF32LE L"\u044f\u044e\u0000\u0000"
-extern PACKAGE void __fastcall ReadCharUTF8(TReadCPCharObj ReadCPChar, System::AnsiString &text, bool &_eof);
-extern PACKAGE void __fastcall ReadCharUTF16LE(TReadCPCharObj ReadCPChar, System::AnsiString &text, bool &_eof);
-extern PACKAGE void __fastcall ReadCharUTF16BE(TReadCPCharObj ReadCPChar, System::AnsiString &text, bool &_eof);
-extern PACKAGE void __fastcall ReadCharUTF32(TReadCPCharObj ReadCPChar, System::AnsiString &text, bool &_eof);
-extern PACKAGE void __fastcall ReadCharOneByte(TReadCPCharObj ReadCPChar, System::AnsiString &text, bool &_eof);
-extern PACKAGE System::AnsiString __fastcall conv_UTF8ToLocal(System::AnsiString Text);
-extern PACKAGE System::AnsiString __fastcall conv_UTF16LEToLocal(System::AnsiString Text);
-extern PACKAGE System::AnsiString __fastcall conv_UTF16BEToLocal(System::AnsiString Text);
-extern PACKAGE System::AnsiString __fastcall conv_UTF32LEToLocal(System::AnsiString Text);
-extern PACKAGE System::AnsiString __fastcall conv_UTF32BEToLocal(System::AnsiString Text);
-extern PACKAGE System::AnsiString __fastcall conv_WIN1251ToLocal(System::AnsiString Text);
-extern PACKAGE System::AnsiString __fastcall conv_CP866ToLocal(System::AnsiString Text);
-extern PACKAGE TZAttrArray __fastcall ToAttribute(System::AnsiString AttrName, System::AnsiString Value)/* overload */;
-extern PACKAGE TZAttrArrayH __fastcall ToAttribute(System::UnicodeString AttrName, System::UnicodeString Value)/* overload */;
+extern PACKAGE void __fastcall ReadCharUTF8(const TReadCPCharObj ReadCPChar, System::AnsiString &text, bool &_eof);
+extern PACKAGE void __fastcall ReadCharUTF16LE(const TReadCPCharObj ReadCPChar, System::AnsiString &text, bool &_eof);
+extern PACKAGE void __fastcall ReadCharUTF16BE(const TReadCPCharObj ReadCPChar, System::AnsiString &text, bool &_eof);
+extern PACKAGE void __fastcall ReadCharUTF32(const TReadCPCharObj ReadCPChar, System::AnsiString &text, bool &_eof);
+extern PACKAGE void __fastcall ReadCharOneByte(const TReadCPCharObj ReadCPChar, System::AnsiString &text, bool &_eof);
+extern PACKAGE System::AnsiString __fastcall conv_UTF8ToLocal(const System::AnsiString Text);
+extern PACKAGE System::AnsiString __fastcall conv_UTF16LEToLocal(const System::AnsiString Text);
+extern PACKAGE System::AnsiString __fastcall conv_UTF16BEToLocal(const System::AnsiString Text);
+extern PACKAGE System::AnsiString __fastcall conv_UTF32LEToLocal(const System::AnsiString Text);
+extern PACKAGE System::AnsiString __fastcall conv_UTF32BEToLocal(const System::AnsiString Text);
+extern PACKAGE System::AnsiString __fastcall conv_WIN1251ToLocal(const System::AnsiString Text);
+extern PACKAGE System::AnsiString __fastcall conv_CP866ToLocal(const System::AnsiString Text);
+extern PACKAGE TZAttrArray __fastcall ToAttribute(const System::AnsiString AttrName, const System::AnsiString Value)/* overload */;
+extern PACKAGE TZAttrArrayH __fastcall ToAttribute(const System::UnicodeString AttrName, const System::UnicodeString Value)/* overload */;
 extern PACKAGE void __fastcall Correct_Entity(const System::AnsiString _St, int num, System::AnsiString &_result)/* overload */;
 extern PACKAGE void __fastcall Correct_Entity(const System::UnicodeString _St, int num, System::UnicodeString &_result)/* overload */;
-extern PACKAGE System::AnsiString __fastcall CheckStrEntity(System::AnsiString st, bool checkamp = true)/* overload */;
-extern PACKAGE System::UnicodeString __fastcall CheckStrEntity(System::UnicodeString st, bool checkamp = true)/* overload */;
-extern PACKAGE bool __fastcall RecognizeEncodingXML(int startpos, System::AnsiString &txt, int &cpfromtext, System::AnsiString &cpname, int &ftype)/* overload */;
+extern PACKAGE System::AnsiString __fastcall CheckStrEntity(const System::AnsiString st, bool checkamp = true)/* overload */;
+extern PACKAGE System::UnicodeString __fastcall CheckStrEntity(const System::UnicodeString st, bool checkamp = true)/* overload */;
+extern PACKAGE TAnsiToCPConverter __fastcall ZEGetDefaultUTF8Converter(void);
+extern PACKAGE bool __fastcall RecognizeEncodingXML(int startpos, System::AnsiString &txt, /* out */ int &cpfromtext, /* out */ System::AnsiString &cpname, /* out */ int &ftype)/* overload */;
 extern PACKAGE int __fastcall RecognizeBOM(System::AnsiString &txt);
-extern PACKAGE bool __fastcall RecognizeEncodingXML(System::AnsiString &txt, int &BOM, int &cpfromtext, System::AnsiString &cpname, int &ftype)/* overload */;
+extern PACKAGE bool __fastcall RecognizeEncodingXML(System::AnsiString &txt, /* out */ int &BOM, /* out */ int &cpfromtext, /* out */ System::AnsiString &cpname, /* out */ int &ftype)/* overload */;
 
 }	/* namespace Zsspxml */
 #if !defined(DELPHIHEADER_NO_IMPLICIT_NAMESPACE_USE)
