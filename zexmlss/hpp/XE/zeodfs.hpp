@@ -22,6 +22,8 @@
 #include <zexmlss.hpp>	// Pascal unit
 #include <zesavecommon.hpp>	// Pascal unit
 #include <zeZippy.hpp>	// Pascal unit
+#include <zearchhelper.hpp>	// Pascal unit
+#include <zipuseab.hpp>	// Pascal unit
 
 //-- user supplied -----------------------------------------------------------
 
@@ -322,6 +324,10 @@ extern PACKAGE int __fastcall ExportXmlssToODFS(Zexmlss::TZEXMLSS* &XMLSS, Syste
 extern PACKAGE bool __fastcall ReadODFContent(Zexmlss::TZEXMLSS* &XMLSS, Classes::TStream* stream, TZEODFReadHelper* &ReadHelper);
 extern PACKAGE bool __fastcall ReadODFSettings(Zexmlss::TZEXMLSS* &XMLSS, Classes::TStream* stream);
 extern PACKAGE int __fastcall ReadODFSPath(Zexmlss::TZEXMLSS* &XMLSS, System::UnicodeString DirName);
+extern PACKAGE int __fastcall SaveXmlssToODFS(Zexmlss::TZEXMLSS* &XMLSS, System::UnicodeString FileName, int const *SheetsNumbers, const int SheetsNumbers_Size, System::UnicodeString const *SheetsNames, const int SheetsNames_Size, Zsspxml::TAnsiToCPConverter TextConverter, System::UnicodeString CodePageName, System::AnsiString BOM = "")/* overload */;
+extern PACKAGE int __fastcall SaveXmlssToODFS(Zexmlss::TZEXMLSS* &XMLSS, System::UnicodeString FileName, int const *SheetsNumbers, const int SheetsNumbers_Size, System::UnicodeString const *SheetsNames, const int SheetsNames_Size)/* overload */;
+extern PACKAGE int __fastcall SaveXmlssToODFS(Zexmlss::TZEXMLSS* &XMLSS, System::UnicodeString FileName)/* overload */;
+extern PACKAGE int __fastcall ReadODFS(Zexmlss::TZEXMLSS* &XMLSS, System::UnicodeString FileName);
 
 }	/* namespace Zeodfs */
 #if !defined(DELPHIHEADER_NO_IMPLICIT_NAMESPACE_USE)

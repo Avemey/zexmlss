@@ -1,4 +1,4 @@
-ZEXMLSSLIB 0.0.7 (alpha)
+ZEXMLSSLIB 0.0.8 (beta)
 Для Lazarus, Delphi 7, C++Builder 6.
 Borland Developer Studio 2005, BDS 2006, CodeGear Delphi 2007, 
 CodeGear RAD Studio 2009, 2010, Delphi XE і Delphi XE2.
@@ -33,8 +33,8 @@ CodeGear RAD Studio 2009, 2010, Delphi XE і Delphi XE2.
      Library - Win32->Library Path) 
   3. Для выкарыстання функцый ReadXLSX, SaveXmlssToXLSX, SaveXmlssToODFS 
      і ReadODFS: прачытайце /delphizip/readme.txt, заменіце ў дырэкторыі src inc-файлы на /delphizip/патрэбны_пакавальнік
-     (пакуль падтрымліваюцца TurboPower Abbrevia (http://sourceforge.net/projects/tpabbrevia/) 
-     і Synzip (http://synopse.info)). Усталюйце патрэбны пакавальнік. 
+     (пакуль падтрымліваюцца TurboPower Abbrevia (http://sourceforge.net/projects/tpabbrevia/),
+     Synzip (http://synopse.info) і JEDI Code library (http://sourceforge.net/projects/jcl/)). Усталюйце патрэбны пакавальнік. 
   4. Адкрыйце патрэбны zexmlsslibe.dpk (ці zexmlsslib.dpk калі не 
      выкарыстоўваецца ZColorStringGrid). Націсніце "Compile" затым "Install".
 

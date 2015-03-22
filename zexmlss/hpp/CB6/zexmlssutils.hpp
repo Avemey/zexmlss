@@ -34,7 +34,11 @@ extern PACKAGE bool __fastcall XmlSSToGrid(Grids::TStringGrid* &Grid, Zexmlss::T
 extern PACKAGE int __fastcall SaveXmlssToHtml(Zexmlss::TZEXMLSS* &XMLSS, const int PageNum, AnsiString Title, Classes::TStream* Stream, Zsspxml::TAnsiToCPConverter TextConverter, AnsiString CodePageName)/* overload */;
 extern PACKAGE int __fastcall SaveXmlssToHtml(Zexmlss::TZEXMLSS* &XMLSS, const int PageNum, AnsiString Title, AnsiString FileName, Zsspxml::TAnsiToCPConverter TextConverter, AnsiString CodePageName)/* overload */;
 extern PACKAGE int __fastcall SaveXmlssToEXML(Zexmlss::TZEXMLSS* &XMLSS, Classes::TStream* Stream, const int * SheetsNumbers, const int SheetsNumbers_Size, const AnsiString * SheetsNames, const int SheetsNames_Size, Zsspxml::TAnsiToCPConverter TextConverter, AnsiString CodePageName, AnsiString BOM = "")/* overload */;
+extern PACKAGE int __fastcall SaveXmlssToEXML(Zexmlss::TZEXMLSS* &XMLSS, Classes::TStream* Stream, const int * SheetsNumbers, const int SheetsNumbers_Size, const AnsiString * SheetsNames, const int SheetsNames_Size)/* overload */;
+extern PACKAGE int __fastcall SaveXmlssToEXML(Zexmlss::TZEXMLSS* &XMLSS, Classes::TStream* Stream)/* overload */;
 extern PACKAGE int __fastcall SaveXmlssToEXML(Zexmlss::TZEXMLSS* &XMLSS, AnsiString FileName, const int * SheetsNumbers, const int SheetsNumbers_Size, const AnsiString * SheetsNames, const int SheetsNames_Size, Zsspxml::TAnsiToCPConverter TextConverter, AnsiString CodePageName, AnsiString BOM = "")/* overload */;
+extern PACKAGE int __fastcall SaveXmlssToEXML(Zexmlss::TZEXMLSS* &XMLSS, AnsiString FileName, const int * SheetsNumbers, const int SheetsNumbers_Size, const AnsiString * SheetsNames, const int SheetsNames_Size)/* overload */;
+extern PACKAGE int __fastcall SaveXmlssToEXML(Zexmlss::TZEXMLSS* &XMLSS, AnsiString FileName)/* overload */;
 extern PACKAGE int __fastcall ReadEXMLSS(Zexmlss::TZEXMLSS* &XMLSS, Classes::TStream* Stream)/* overload */;
 extern PACKAGE int __fastcall ReadEXMLSS(Zexmlss::TZEXMLSS* &XMLSS, AnsiString FileName)/* overload */;
 

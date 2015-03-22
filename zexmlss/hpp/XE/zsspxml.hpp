@@ -84,7 +84,7 @@ public:
 	HIDESBASE virtual System::AnsiString __fastcall ToString(bool CheckEntity)/* overload */;
 	HIDESBASE virtual System::AnsiString __fastcall ToString(void)/* overload */;
 	__property int Count = {read=FCount, nodefault};
-//	__property TZAttrArray Items[int num] = {read=GetAttr, write=SetAttr};
+	//__property TZAttrArray Items[int num] = {read=GetAttr, write=SetAttr};
 	__property System::AnsiString ItemsByName[const System::AnsiString Att] = {read=GetAttrS, write=SetAttrS/*, default*/};
 	__property System::AnsiString ItemsByNum[int num] = {read=GetAttrI, write=SetAttrI};
 };
@@ -302,7 +302,7 @@ public:
 	HIDESBASE virtual System::UnicodeString __fastcall ToString(bool CheckEntity)/* overload */;
 	virtual System::UnicodeString __fastcall ToString(void)/* overload */;
 	__property int Count = {read=GetAttrCount, nodefault};
-//	__property TZAttrArrayH Items[int num] = {read=GetAttr, write=SetAttr};
+	//__property TZAttrArrayH Items[int num] = {read=GetAttr, write=SetAttr};
 	__property System::UnicodeString ItemsByName[System::UnicodeString Att] = {read=GetAttrS, write=SetAttrS/*, default*/};
 	__property System::UnicodeString ItemsByNum[int num] = {read=GetAttrI, write=SetAttrI};
 };
