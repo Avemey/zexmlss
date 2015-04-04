@@ -1,0 +1,91 @@
+{
+implementation: function for ODS zip (delphi)
+usign kazip.pas https://raw.githubusercontent.com/JoseJimeniz/KaZip/master/KaZip.pas
+}
+
+//Сохраняет документ в формате Open Document
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      FileName: string                  - имя файла для сохранения
+//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
+//  const SheetsNames: array of string    - массив названий страниц
+//                                          (количество элементов в двух массивах должны совпадать)
+//      TextConverter: TAnsiToCPConverter - конвертер
+//      CodePageName: string              - имя кодировки
+//      BOM: ansistring                   - Byte Order Mark
+//RETURN
+//      integer
+function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
+var
+  tmpdir: string;
+  b: boolean;
+  _isCreated: boolean;
+
+begin
+  _isCreated := false;
+  try
+    _isCreated := ZECreateUniqueTmpDir(ZEGetTempDir(), tmpdir);
+    result := SaveXmlssToODFSPath(XMLSS, tmpdir, SheetsNumbers, SheetsNames, TextConverter, CodePageName, BOM);
+    b := ZEZipPackKazip(FileName, tmpdir);
+    if (not b) then
+      result := -1;
+  finally
+    if (_isCreated) then
+      ZEDelTree(tmpdir);
+  end;
+end; //SaveXmlssToODFS
+
+//Сохраняет документ в формате Open Document
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      FileName: string                  - имя файла для сохранения
+//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
+//  const SheetsNames: array of string    - массив названий страниц
+//                                          (количество элементов в двух массивах должны совпадать)
+//RETURN
+//      integer
+function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string): integer; overload;
+begin
+  result := SaveXmlssToODFS(XMLSS, FileName, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
+end; //SaveXmlssToODFS
+
+//Сохраняет документ в формате Open Document
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      FileName: string                  - имя файла для сохранения
+//RETURN
+//      integer
+function SaveXmlssToODFS(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
+begin
+  result := SaveXmlssToODFS(XMLSS, FileName, [], []);
+end; //SaveXmlssToODFS
+
+//Читает ODS
+//INPUT
+//  var XMLSS: TZEXMLSS - хранилище
+//  FileName: string    - имя файла
+//RETURN
+//      integer - номер ошибки (0 - всё OK)
+function ReadODFS(var XMLSS: TZEXMLSS; FileName: string): integer;
+var
+  tmpdir: string;
+  b: boolean;
+  _isCreated: boolean;
+
+begin
+  result := 0;
+  _isCreated := false;
+  try
+    _isCreated := ZECreateUniqueTmpDir(ZEGetTempDir(), tmpdir);
+    b := ZEZipUnpackKazip(FileName, tmpdir);
+    if (b) then
+      result := ReadODFSPath(XMLSS, tmpdir)
+    else
+      result := -1;
+  finally
+    if (_isCreated) then
+      ZEDelTree(tmpdir);
+  end;
+end; //ReadODFS
