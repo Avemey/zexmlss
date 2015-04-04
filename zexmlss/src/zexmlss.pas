@@ -683,6 +683,156 @@ type
 
   {$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
 
+  //Possible chart types
+  TZEChartType = (
+                    ZEChartTypeArea,
+                    ZEChartTypeBar,
+                    ZEChartTypeBubble,
+                    ZEChartTypeCircle,
+                    ZEChartTypeGantt,
+                    ZEChartTypeLine,
+                    ZEChartTypeRadar,
+                    ZEChartTypeRing,
+                    ZEChartTypeScatter,
+                    ZEChartTypeStock,
+                    ZEChartTypeSurface
+                 );
+
+  //Position of Legend in chart
+  TZEChartLegendPosition = (
+                            ZELegendBottom,     //Legend below the plot area
+                            ZELegendEnd,        //Legend on the right side of the plot area
+                            ZELegendStart,      //Legend on the left side of the plot area
+                            ZELegendTop,        //Legend above the plot area
+                            ZELegendBottomEnd,  //Legend in the bottom right corner of the plot area
+                            ZELegendBottomStart,//Legend in the bottom left corner
+                            ZELegendTopEnd,     //Legend in the top right corner
+                            ZELegendTopStart    //Legend in the top left corner
+                           );
+
+  //Alignment of a legend
+  TZELegendAlign = (
+                     ZELegengAlignStart,  //Legend aligned at the beginning of a plot area (left or top)
+                     ZELegendAlignCenter, //Legend aligned at the center of a plot area
+                     ZELegendAlignEnd     //Legend aligned at the end of a plot area (right or bottom)
+                   );
+
+  //Transformations that can applied to a chart/image.
+  TZETransform = class (TPersistent)
+  private
+    FRotate: double;
+    FScaleX: double;
+    FScaleY: double;
+    FSkewX: double;
+    FSkewY: double;
+    FTranslateX: double;
+    FTranslateY: double;
+  protected
+  public
+    constructor Create();
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean;
+    procedure Clear();
+  published
+    property Rotate: double read FRotate write FRotate;
+    property ScaleX: double read FScaleX write FScaleX;
+    property ScaleY: double read FScaleY write FScaleY;
+    property SkewX: double read FSkewX write FSkewX;
+    property SkewY: double read FSkewY write FSkewY;
+    property TranslateX: double read FTranslateX write FTranslateX;
+    property TranslateY: double read FTranslateY write FTranslateY;
+  end;
+
+  //Common frame ancestor for Charts and Images
+  TZECommonFrameAncestor = class (TPersistent)
+  private
+    FX: integer;
+    FY: integer;
+    FWidth: integer;
+    FHeight: integer;
+    FTransform: TZETransform;
+  protected
+    procedure SetX(value: integer); virtual;
+    procedure SetY(value: integer); virtual;
+    procedure SetWidth(value: integer); virtual;
+    procedure SetHeight(value: integer); virtual;
+    procedure SetTransform(const value: TZETransform); virtual;
+  public
+    constructor Create(); overload; virtual;
+    constructor Create(AX, AY, AWidth, AHeight: integer); overload; virtual;
+    destructor Destroy(); override;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; virtual;
+  published
+    property X: integer read FX write SetX default 0;
+    property Y: integer read FY write SetY default 0;
+    property Width: integer read FWidth write SetWidth default 10;
+    property Height: integer read FHeight write SetHeight default 10;
+    property Transform: TZETransform read FTransform write SetTransform;
+  end;
+
+  //Title or Subtitle for chart, axis etc
+  TZEChartTitleItem = class (TPersistent)
+  private
+    FText: string;
+    FFont: TFont;
+  protected
+    procedure SetFont(const value: TFont);
+  public
+    constructor Create(); virtual;
+    destructor Destroy(); override;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; virtual;
+  published
+    property Text: string read FText write FText;
+    property Font: TFont read FFont write SetFont;
+  end;
+
+  //Chart legend
+  TZEChartLegend = class (TZEChartTitleItem)
+  private
+    FPosition: TZEChartLegendPosition;
+    FAlign: TZELegendAlign;
+  protected
+  public
+    constructor Create(); override;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; override;
+  published
+    property Position: TZEChartLegendPosition read FPosition write FPosition;
+    property Align: TZELegendAlign read FAlign write FAlign;
+  end;
+
+  TZEChartAxis = class (TPersistent)
+  private
+  protected
+  public
+  published
+  end;
+
+  //Chart item
+  TZEChart = class (TZECommonFrameAncestor)
+  private
+    FTitle: TZEChartTitleItem;
+    FSubtitle: TZEChartTitleItem;
+    FLegend: TZEChartLegend;
+  protected
+    procedure SetTitle(const value: TZEChartTitleItem);
+    procedure SetSubtitle(const value: TZEChartTitleItem);
+    procedure SetLegend(const value: TZEChartLegend);
+    procedure CommonInit();
+  public
+    constructor Create(); overload; override;
+    constructor Create(AX, AY, AWidth, AHeight: integer); overload; override;
+    destructor Destroy(); override;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; override;
+  published
+    property Title: TZEChartTitleItem read FTitle write SetTitle;
+    property Subtitle: TZEChartTitleItem read FSubtitle write SetSubtitle;
+    property Legend: TZEChartLegend read FLegend write SetLegend;
+  end;
+
   //лист документа
   TZSheet = class (TPersistent)
   private
@@ -892,7 +1042,43 @@ function StrToZCellPattern(Value: string): TZCellPattern;
 
 function StrToZCellType(Value: string): TZCellType;
 
+function ZEIsFontsEquals(const Font1, Font2: TFont): boolean;
+
 implementation
+
+//Checks is Font1 equal Font2
+//INPUT
+//  const Font1: TFont
+//  const Font2: TFont
+//RETURN
+//    boolean - true - fonts are equals
+function ZEIsFontsEquals(const Font1, Font2: TFont): boolean;
+begin
+  Result := Assigned(Font1) and (Assigned(Font2));
+  if (Result) then
+  begin
+    Result := false;
+    if (Font1.Color <> Font2.Color) then
+      exit;
+
+    if (Font1.Height <> Font2.Height) then
+      exit;
+
+    if (Font1.Name <> Font2.Name) then
+      exit;
+
+    if (Font1.Pitch <> Font2.Pitch) then
+      exit;
+
+    if (Font1.Size <> Font2.Size) then
+      exit;
+
+    if (Font1.Style <> Font2.Style) then
+      exit;
+
+    Result := true;
+  end;
+end; //ZEIsFontsEquals
 
 //ѕровер€ет строку на правильность, если что-то не правильно - правит
 //Input
@@ -1707,7 +1893,7 @@ end;
 // about default font in Excel - http://support.microsoft.com/kb/214123
 constructor TZStyle.Create();
 begin
-  FFont := TFont.Create();
+  FFont  := TFont.Create();
   FFont.Size := 10;
   FFont.Name := 'Arial';
   FFont.Color := ClBlack;
@@ -1782,25 +1968,7 @@ begin
   if HideFormula <> zSource.HideFormula then
     exit;
 
-  //font
-  if Font.Color <> zSource.Font.Color then
-    exit;
-
-  if Font.Height <> zSource.Font.Height then
-    exit;
-
-  if Font.Name <> zSource.Font.Name then
-    exit;
-
-  if Font.Pitch <> zSource.Font.Pitch then
-    exit;
-
-  if Font.Size <> zSource.Font.Size then
-    exit;
-
-  if Font.Style <> zSource.Font.Style then
-    exit;
-    {tut} //Ќичего не забыл?
+  Result := ZEIsFontsEquals(FFont, zSource.Font);
 
   Result := true;
 end;
@@ -3945,6 +4113,360 @@ begin
 end; //IsEqual
 
 {$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
+
+
+////::::::::::::: TZECommonFrameAncestor :::::::::::::::::////
+
+constructor TZECommonFrameAncestor.Create();
+begin
+  FX := 0;
+  FY := 0;
+  FWidth := 10;
+  FHeight := 10;
+  FTransform := TZETransform.Create();
+end;
+
+constructor TZECommonFrameAncestor.Create(AX, AY, AWidth, AHeight: integer);
+begin
+  FX := AX;
+  FY := AY;
+  FWidth := AWidth;
+  FHeight := AHeight;
+  FTransform := TZETransform.Create();
+end;
+
+destructor TZECommonFrameAncestor.Destroy();
+begin
+  FreeAndNil(FTransform);
+  inherited;
+end;
+
+function TZECommonFrameAncestor.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZECommonFrameAncestor;
+
+begin
+  Result := false;
+  if (Assigned(Source)) then
+    if (Source is TZECommonFrameAncestor) then
+    begin
+      tmp := Source as TZECommonFrameAncestor;
+      Result := (FX = tmp.X) and (FY = tmp.Y) and
+                (FWidth = tmp.Width) and (FHeight = tmp.Height);
+      if (Result) then
+        Result := FTransform.IsEqual(tmp.Transform);
+    end;
+end; //IsEqual
+
+procedure TZECommonFrameAncestor.Assign(Source: TPersistent);
+var
+  b: boolean;
+  tmp: TZECommonFrameAncestor;
+
+begin
+  b := Source <> nil;
+  if (b) then
+    b := Source is TZECommonFrameAncestor;
+
+  if (b) then
+  begin
+    tmp := Source as TZECommonFrameAncestor;
+    FX := tmp.X;
+    FY := tmp.Y;
+    FWidth := tmp.Width;
+    FHeight := tmp.Height;
+    FTransform.Assign(tmp.Transform);
+  end
+  else
+    inherited Assign(Source);
+end; //Assign
+
+procedure TZECommonFrameAncestor.SetHeight(value: integer);
+begin
+  FHeight := value;
+end;
+
+procedure TZECommonFrameAncestor.SetTransform(const value: TZETransform);
+begin
+  if (Assigned(value)) then
+    FTransform.Assign(value);
+end;
+
+procedure TZECommonFrameAncestor.SetWidth(value: integer);
+begin
+  FWidth := value;
+end;
+
+procedure TZECommonFrameAncestor.SetX(value: integer);
+begin
+  FX := value;
+end;
+
+procedure TZECommonFrameAncestor.SetY(value: integer);
+begin
+  FY := value;
+end;
+
+////::::::::::::: TZETransform :::::::::::::::::////
+
+constructor TZETransform.Create();
+begin
+  Clear();
+end;
+
+procedure TZETransform.Assign(Source: TPersistent);
+var
+  b: boolean;
+  tmp: TZETransform;
+
+begin
+  b := Assigned(Source);
+  if (b) then
+    b := Source is TZETransform;
+
+  if (b) then
+  begin
+    tmp := Source as TZETransform;
+    FRotate := tmp.Rotate;
+    FScaleX := tmp.ScaleX;
+    FScaleY := tmp.ScaleY;
+    FSkewX := tmp.SkewX;
+    FSkewY := tmp.SkewY;
+    FTranslateX := tmp.TranslateX;
+    FTranslateY := tmp.TranslateY;
+  end
+  else
+    inherited Assign(Source);
+end; //Assign
+
+procedure TZETransform.Clear();
+begin
+  FRotate := 0;
+  FScaleX := 1;
+  FScaleY := 1;
+  FSkewX := 0;
+  FSkewY := 0;
+  FTranslateX := 0;
+  FTranslateY := 0;
+end; //Clear
+
+function TZETransform.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZETransform;
+
+begin
+  Result := Assigned(Source);
+  if (Result) then
+    Result := Source is TZETransform;
+
+  if (Result) then
+  begin
+    tmp := Source as TZETransform;
+    Result := (FRotate = tmp.Rotate) and
+              (FScaleX = tmp.ScaleX) and
+              (FScaleY = tmp.ScaleY) and
+              (FSkewX = tmp.SkewX) and
+              (FSkewY = tmp.SkewY) and
+              (FTranslateX = tmp.TranslateX) and
+              (FTranslateY = tmp.TranslateY);
+  end;
+end; //IsEqual
+
+
+////::::::::::::: TZEChartTitleItem :::::::::::::::::////
+
+constructor TZEChartTitleItem.Create();
+begin
+  FFont := TFont.Create();
+  FText := '';
+end;
+
+destructor TZEChartTitleItem.Destroy();
+begin
+  FreeAndNil(FFont);
+  inherited;
+end;
+
+procedure TZEChartTitleItem.Assign(Source: TPersistent);
+var
+  tmp: TZEChartTitleItem;
+  b: boolean;
+
+begin
+  b := Assigned(Source);
+
+  if (b) then
+  begin
+    b := Source is TZEChartTitleItem;
+    if (b) then
+    begin
+      tmp := Source as TZEChartTitleItem;
+
+      FText := tmp.Text;
+      FFont.Assign(tmp.Font);
+    end;
+  end;
+
+  if (not b) then
+    inherited Assign(Source);
+end;
+
+function TZEChartTitleItem.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZEChartTitleItem;
+
+begin
+  Result := Assigned(Source);
+  if (Result) then
+  begin
+    Result := Source is TZEChartTitleItem;
+    if (Result) then
+    begin
+      tmp := Source as TZEChartTitleItem;
+      Result := false;
+
+      if (FText <> tmp.Text) then
+        exit;
+
+      if (ZEIsFontsEquals(FFont, tmp.Font)) then
+        exit;
+
+      Result := true;
+    end;
+  end;
+end; //IsEqual
+
+procedure TZEChartTitleItem.SetFont(const value: TFont);
+begin
+  if (Assigned(value)) then
+    FFont.Assign(value);
+end;
+
+////::::::::::::: TZEChartLegend :::::::::::::::::////
+
+constructor TZEChartLegend.Create();
+begin
+  inherited;
+  FPosition := ZELegendStart;
+  FAlign := ZELegendAlignCenter;
+end;
+
+procedure TZEChartLegend.Assign(Source: TPersistent);
+var
+  tmp: TZEChartLegend;
+
+begin
+  inherited Assign(Source);
+
+  if (Assigned(Source)) then
+    if (Source is TZEChartLegend) then
+    begin
+      tmp := Source as TZEChartLegend;
+      FAlign := tmp.Align;
+      FPosition := tmp.Position;
+    end;
+end; //Assign
+
+function TZEChartLegend.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZEChartLegend;
+
+begin
+  Result := inherited IsEqual(Source);
+
+  if (Result) then
+  begin
+    Result := false;
+    if (Source is TZEChartLegend) then
+    begin
+      tmp := Source as TZEChartLegend;
+      Result := (FPosition = tmp.Position) and
+                (FAlign = tmp.Align);
+    end;
+  end;
+end; //IsEqual
+
+////::::::::::::: TZEChart :::::::::::::::::////
+
+procedure TZEChart.CommonInit();
+begin
+  FTitle := TZEChartTitleItem.Create();
+  FSubtitle := TZEChartTitleItem.Create();
+  FLegend := TZEChartLegend.Create();
+end;
+
+constructor TZEChart.Create(AX, AY, AWidth, AHeight: integer);
+begin
+  inherited;
+  CommonInit();
+end;
+
+constructor TZEChart.Create();
+begin
+  inherited;
+  CommonInit();
+end;
+
+destructor TZEChart.Destroy();
+begin
+  FreeAndNil(FSubtitle);
+  FreeAndNil(FTitle);
+  FreeAndNil(FLegend);
+  inherited;
+end;
+
+function TZEChart.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZEChart;
+
+begin
+  Result := inherited IsEqual(Source);
+  if (Result) then
+    if (Source is TZEChart) then
+    begin
+      tmp := Source as TZEChart;
+      Result := inherited IsEqual(Source);
+
+      if (Result) then
+        Result := FSubtitle.IsEqual(tmp.Subtitle) and
+                  FTitle.IsEqual(tmp.Title) and
+                  FLegend.IsEqual(tmp.Legend);
+    end;
+end;
+
+procedure TZEChart.SetLegend(const value: TZEChartLegend);
+begin
+  if (Assigned(value)) then
+    FLegend.Assign(value);
+end;
+
+procedure TZEChart.SetSubtitle(const value: TZEChartTitleItem);
+begin
+  if (Assigned(value)) then
+    FSubtitle.Assign(value);
+end;
+
+procedure TZEChart.SetTitle(const value: TZEChartTitleItem);
+begin
+  if (Assigned(value)) then
+    FTitle.Assign(value);
+end;
+
+procedure TZEChart.Assign(Source: TPersistent);
+var
+  tmp: TZEChart;
+
+begin
+  inherited;
+  if (Assigned(Source)) then
+    if (Source is TZEChart) then
+    begin
+      tmp := Source as TZEChart;
+      FSubtitle.Assign(tmp.Subtitle);
+      FTitle.Assign(tmp.Title);
+      FLegend.Assign(tmp.Legend);
+    end;
+end;
 
 {$IFDEF FPC}
 initialization
