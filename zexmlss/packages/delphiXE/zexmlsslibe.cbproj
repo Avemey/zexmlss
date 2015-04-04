@@ -2,7 +2,7 @@
 		<PropertyGroup>
 			<ProjectGuid>{472B0EA1-0A92-428E-A4BB-EB4FD6454928}</ProjectGuid>
 			<ProjectVersion>12.3</ProjectVersion>
-			<MainSource>zexmlslibe.cpp</MainSource>
+			<MainSource>zexmlsslibe.cpp</MainSource>
 			<Base>True</Base>
 			<Config Condition="'$(Config)'==''">Debug</Config>
 			<Platform>Win32</Platform>
@@ -66,7 +66,7 @@
 			<TASM_Debugging>None</TASM_Debugging>
 		</PropertyGroup>
 		<ItemGroup>
-			<CppCompile Include="zexmlslibe.cpp">
+			<CppCompile Include="zexmlsslibe.cpp">
 				<BuildOrder>0</BuildOrder>
 			</CppCompile>
 			<DelphiCompile Include="..\..\src\duansistr.pas">
@@ -122,7 +122,7 @@
 			<BorlandProject>
 				<CPlusPlusBuilder.Personality>
 					<Source>
-						<Source Name="MainSource">zexmlslibe.cpp</Source>
+						<Source Name="MainSource">zexmlsslibe.cpp</Source>
 					</Source>
 					<VersionInfo>
 						<VersionInfo Name="IncludeVerInfo">False</VersionInfo>

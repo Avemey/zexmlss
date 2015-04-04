@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2013.11.05
+// Last update: 2015.01.24
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -32,7 +32,9 @@ const
 //  TZESaveStrArray = array of string;  // Since Delphi 7 and FPC 2005 - TStringDynArray
 
 //ѕопытка преобразовать строку в число
-function ZETryStrToFloat(const st: string; valueIfError: double = 0): double;
+function ZEIsTryStrToFloat(const st: string; out retValue: double): boolean;
+function ZETryStrToFloat(const st: string; valueIfError: double = 0): double; overload;
+function ZETryStrToFloat(const st: string; out isOk: boolean; valueIfError: double = 0): double; overload;
 
 //ѕопытка преобразовать строку в boolean
 function ZETryStrToBoolean(const st: string; valueIfError: boolean = false): boolean;
@@ -77,14 +79,21 @@ function ZENormalizeAngle180(const value: TZCellTextRotate): integer;
 
 // single place to update version et all
 function ZELibraryName: string;
-const ZELibraryVersion = '0.0.6';
+
+//Trying to convert string like "n%" to integer
+function TryStrToIntPercent(s: string; out Value: integer): boolean;
+
+const ZELibraryVersion = '0.0.7';
       ZELibraryFork = '';//'Arioch';  // or empty str   // URL ?
+
 implementation
 
 function ZELibraryName: string;
 begin   // todo: compiler version and date ?
   Result := 'ZEXMLSSlib/' + ZELibraryVersion;
+  {$WARNINGS OFF}
   if ZELibraryFork <> '' then Result := Result + '@' + ZELibraryFork;
+  {$WARNINGS ON}
 
   Result := Result + '$' +
     {$IFDEF FPC}
@@ -266,6 +275,51 @@ begin
   end;
 end; //ZETryStrToBoolean
 
+function ZEIsTryStrToFloat(const st: string; out retValue: double): boolean;
+begin
+  retValue := ZETryStrToFloat(st, Result);
+end;
+
+//ѕопытка преобразовать строку в число
+//INPUT
+//  const st: string        - строка
+//  out isOk: boolean       - если true - ошибки небыло
+//    valueIfError: double  - значение, которое подставл€етс€ при ошибке преобразовани€
+function ZETryStrToFloat(const st: string; out isOk: boolean; valueIfError: double = 0): double;
+var
+  s: string;
+  i: integer;
+
+begin
+  result := 0;
+  isOk := true;
+  if (length(trim(st)) <> 0) then
+  begin
+    s := '';
+    for i := 1 to length(st) do
+      {$IFDEF DELPHI_UNICODE}
+      if (CharInSet(st[i], ['.', ','])) then
+      {$ELSE}
+      if (st[i] in ['.', ',']) then
+      {$ENDIF}
+        {$IFDEF DELPHI_UNICODE}
+        s := s + FormatSettings.DecimalSeparator
+        {$ELSE}
+          {$IFDEF Z_FPC_USE_FORMATSETTINGS}
+        s := s + FormatSettings.DecimalSeparator
+          {$ELSE}
+        s := s + DecimalSeparator
+          {$ENDIF}
+        {$ENDIF}
+      else if (st[i] <> ' ') then
+        s := s + st[i];
+
+    isOk := TryStrToFloat(s, result);
+    if (not isOk) then
+      result := valueIfError;
+  end;
+end; //ZETryStrToFloat
+
 //ѕопытка преобразовать строку в число
 //INPUT
 //  const st: string        - строка
@@ -289,7 +343,11 @@ begin
         {$IFDEF DELPHI_UNICODE}
         s := s + FormatSettings.DecimalSeparator
         {$ELSE}
+          {$IFDEF Z_FPC_USE_FORMATSETTINGS}
+        s := s + FormatSettings.DecimalSeparator
+          {$ELSE}
         s := s + DecimalSeparator
+          {$ENDIF}
         {$ENDIF}
       else if (st[i] <> ' ') then
         s := s + st[i];
@@ -566,5 +624,23 @@ begin
   ZECorrectTitles(_names);
   result := true;
 end; //ZECheckTablesTitle
+
+//Trying to convert string like "n%" to integer
+//INPUT
+//      s: string     - input string
+//  out Value: integer  - returned value
+//RETURN
+//      boolean - true - Ok
+function TryStrToIntPercent(s: string; out Value: integer): boolean;
+var
+  l: integer;
+
+begin
+  l := length(s);
+  if (l > 1) then
+    if (s[l] = '%') then
+      Delete(s, l, 1);
+  result := TryStrToInt(s, Value);
+end; //TryStrToIntPercent
 
 end.

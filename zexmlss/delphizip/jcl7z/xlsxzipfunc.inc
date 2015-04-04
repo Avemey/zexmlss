@@ -1,6 +1,6 @@
 {
 interface: functions for XLSX zip (delphi)
-using TurboPower Abbrevia http://sourceforge.net/projects/tpabbrevia/
+JEDI Code library (via www.7-zip.org) : http://sourceforge.net/projects/jcl/
 }
 function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;

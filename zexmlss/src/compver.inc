@@ -5,6 +5,7 @@
   //Directive deprecated with string msg (deprecated 'Use "some else"';)
   //  works in FPC and D>=2009.
   {$DEFINE USE_DEPRECATED_STRING}
+  {$I fpccompver.inc}
 {$ENDIF}
 
 /// ******DELPHI*********

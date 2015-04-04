@@ -74,7 +74,7 @@ class PASCALIMPLEMENTATION TStringList : public Classes::TStringList
 public:
 	bool OwnsObjects;
 	__fastcall TStringList(void)/* overload */;
-	__fastcall TStringList(bool OwnsObjects)/* overload */;
+	__fastcall TStringList(bool AOwnsObjects)/* overload */;
 	__fastcall virtual ~TStringList(void);
 	virtual void __fastcall Delete(int Index);
 	virtual void __fastcall Clear(void);

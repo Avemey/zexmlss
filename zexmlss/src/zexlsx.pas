@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2013.11.05
+// Last update: 2015.01.24
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - uniform save API for creating
 //     XLSX files in Delphi/Windows
@@ -76,6 +76,115 @@ type
 
   TZXLSXRelationsArray = array of TZXLSXRelations;
 
+///Differential Formatting
+
+  TZXLSXDiffBorderItemStyle = class(TPersistent)
+  private
+    FUseStyle: boolean;             //заменять ли стиль
+    FUseColor: boolean;             //заменять ли цвет
+    FColor: TColor;                 //цвет линий
+    FLineStyle: TZBorderType;       //стиль линий
+    FWeight: byte;
+  protected
+  public
+    constructor Create();
+    procedure Clear();
+    procedure Assign(Source: TPersistent); override;
+    property UseStyle: boolean read FUseStyle write FUseStyle;
+    property UseColor: boolean read FUseColor write FUseColor;
+    property Color: TColor read FColor write FColor;
+    property LineStyle: TZBorderType read FLineStyle write FLineStyle;
+    property Weight: byte read FWeight write FWeight;
+  end;
+
+  TZXLSXDiffBorder = class(TPersistent)
+  private
+    FBorder: array [0..5] of TZXLSXDiffBorderItemStyle;
+    procedure SetBorder(Num: integer; Const Value: TZXLSXDiffBorderItemStyle);
+    function GetBorder(Num: integer): TZXLSXDiffBorderItemStyle;
+  public
+    constructor Create(); virtual;
+    destructor Destroy(); override;
+    procedure Clear();
+    procedure Assign(Source: TPersistent);override;
+    property Border[Num: integer]: TZXLSXDiffBorderItemStyle read GetBorder write SetBorder; default;
+  end;
+
+  //Итем для дифференцированного форматирования
+  //TODO:
+  //      возможно, для excel xml тоже понадобится (перенести?)
+  TZXLSXDiffFormattingItem = class(TPersistent)
+  private
+    FUseFont: boolean;              //заменять ли шрифт
+    FUseFontColor: boolean;         //заменять ли цвет шрифта
+    FUseFontStyles: boolean;        //заменять ли стиль шрифта
+    FFontColor: TColor;             //цвет шрифта
+    FFontStyles: TFontStyles;       //стиль шрифта
+    FUseBorder: boolean;            //заменять ли рамку
+    FBorders: TZXLSXDiffBorder;     //Что менять в рамке
+    FUseFill: boolean;              //заменять ли заливку
+    FUseCellPattern: boolean;       //Заменять ли тип заливки
+    FCellPattern: TZCellPattern;    //тип заливки
+    FUseBGColor: boolean;           //заменять ли цвет заливки
+    FBGColor: TColor;               //цвет заливки
+    FUsePatternColor: boolean;      //Заменять ли цвет шаблона заливки
+    FPatternColor: TColor;          //Цвет шаблона заливки
+  protected
+  public
+    constructor Create();
+    destructor Destroy(); override;
+    procedure Clear();
+    procedure Assign(Source: TPersistent); override;
+    property UseFont: boolean read FUseFont write FUseFont;
+    property UseFontColor: boolean read FUseFontColor write FUseFontColor;
+    property UseFontStyles: boolean read FUseFontStyles write FUseFontStyles;
+    property FontColor: TColor read FFontColor write FFontColor;
+    property FontStyles: TFontStyles read FFontStyles write FFontStyles;
+    property UseBorder: boolean read FUseBorder write FUseBorder;
+    property Borders: TZXLSXDiffBorder read FBorders write FBorders;
+    property UseFill: boolean read FUseFill write FUseFill;
+    property UseCellPattern: boolean read FUseCellPattern write FUseCellPattern;
+    property CellPattern: TZCellPattern read FCellPattern write FCellPattern;
+    property UseBGColor: boolean read FUseBGColor write FUseBGColor;
+    property BGColor: TColor read FBGColor write FBGColor;
+    property UsePatternColor: boolean read FUsePatternColor write FUsePatternColor;
+    property PatternColor: TColor read FPatternColor write FPatternColor;
+  end;
+
+  //Дифференцированное форматирование
+  TZXLSXDiffFormatting = class(TPersistent)
+  private
+    FCount: integer;
+    FMaxCount: integer;
+    FItems: array of TZXLSXDiffFormattingItem;
+  protected
+    function GetItem(num: integer): TZXLSXDiffFormattingItem;
+    procedure SetItem(num: integer; const Value: TZXLSXDiffFormattingItem);
+    procedure SetCount(ACount: integer);
+  public
+    constructor Create();
+    destructor Destroy(); override;
+    procedure Add();
+    procedure Assign(Source: TPersistent); override;
+    procedure Clear();
+    property Count: integer read FCount;
+    property Items[num: integer]: TZXLSXDiffFormattingItem read GetItem write SetItem; default;
+  end;
+
+///end Differential Formatting
+
+  TZEXLSXReadHelper = class
+  private
+    FDiffFormatting: TZXLSXDiffFormatting;
+  protected
+    procedure SetDiffFormatting(const Value: TZXLSXDiffFormatting);
+  public
+    constructor Create();
+    destructor Destroy(); override;
+    property DiffFormatting: TZXLSXDiffFormatting read FDiffFormatting write SetDiffFormatting;
+  end;
+
+
 function ReadXSLXPath(var XMLSS: TZEXMLSS; DirName: string): integer; deprecated {$IFDEF FPC}'Use ReadXLSXPath!'{$ENDIF};
 function ReadXLSXPath(var XMLSS: TZEXMLSS; DirName: string): integer;
 
@@ -85,11 +194,17 @@ function ReadXLSX(var XMLSS: TZEXMLSS; FileName: string): integer;
 {$ENDIF}
 
 function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
-                             const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
+                             const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
+function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
+                             const SheetsNames: array of string): integer; overload;
+function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string): integer; overload;
 
 {$IFDEF FPC}
 function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
+function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
+                         const SheetsNames: array of string): integer; overload;
+function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
 {$ENDIF}
 
 {$IFNDEF FPC}
@@ -106,10 +221,10 @@ function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; PathName: string; const SheetsNu
 function ZEXSLXReadTheme(var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer): boolean;
 function ZEXSLXReadContentTypes(var Stream: TStream; var FileArray: TZXLSXFileArray; var FilesCount: integer): boolean;
 function ZEXSLXReadSharedStrings(var Stream: TStream; out StrArray: TStringDynArray; out StrCount: integer): boolean;
-function ZEXSLXReadStyles(var XMLSS: TZEXMLSS; var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer): boolean;
+function ZEXSLXReadStyles(var XMLSS: TZEXMLSS; var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer; ReadHelper: TZEXLSXReadHelper): boolean;
 function ZE_XSLXReadRelationships(var Stream: TStream; var Relations: TZXLSXRelationsArray; var RelationsCount: integer; var isWorkSheet: boolean; needReplaceDelimiter: boolean): boolean;
 function ZEXSLXReadWorkBook(var XMLSS: TZEXMLSS; var Stream: TStream; var Relations: TZXLSXRelationsArray; var RelationsCount: integer): boolean;
-function ZEXSLXReadSheet(var XMLSS: TZEXMLSS; var Stream: TStream; const SheetName: string; var StrArray: TStringDynArray; StrCount: integer; var Relations: TZXLSXRelationsArray; RelationsCount: integer): boolean;
+function ZEXSLXReadSheet(var XMLSS: TZEXMLSS; var Stream: TStream; const SheetName: string; var StrArray: TStringDynArray; StrCount: integer; var Relations: TZXLSXRelationsArray; RelationsCount: integer; ReadHelper: TZEXLSXReadHelper): boolean;
 function ZEXSLXReadComments(var XMLSS: TZEXMLSS; var Stream: TStream): boolean;
 
 //Дополнительные функции для экспорта отдельных файлов
@@ -118,18 +233,28 @@ function ZEXLSXCreateWorkBook(var XMLSS: TZEXMLSS; Stream: TStream; const _pages
                               const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
 function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring; out isHaveComments: boolean): integer;
 function ZEXLSXCreateContentTypes(var XMLSS: TZEXMLSS; Stream: TStream; PageCount: integer; CommentCount: integer; const PagesComments: TIntegerDynArray;
-
                                   TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateRelsMain(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateDocPropsApp(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateDocPropsCore(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 
-implementation uses
+implementation
+
+uses
 {$IfDef DELPHI_UNICODE}
   AnsiStrings,  // AnsiString targeted overloaded versions of Pos, Trim, etc
 {$EndIf}
-  StrUtils;
+  StrUtils,
+  Math;
+
+{$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+const
+  ZETag_conditionalFormatting   = 'conditionalFormatting';
+  ZETag_cfRule                  = 'cfRule';
+  ZETag_formula                 = 'formula';
+{$ENDIF}
+
 
 type
   //шрифт
@@ -141,6 +266,8 @@ type
     strike: boolean;
     charset: integer;
     color: TColor;
+    ColorType: byte;
+    LumFactor: double;
     fontsize: integer;
   end;
 
@@ -149,8 +276,10 @@ type
 {$IFDEF FPC}
   //Для распаковки в поток
 
-  { TXSLXZipHelper }
+  procedure XLSXSortRelationArray(var arr: TZXLSXRelationsArray; count: integer); forward;
 
+  { TXSLXZipHelper }
+type
   TXSLXZipHelper = class
   private
     FXMLSS: TZEXMLSS;
@@ -174,6 +303,7 @@ type
     FSheetRelations: TZXLSXRelationsArray;
     FSheetRelationsCount: integer;
     FNeedReadComments: boolean;
+    FReadHelper: TZEXLSXReadHelper;
     function GetFileItem(num: integer): TZXLSXFileItem;
     function GetRelationsCounts(num: integer): integer;
     function GetRelationsArray(num: integer): TZXLSXRelationsArray;
@@ -182,6 +312,7 @@ type
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
+    procedure SortRelationArray();
     procedure DoCreateOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
     procedure DoDoneOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
     procedure AddArchFile(const FileName: string);
@@ -226,6 +357,7 @@ begin
   FSheetRelationsCount := 0;
   SetLength(FArchFiles, FMaxArchFilesCount);
   FNeedReadComments := false;
+  FReadHelper := TZEXLSXReadHelper.Create();
 end;
 
 destructor TXSLXZipHelper.Destroy();
@@ -252,7 +384,13 @@ begin
   FThemaColor := nil;
   SetLength(FSheetRelations, 0);
   FSheetRelations := nil;
+  FreeAndNil(FReadHelper);
   inherited;
+end;
+
+procedure TXSLXZipHelper.SortRelationArray();
+begin
+ XLSXSortRelationArray(FRelationsArray[SheetRelationNumber], RelationsCounts[SheetRelationNumber]);
 end;
 
 function TXSLXZipHelper.GetArchFileItem(num: integer): string;
@@ -485,7 +623,7 @@ begin
       //стили
       if (FileType = 1) then
       begin
-        if (not ZEXSLXReadStyles(FXMLSS, AStream, FThemaColor, FThemaColorCount)) then
+        if (not ZEXSLXReadStyles(FXMLSS, AStream, FThemaColor, FThemaColorCount, FReadHelper)) then
           FRetCode := FRetCode or 5;
       end else
       //Workbook
@@ -497,7 +635,7 @@ begin
       //Sheet
       if (FileType = 0) then
       begin
-        if (not ZEXSLXReadSheet(FXMLSS, AStream, ListName, FStrArray, FStrCount, FSheetRelations, FSheetRelationsCount)) then
+        if (not ZEXSLXReadSheet(FXMLSS, AStream, ListName, FStrArray, FStrCount, FSheetRelations, FSheetRelationsCount, FReadHelper)) then
           FRetCode := FRetCode or 4;
       end else
       //Тема
@@ -528,6 +666,295 @@ begin
   end;
 end;
 {$ENDIF}
+
+////////////////////////////////////////////////////////////////////////////////
+///                   Differential Formatting
+////////////////////////////////////////////////////////////////////////////////
+
+////:::::::::::::  TZXLSXDiffFormating :::::::::::::::::////
+
+constructor TZXLSXDiffFormatting.Create();
+var
+  i: integer;
+
+begin
+  FCount := 0;
+  FMaxCount := 20;
+  SetLength(FItems, FMaxCount);
+  for i := 0 to FMaxCount - 1 do
+    FItems[i] := TZXLSXDiffFormattingItem.Create();
+end;
+
+destructor TZXLSXDiffFormatting.Destroy();
+var
+  i: integer;
+
+begin
+  for i := 0 to FMaxCount - 1 do
+    if (Assigned(FItems[i])) then
+      FreeAndNil(FItems[i]);
+  inherited;
+end;
+
+procedure TZXLSXDiffFormatting.Add();
+begin
+  SetCount(FCount + 1);
+  FItems[FCount - 1].Clear();
+end;
+
+procedure TZXLSXDiffFormatting.Assign(Source: TPersistent);
+var
+  df: TZXLSXDiffFormatting;
+  i: integer;
+  b: boolean;
+
+begin
+  b := true;
+
+  if (Assigned(Source)) then
+    if (Source is TZXLSXDiffFormatting) then
+    begin
+      b := false;
+      df := Source as TZXLSXDiffFormatting;
+      SetCount(df.Count);
+      for i := 0 to Count - 1 do
+        FItems[i].Assign(df[i]);
+
+    end;
+
+  if (b) then
+    inherited;
+end; //Assign
+
+procedure TZXLSXDiffFormatting.SetCount(ACount: integer);
+var
+  i: integer;
+
+begin
+  if (ACount >= FMaxCount) then
+  begin
+    FMaxCount := ACount + 20;
+    SetLength(FItems, FMaxCount);
+    for i := FCount to FMaxCount - 1 do
+      FItems[i] := TZXLSXDiffFormattingItem.Create();
+  end;
+  FCount := ACount;
+end;
+
+procedure TZXLSXDiffFormatting.Clear();
+begin
+  FCount := 0;
+end;
+
+function TZXLSXDiffFormatting.GetItem(num: integer): TZXLSXDiffFormattingItem;
+begin
+  if ((num >= 0) and (num < Count)) then
+    result := FItems[num]
+  else
+    result := nil;
+end;
+
+procedure TZXLSXDiffFormatting.SetItem(num: integer; const Value: TZXLSXDiffFormattingItem);
+begin
+  if ((num >= 0) and (num < Count)) then
+    if (Assigned(Value)) then
+      FItems[num].Assign(Value);
+end;
+
+////:::::::::::::  TZXLSXDiffBorderItemStyle :::::::::::::::::////
+
+constructor TZXLSXDiffBorderItemStyle.Create();
+begin
+  Clear();
+end;
+
+procedure TZXLSXDiffBorderItemStyle.Assign(Source: TPersistent);
+var
+  bs: TZXLSXDiffBorderItemStyle;
+  b: boolean;
+
+begin
+  b := true;
+
+  if (Assigned(Source)) then
+    if (Source is TZXLSXDiffBorderItemStyle) then
+    begin
+      b := false;
+      bs := Source as TZXLSXDiffBorderItemStyle;
+
+      FUseStyle := bs.UseStyle;
+      FUseColor := bs.UseColor;
+      FColor := bs.Color;
+      FWeight := bs.Weight;
+      FLineStyle := bs.LineStyle;
+    end;
+
+  if (b) then
+    inherited;
+end; //Assign
+
+procedure TZXLSXDiffBorderItemStyle.Clear();
+begin
+  FUseStyle := false;
+  FUseColor := false;
+  FColor := clBlack;
+  FWeight := 1;
+  FLineStyle := ZENone;
+end;
+
+////::::::::::::: TZXLSXDiffBorder :::::::::::::::::////
+
+constructor TZXLSXDiffBorder.Create();
+var
+  i: integer;
+
+begin
+  for i := 0 to 5 do
+    FBorder[i] := TZXLSXDiffBorderItemStyle.Create();
+  Clear();
+end;
+
+destructor TZXLSXDiffBorder.Destroy();
+var
+  i: integer;
+
+begin
+  for i := 0 to 5 do
+    FreeAndNil(FBorder[i]);
+
+  inherited;
+end;
+
+procedure TZXLSXDiffBorder.Assign(Source: TPersistent);
+var
+  brd: TZXLSXDiffBorder;
+  b: boolean;
+  i: integer;
+
+begin
+  b := true;
+
+  if (Assigned(Source)) then
+    if (Source is TZXLSXDiffBorder) then
+    begin
+      b := false;
+      brd := Source as TZXLSXDiffBorder;
+      for i := 0 to 5 do
+        FBorder[i].Assign(brd[i]);
+    end;
+
+  if (b) then
+    inherited;
+end; //Assign
+
+procedure TZXLSXDiffBorder.Clear();
+var
+  i: integer;
+
+begin
+  for i := 0 to 5 do
+    FBorder[i].Clear();
+end;
+
+function TZXLSXDiffBorder.GetBorder(Num: integer): TZXLSXDiffBorderItemStyle;
+begin
+  result := nil;
+  if ((num >= 0 ) and (num < 6)) then
+    result := FBorder[num];
+end;
+
+procedure TZXLSXDiffBorder.SetBorder(Num: integer; const Value: TZXLSXDiffBorderItemStyle);
+begin
+  if ((num >= 0) and (num < 6)) then
+    if (Assigned(Value)) then
+      FBorder[num].Assign(Value);
+end;
+
+////::::::::::::: TZXLSXDiffFormatingItem :::::::::::::::::////
+
+constructor TZXLSXDiffFormattingItem.Create();
+begin
+  FBorders := TZXLSXDiffBorder.Create();
+  Clear();
+end;
+
+destructor TZXLSXDiffFormattingItem.Destroy();
+begin
+  FreeAndNil(FBorders);
+  inherited;
+end;
+
+procedure TZXLSXDiffFormattingItem.Assign(Source: TPersistent);
+var
+  dxfItem: TZXLSXDiffFormattingItem;
+  b: boolean;
+
+begin
+  b := true;
+  if (Assigned(Source)) then
+    if (Source is TZXLSXDiffFormattingItem) then
+    begin
+      b := false;
+      dxfItem := Source as TZXLSXDiffFormattingItem;
+
+      FUseFont := dxfItem.UseFont;
+      FUseFontColor := dxfItem.UseFontColor;
+      FUseFontStyles := dxfItem.UseFontStyles;
+      FFontColor := dxfItem.FontColor;
+      FFontStyles := dxfItem.FontStyles;
+      FUseBorder := dxfItem.UseBorder;
+      FBorders.Assign(dxfItem.Borders);
+      FUseFill := dxfItem.UseFill;
+      FUseCellPattern := dxfItem.UseCellPattern;
+      FCellPattern := dxfItem.CellPattern;
+      FUseBGColor := dxfItem.UseBGColor;
+      FBGColor := dxfItem.BGColor;
+      FUsePatternColor := dxfItem.UsePatternColor;
+      FPatternColor := dxfItem.PatternColor;
+    end;
+
+  if (b) then
+    inherited;
+end; //Assign
+
+procedure TZXLSXDiffFormattingItem.Clear();
+begin
+  FUseFont := false;
+  FUseFontColor := false;
+  FUseFontStyles := false;
+  FFontColor := clBlack;
+  FFontStyles := [];
+  FUseBorder := false;
+  FBorders.Clear();
+  FUseFill := false;
+  FUseCellPattern := false;
+  FCellPattern := ZPNone;
+  FUseBGColor := false;
+  FBGColor := clWindow;
+  FUsePatternColor := false;
+  FPatternColor := clWindow;
+end; //Clear
+
+// END Differential Formatting
+////////////////////////////////////////////////////////////////////////////////
+
+constructor TZEXLSXReadHelper.Create();
+begin
+  FDiffFormatting := TZXLSXDiffFormatting.Create();
+end;
+
+destructor TZEXLSXReadHelper.Destroy();
+begin
+  if (Assigned(FDiffFormatting)) then
+    FreeAndNil(FDiffFormatting);
+  inherited;
+end;
+
+procedure TZEXLSXReadHelper.SetDiffFormatting(const Value: TZXLSXDiffFormatting);
+begin
+  if (Assigned(Value)) then
+    FDiffFormatting.Assign(Value);
+end;
 
 //Возвращает номер Relations из rels
 //INPUT
@@ -790,6 +1217,115 @@ begin
   end;
 end; //ZEXSLXReadSharedStrings
 
+{$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+//Получить условное форматирование и оператор из xlsx
+//INPUT
+//  const xlsxCfType: string              - xlsx тип условного форматирования
+//  const xlsxCFOperator: string          - xlsx оператор
+//  out CFCondition: TZCondition          - распознанное условие
+//  out CFOperator: TZConditionalOperator - распознанный оператор
+//RETURN
+//      boolean - true - условное форматирование и оператор успешно распознаны
+function ZEXLSX_getCFCondition(const xlsxCfType, xlsxCFOperator: string;
+                               out CFCondition: TZCondition;
+                               out CFOperator: TZConditionalOperator): boolean;
+var
+  isCheckOperator: boolean;
+
+  procedure _SetCFOperator(AOperator: TZConditionalOperator);
+  begin
+    CFOperator := AOperator;
+    CFCondition := ZCFCellContentOperator;
+  end;
+
+  //Проверить тип условного форматирования
+  //  out isNeddCheckOperator: boolean - возвращает, нужно ли проверять
+  //                                     оператор
+  //RETURN
+  //      boolean - true - всё ок, можно проверять далее
+  function _CheckXLSXCfType(out isNeddCheckOperator: boolean): boolean;
+  begin
+    result := true;
+    isNeddCheckOperator := true;
+    if (xlsxCfType = 'cellIs') then
+    begin
+    end else
+    if (xlsxCfType = 'containsText') then
+      CFCondition := ZCFContainsText
+    else
+    if (xlsxCfType = 'notContains') then
+      CFCondition := ZCFNotContainsText
+    else
+    if (xlsxCfType = 'beginsWith') then
+      CFCondition := ZCFBeginsWithText
+    else
+    if (xlsxCfType = 'endsWith') then
+      CFCondition := ZCFEndsWithText
+    else
+    if (xlsxCfType = 'containsBlanks') then
+      isNeddCheckOperator := false
+    else
+      result := false;
+  end; //_CheckXLSXCfType
+
+  //Проверить оператор
+  function _CheckCFoperator(): boolean;
+  begin
+    result := true;
+    if (xlsxCFOperator = 'lessThan') then
+      _SetCFOperator(ZCFOpLT)
+    else
+    if (xlsxCFOperator = 'equal') then
+      _SetCFOperator(ZCFOpEqual)
+    else
+    if (xlsxCFOperator = 'notEqual') then
+      _SetCFOperator(ZCFOpNotEqual)
+    else
+    if (xlsxCFOperator = 'greaterThanOrEqual') then
+      _SetCFOperator(ZCFOpGTE)
+    else
+    if (xlsxCFOperator = 'greaterThan') then
+      _SetCFOperator(ZCFOpGT)
+    else
+    if (xlsxCFOperator = 'lessThanOrEqual') then
+      _SetCFOperator(ZCFOpLTE)
+    else
+    if (xlsxCFOperator = 'between') then
+      CFCondition := ZCFCellContentIsBetween
+    else
+    if (xlsxCFOperator = 'notBetween') then
+      CFCondition := ZCFCellContentIsNotBetween
+    else
+    if (xlsxCFOperator = 'containsText') then
+      CFCondition := ZCFContainsText
+    else
+    if (xlsxCFOperator = 'notContains') then
+      CFCondition := ZCFNotContainsText
+    else
+    if (xlsxCFOperator = 'beginsWith') then
+      CFCondition := ZCFBeginsWithText
+    else
+    if (xlsxCFOperator = 'endsWith') then
+      CFCondition := ZCFEndsWithText
+    else
+      result := false;
+  end; //_CheckCFoperator
+
+begin
+  result := false;
+  CFCondition := ZCFNumberValue;
+  CFOperator := ZCFOpGT;
+
+  if (_CheckXLSXCfType(isCheckOperator)) then
+  begin
+    if (isCheckOperator) then
+      result := _CheckCFoperator()
+    else
+      result := true;
+  end;
+end; //ZEXLSX_getCFCondition
+{$ENDIF}
+
 //Читает страницу документа
 //INPUT
 //  var XMLSS: TZEXMLSS                 - хранилище
@@ -799,10 +1335,12 @@ end; //ZEXSLXReadSharedStrings
 //      StrCount: integer               - кол-во строк подстановки
 //  var Relations: TZXLSXRelationsArray - отношения
 //      RelationsCount: integer         - кол-во отношений
+//      ReadHelper: TZEXLSXReadHelper   -
 //RETURN
 //      boolean - true - страница прочиталась успешно
 function ZEXSLXReadSheet(var XMLSS: TZEXMLSS; var Stream: TStream; const SheetName: string; var StrArray: TStringDynArray; StrCount: integer;
-                         var Relations: TZXLSXRelationsArray; RelationsCount: integer): boolean;
+                         var Relations: TZXLSXRelationsArray; RelationsCount: integer;
+                         ReadHelper: TZEXLSXReadHelper): boolean;
 var
   xml: TZsspXMLReaderH;
   _currPage: integer;
@@ -860,6 +1398,7 @@ var
           end;
 
         _type := xml.Attributes.ItemsByName['t']; //тип
+
         //s := xml.Attributes.ItemsByName['cm'];
         //s := xml.Attributes.ItemsByName['ph'];
         //s := xml.Attributes.ItemsByName['vm'];
@@ -891,12 +1430,17 @@ var
 
         end; //while
 
-        //s - sharedstring
-        //b - boolean
-        //n - number
-        //e - error
-        //str - string
-        //inlineStr - inline string ??
+        //Возможные типы:
+        //  s - sharedstring
+        //  b - boolean
+        //  n - number
+        //  e - error
+        //  str - string
+        //  inlineStr - inline string ??
+        //По-умолчанию - number
+        if ((_type = 'n') or (_type = '')) then
+          _currCell.CellType := ZENumber
+        else
         if (_type = 's') then
         begin
           _currCell.CellType := ZEString;
@@ -1056,6 +1600,8 @@ var
   var
     num: integer;
     t: real;
+    _max, _min: integer;
+    _delta, i: integer;
 
   begin
     num := 0;
@@ -1078,8 +1624,14 @@ var
         if (s > '') then
           _currSheet.Columns[num].Hidden := ZETryStrToBoolean(s);
 
-        //s := xml.Attributes.ItemsByName['max'];
-        //s := xml.Attributes.ItemsByName['min'];
+        _min := 0;
+        _max := 0;
+        s := xml.Attributes.ItemsByName['max'];
+        if (s > '') then
+          TryStrToInt(s, _max);
+        s := xml.Attributes.ItemsByName['min'];
+        if (s > '') then
+          TryStrToInt(s, _min);
         //s := xml.Attributes.ItemsByName['outlineLevel'];
         //s := xml.Attributes.ItemsByName['phonetic'];
         s := xml.Attributes.ItemsByName['style'];
@@ -1090,6 +1642,18 @@ var
           t := ZETryStrToFloat(s, 5.14509803921569);
           t := 10 * t / 5.14509803921569;
           _currSheet.Columns[num].WidthMM := t;
+        end;
+
+        if (_max > _min) then
+        begin
+          _delta := _max - _min;
+          if (_delta < 100) then
+          begin
+            CheckCol(num + _delta);
+            for i := num + 1 to num + _delta do
+              _currSheet.Columns[i].Assign(_currSheet.Columns[num]);
+            inc(num, _delta);
+          end;
         end;
 
         inc(num);
@@ -1130,7 +1694,7 @@ var
       _maxC := -1;
       _maxR := -1;
       for i := 1 to l do
-      if (st[l] = ':') then
+      if (st[i] = ':') then
       begin
         if (ZEGetCellCoords(s, c, r, true)) then
         begin;
@@ -1142,7 +1706,7 @@ var
           break;
         s := '';
       end else
-        s := s + st[l];
+        s := s + st[i];
       if (_maxC > 0) then
         CheckCol(_maxC);
       if (_maxR > 0) then
@@ -1239,6 +1803,375 @@ var
     end; //while
   end; //_ReadSheetViews()
 
+  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+  //Чтение условного форматирования
+  //<conditionalFormatting>..</conditionalFormatting>
+  procedure _ReadConditionFormatting();
+  var
+    MaxFormulasCount: integer;
+    _formulas: array of string;
+    count: integer;
+    _sqref: string;
+    _type: string;
+    _operator: string;
+    _CFCondition: TZCondition;
+    _CFOperator: TZConditionalOperator;
+    _Style: string;
+    _text: string;
+    _isCFAdded: boolean;
+    _isOk: boolean;
+    //_priority: string;
+    _CF: TZConditionalStyle;
+    _tmpStyle: TZStyle;
+
+    function _AddCF(): boolean;
+    var
+      s, ss: string;
+      _len, i, kol: integer;
+      a: array of array[0..5] of integer;
+      _maxx: integer;
+      ch: char;
+      w, h: integer;
+
+      function _GetOneArea(st: string): boolean;
+      var
+        i, j: integer;
+        s: string;
+        ch: char;
+        _cnt: integer;
+        tmpArr: array [0..1, 0..1] of integer;
+        _isOk: boolean;
+        t: integer;
+        tmpB: boolean;
+
+      begin
+        result := false;
+        if (st <> '') then
+        begin
+          st := st + ':';
+          s := '';
+          _cnt := 0;
+          _isOk := true;
+          for i := 1 to length(st) do
+          begin
+            ch := st[i];
+            if (ch = ':') then
+            begin
+              if (_cnt < 2) then
+              begin
+                tmpB := ZEGetCellCoords(s, tmpArr[_cnt][0], tmpArr[_cnt][1]);
+                _isOk := _isOk and tmpB;
+              end;
+              s := '';
+              inc(_cnt);
+            end else
+              s := s + ch;
+          end; //for
+
+          if (_isOk) then
+            if (_cnt > 0) then
+            begin
+              if (_cnt > 2) then
+                _cnt := 2;
+
+              a[kol][0] := _cnt;
+              t := 1;
+              for i := 0 to _cnt - 1 do
+                for j := 0 to 1 do
+                begin
+                  a[kol][t] := tmpArr[i][j];
+                  inc(t);
+                end;
+              result := true;
+            end;
+        end; //if
+      end; //_GetOneArea
+
+    begin
+      result := false;
+      if (_sqref <> '') then
+      try
+        _maxx := 4;
+        SetLength(a, _maxx);
+        ss := _sqref + ' ';
+        _len := Length(ss);
+        kol := 0;
+        s := '';
+        for i := 1 to _len do
+        begin
+          ch := ss[i];
+          if (ch = ' ') then
+          begin
+            if (_GetOneArea(s)) then
+            begin
+              inc(kol);
+              if (kol >= _maxx) then
+              begin
+                inc(_maxx, 4);
+                SetLength(a, _maxx);
+              end;
+            end;
+            s := '';
+          end else
+            s := s + ch;
+        end; //for
+
+        if (kol > 0) then
+        begin
+          _currSheet.ConditionalFormatting.Add();
+          _CF := _currSheet.ConditionalFormatting[_currSheet.ConditionalFormatting.Count - 1];
+          for i := 0 to kol - 1 do
+          begin
+            w := 1;
+            h := 1;
+            if (a[i][0] >= 2) then
+            begin
+              w := abs(a[i][3] - a[i][1]) + 1;
+              h := abs(a[i][4] - a[i][2]) + 1;
+            end;
+            _CF.Areas.Add(a[i][1], a[i][2], w, h);
+          end;
+          result := true;
+        end;
+      finally
+        SetLength(a, 0);
+      end;
+    end; //_AddCF
+
+    //Применяем условный стиль
+    procedure _TryApplyCF();
+    var
+      b: boolean;
+      num: integer;
+      _id: integer;
+
+      procedure _CheckTextCondition();
+      begin
+        if (count = 1) then
+          if (_formulas[0] <> '') then
+            _isOk := true;
+      end;
+
+      //Найти стиль
+      //  пока будем делать так: предполагаем, что все ячейки в текущей области
+      //  условного форматирования имеют один стиль. Берём стиль из левой верхней
+      //  ячейки, клонируем его, применяем дифф. стиль, добавляем в хранилище стилей
+      //  с учётом повторов.
+      //TODO: потом нужно будет переделать
+      //INPUT
+      //      dfNum: integer - номер дифференцированного форматирования
+      //RETURN
+      //      integer - номер применяемого стиля
+      function _getStyleIdxForDF(dfNum: integer): integer;
+      var
+        _df: TZXLSXDiffFormattingItem;
+        _r, _c: integer;
+        _t: integer;
+        i: integer;
+
+      begin
+        //_currSheet
+        result := -1;
+        if ((dfNum >= 0) and (dfNum < ReadHelper.DiffFormatting.Count)) then
+        begin
+          _df := ReadHelper.DiffFormatting[dfNum];
+          _t := -1;
+
+          if (_cf.Areas.Count > 0) then
+          begin
+            _r := _cf.Areas.Items[0].Row;
+            _c := _cf.Areas.Items[0].Column;
+            if ((_r >= 0) and (_r < _currSheet.RowCount)) then
+              if ((_c >= 0) and (_c < _currSheet.ColCount)) then
+                _t := _currSheet.Cell[_c, _r].CellStyle;
+          end;
+
+          _tmpStyle.Assign(XMLSS.Styles[_t]);
+
+          if (_df.UseFont) then
+          begin
+            if (_df.UseFontStyles) then
+              _tmpStyle.Font.Style := _df.FontStyles;
+            if (_df.UseFontColor) then
+              _tmpStyle.Font.Color := _df.FontColor;
+          end;
+          if (_df.UseFill) then
+          begin
+            if (_df.UseCellPattern) then
+              _tmpStyle.CellPattern := _df.CellPattern;
+            if (_df.UseBGColor) then
+              _tmpStyle.BGColor := _df.BGColor;
+            if (_df.UsePatternColor) then
+              _tmpStyle.PatternColor := _df.PatternColor;
+          end;
+          if (_df.UseBorder) then
+            for i := 0 to 5 do
+            begin
+              if (_df.Borders[i].UseStyle) then
+              begin
+                _tmpStyle.Border[i].Weight := _df.Borders[i].Weight;
+                _tmpStyle.Border[i].LineStyle := _df.Borders[i].LineStyle;
+              end;
+              if (_df.Borders[i].UseColor) then
+                _tmpStyle.Border[i].Color := _df.Borders[i].Color;
+            end; //for
+
+          result := XMLSS.Styles.Add(_tmpStyle, true);
+        end; //if
+      end; //_getStyleIdxForDF
+
+    begin
+      _isOk := false;
+      case (_CFCondition) of
+        ZCFIsTrueFormula:;
+        ZCFCellContentIsBetween, ZCFCellContentIsNotBetween:
+          begin
+            //только числа
+            if (count = 2) then
+            begin
+              ZETryStrToFloat(_formulas[0], b);
+              if (b) then
+                ZETryStrToFloat(_formulas[1], _isOk);
+            end;
+          end;
+        ZCFCellContentOperator:
+          begin
+            //только числа
+            if (count = 1) then
+              ZETryStrToFloat(_formulas[0], _isOk);
+          end;
+        ZCFNumberValue:;
+        ZCFString:;
+        ZCFBoolTrue:;
+        ZCFBoolFalse:;
+        ZCFFormula:;
+        ZCFContainsText: _CheckTextCondition();
+        ZCFNotContainsText: _CheckTextCondition();
+        ZCFBeginsWithText: _CheckTextCondition();
+        ZCFEndsWithText: _CheckTextCondition();
+      end; //case
+
+      if (_isOk) then
+      begin
+        if (not _isCFAdded) then
+          _isCFAdded := _AddCF();
+
+        if ((_isCFAdded) and (Assigned(_CF))) then
+        begin
+          num := _CF.Count;
+          _CF.Add();
+          if (_Style <> '') then
+            if (TryStrToInt(_Style, _id)) then
+             _CF[num].ApplyStyleID := _getStyleIdxForDF(_id);
+          _CF[num].Condition := _CFCondition;
+          _CF[num].ConditionOperator := _CFOperator;
+
+          _cf[num].Value1 := _formulas[0];
+          if (count >= 2) then
+            _cf[num].Value2 := _formulas[1];
+        end;
+      end;
+    end; //_TryApplyCF
+
+  begin
+    try
+      _sqref := xml.Attributes['sqref'];
+      MaxFormulasCount := 2;
+      SetLength(_formulas, MaxFormulasCount);
+      _isCFAdded := false;
+      _CF := nil;
+      _tmpStyle := TZStyle.Create();
+      while (not ((xml.TagType = 6) and (xml.TagName = ZETag_conditionalFormatting))) do
+      begin
+        xml.ReadTag();
+        if (xml.Eof()) then
+          break;
+
+        // cfRule = Conditional Formatting Rule
+        if ((xml.TagType = 4) and (xml.TagName = ZETag_cfRule)) then
+        begin
+         (*
+          Атрибуты в cfRule:
+          type	       	- тип
+                            expression        - ??
+                            cellIs            -
+                            colorScale        - ??
+                            dataBar           - ??
+                            iconSet           - ??
+                            top10             - ??
+                            uniqueValues      - ??
+                            duplicateValues   - ??
+                            containsText      -    ?
+                            notContainsText   -    ?
+                            beginsWith        -    ?
+                            endsWith          -    ?
+                            containsBlanks    - ??
+                            notContainsBlanks - ??
+                            containsErrors    - ??
+                            notContainsErrors - ??
+                            timePeriod        - ??
+                            aboveAverage      - ?
+          dxfId	        - ID применяемого формата
+          priority	    - приоритет
+          stopIfTrue	  -  ??
+          aboveAverage  -  ??
+          percent	      -  ??
+          bottom	      -  ??
+          operator	    - оператор:
+                              lessThan	          <
+                              lessThanOrEqual	    <=
+                              equal	              =
+                              notEqual	          <>
+                              greaterThanOrEqual  >=
+                              greaterThan	        >
+                              between	            Between
+                              notBetween	        Not Between
+                              containsText	      содержит текст
+                              notContains	        не содержит
+                              beginsWith	        начинается с
+                              endsWith	          оканчивается на
+          text	        -  ??
+          timePeriod	  -  ??
+          rank	        -  ??
+          stdDev  	    -  ??
+          equalAverage	-  ??
+         *)
+          _type := xml.Attributes['type'];
+          _operator := xml.Attributes['operator'];
+          _Style := xml.Attributes['dxfId'];
+          _text := ZEReplaceEntity(xml.Attributes['text']);
+          //_priority := xml.Attributes['priority'];
+
+          count := 0;
+          while (not ((xml.TagType = 6) and (xml.TagName = ZETag_cfRule))) do
+          begin
+            xml.ReadTag();
+            if (xml.Eof()) then
+              break;
+            if (xml.TagType = 6) then
+              if (xml.TagName = ZETag_formula) then
+              begin
+                if (count >= MaxFormulasCount) then
+                begin
+                  inc(MaxFormulasCount, 2);
+                  SetLength(_formulas, MaxFormulasCount);
+                end;
+                _formulas[count] := ZEReplaceEntity(xml.TextBeforeTag);
+                inc(count);
+              end;
+          end; //while
+
+          if (ZEXLSX_getCFCondition(_type, _operator, _CFCondition, _CFOperator)) then
+            _TryApplyCF();
+        end; //if
+      end; //while
+    finally
+      SetLength(_formulas, 0);
+      FreeAndNil(_tmpStyle);
+    end;
+  end; //_ReadConditionFormatting
+  {$ENDIF}
+
 begin
   xml := nil;
   result := false;
@@ -1275,10 +2208,10 @@ begin
           _currSheet.SheetOptions.MarginBottom := round(_tmpr);
         s := xml.Attributes.ItemsByName['footer'];
         if (_StrToMM(s, _tmpr)) then
-          _currSheet.SheetOptions.FooterMargin := round(_tmpr);
+          _currSheet.SheetOptions.FooterMargins.Height := abs(round(_tmpr));
         s := xml.Attributes.ItemsByName['header'];
         if (_StrToMM(s, _tmpr)) then
-          _currSheet.SheetOptions.HeaderMargin := round(_tmpr);
+          _currSheet.SheetOptions.HeaderMargins.Height := abs(round(_tmpr));
         s := xml.Attributes.ItemsByName['left'];
         if (_StrToMM(s, _tmpr)) then
           _currSheet.SheetOptions.MarginLeft := round(_tmpr);
@@ -1349,8 +2282,13 @@ begin
         _ReadHyperLinks()
       else
       if ((xml.TagName = 'sheetViews') and (xml.TagType = 4)) then
-        _ReadSheetViews();
-
+        _ReadSheetViews()
+      {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+      else
+      if ((xml.TagType = 4) and (xml.TagName = ZETag_conditionalFormatting)) then
+        _ReadConditionFormatting()
+      {$ENDIF}
+      ;
     end; //while
     
     result := true;
@@ -1366,9 +2304,10 @@ end; //ZEXSLXReadSheet
 //  var Stream: TStream                   - поток
 //  var ThemaFillsColors: TIntegerDynArray - цвета из темы
 //  var ThemaColorCount: integer          - кол-во цветов заливки в теме
+//      ReadHelper: TZEXLSXReadHelper     -
 //RETURN
 //      boolean - true - стили прочитались без ошибок
-function ZEXSLXReadStyles(var XMLSS: TZEXMLSS; var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer): boolean;
+function ZEXSLXReadStyles(var XMLSS: TZEXMLSS; var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer; ReadHelper: TZEXLSXReadHelper): boolean;
 type
 
   TZXLSXBorderItem = record
@@ -1376,7 +2315,7 @@ type
     isColor: boolean;
     isEnabled: boolean;
     style: TZBorderType;
-    width: integer;
+    Weight: byte;
   end;
 
   //   0 - left           левая граница
@@ -1429,9 +2368,19 @@ type
     bgcolor: TColor;
     patterncolor: TColor;
     patternColorType: byte;
+    lumFactorBG: double;
+    lumFactorPattern: double;
   end;
 
   TZXLSXFillArray = array of TZXLSXFill;
+
+  TZXLSXDFFont = record
+    Color: TColor;
+    ColorType: byte;
+    LumFactor: double;
+  end;
+
+  TZXLSXDFFontArray = array of TZXLSXDFFont;
 
 var
   xml: TZsspXMLReaderH;
@@ -1453,6 +2402,9 @@ var
   indexedColorMax: integer;
   _Style: TZStyle;
   t, i, n: integer;
+  h1, s1, l1: double;
+  _dfFonts: TZXLSXDFFontArray;
+  _dfFills: TZXLSXFillArray;
 
   //Приводит к шрифту по-умолчанию
   //INPUT
@@ -1466,6 +2418,8 @@ var
     fnt.strike := false;
     fnt.charset := 204;
     fnt.color := clBlack;
+    fnt.LumFactor := 0;
+    fnt.ColorType := 0;
     fnt.fontsize := 8;
   end; //ZEXLSXZeroFont
 
@@ -1481,9 +2435,48 @@ var
       border[i].isColor := false;
       border[i].isEnabled := false;
       border[i].style := ZENone;
-      border[i].width := 0;
+      border[i].Weight := 0;
     end;
   end; //ZEXLSXZeroBorder
+
+  //Меняёт местами bgColor и fgColor при несплошных заливках
+  //INPUT
+  //  var PattFill: TZXLSXFill - заливка
+  procedure ZEXLSXSwapPatternFillColors(var PattFill: TZXLSXFill);
+  var
+    t: integer;
+    _b: byte;
+
+  begin
+    //если не сплошная заливка - нужно поменять местами цвета (bgColor <-> fgColor)
+    if (not (PattFill.patternfill in [ZPNone, ZPSolid])) then
+    begin
+      t := PattFill.patterncolor;
+      PattFill.patterncolor := PattFill.bgcolor;
+      PattFill.bgColor := t;
+      l1 := PattFill.lumFactorPattern;
+      PattFill.lumFactorPattern := PattFill.lumFactorBG;
+      PattFill.lumFactorBG := l1;
+
+      _b := PattFill.patternColorType;
+      PattFill.patternColorType := PattFill.bgColorType;
+      PattFill.bgColorType := _b;
+    end; //if
+  end; //ZEXLSXSwapPatternFillColors
+
+  //Очистить заливку ячейки
+  //INPUT
+  //  var PattFill: TZXLSXFill - заливка
+  procedure ZEXLSXClearPatternFill(var PattFill: TZXLSXFill);
+  begin
+    PattFill.patternfill := ZPNone;
+    PattFill.bgcolor := clWindow;
+    PattFill.patterncolor := clWindow;
+    PattFill.bgColorType := 0;
+    PattFill.patternColorType := 0;
+    PattFill.lumFactorBG := 0.0;
+    PattFill.lumFactorPattern := 0.0;
+  end; //ZEXLSXClearPatternFill
 
   //Обнуляет стиль
   //INPUT
@@ -1530,6 +2523,43 @@ var
     end;
   end; //ZEXLSXFontToFont
 
+  //Прочитать цвет
+  //INPUT
+  //  var retColor: TColor      - возвращаемый цвет
+  //  var retColorType: byte    - тип цвета: 0 - rgb, 1 - indexed, 2 - theme
+  //  var retLumfactor: double  - яркость
+  procedure ZXLSXGetColor(var retColor: TColor; var retColorType: byte; var retLumfactor: double);
+  var
+    t: integer;
+
+  begin
+    //I hate this f****** format! m$ office >= 2007 is big piece of shit! Arrgh!
+    s := xml.Attributes.ItemsByName['rgb'];
+    if (length(s) > 2) then
+    begin
+      delete(s, 1, 2);
+      if (s > '') then
+        retColor := HTMLHexToColor(s);
+    end;
+    s := xml.Attributes.ItemsByName['theme'];
+    if (s > '') then
+      if (TryStrToInt(s, t)) then
+      begin
+        retColorType := 2;
+        retColor := t;
+      end;
+    s := xml.Attributes.ItemsByName['indexed'];
+    if (s > '') then
+      if (TryStrToInt(s, t)) then
+      begin
+        retColorType := 1;
+        retColor := t;
+      end;
+    s := xml.Attributes.ItemsByName['tint'];
+    if (s <> '') then
+      retLumfactor := ZETryStrToFloat(s, 0);
+  end; //ZXLSXGetColor
+
   procedure _ReadFonts();
   var
     _currFont: integer;
@@ -1556,7 +2586,7 @@ var
           FontArray[_currFont].name := s
         else
         if ((xml.TagName = 'b') and (xml.TagType = 5)) then
-          FontArray[_currFont].bold := ZEStrToBoolean(s)
+          FontArray[_currFont].bold := true
         else
         if ((xml.TagName = 'charset') and (xml.TagType = 5)) then
         begin
@@ -1565,20 +2595,18 @@ var
         end else
         if ((xml.TagName = 'color') and (xml.TagType = 5)) then
         begin
-          s := xml.Attributes.ItemsByName['rgb'];
-          if (length(s) > 2) then
-            delete(s, 1, 2);
-          if (s > '') then
-            FontArray[_currFont].color := HTMLHexToColor(s);
+          ZXLSXGetColor(FontArray[_currFont].color,
+                        FontArray[_currFont].ColorType,
+                        FontArray[_currFont].LumFactor);
         end else
         if ((xml.TagName = 'i') and (xml.TagType = 5)) then
-          FontArray[_currFont].italic := ZEStrToBoolean(s)
+          FontArray[_currFont].italic := true
         else
   //      if ((xml.TagName = 'outline') and (xml.TagType = 5)) then
   //      begin
   //      end else
         if ((xml.TagName = 'strike') and (xml.TagType = 5)) then
-          FontArray[_currFont].strike := ZEStrToBoolean(s)
+          FontArray[_currFont].strike := true
         else
         if ((xml.TagName = 'sz') and (xml.TagType = 5)) then
         begin
@@ -1616,6 +2644,140 @@ var
     end; //while
   end; //_ReadFonts
 
+  //Получить тип заливки
+  function _GetPatternFillByStr(const s: string): TZCellPattern;
+  begin
+    if (s = 'solid') then
+      result := ZPSolid
+    else
+    if (s = 'none') then
+      result := ZPNone
+    else
+    if (s = 'gray125') then
+      result := ZPGray125
+    else
+    if (s = 'gray0625') then
+      result := ZPGray0625
+    else
+    if (s = 'darkUp') then
+      result := ZPDiagStripe
+    else
+    if (s = 'mediumGray') then
+      result := ZPGray50
+    else
+    if (s = 'darkGray') then
+      result := ZPGray75
+    else
+    if (s = 'lightGray') then
+      result := ZPGray25
+    else
+    if (s = 'darkHorizontal') then
+      result := ZPHorzStripe
+    else
+    if (s = 'darkVertical') then
+      result := ZPVertStripe
+    else
+    if (s = 'darkDown') then
+      result := ZPReverseDiagStripe
+    else
+    if (s = 'darkUpDark') then
+      result := ZPDiagStripe
+    else
+    if (s = 'darkGrid') then
+      result := ZPDiagCross
+    else
+    if (s = 'darkTrellis') then
+      result := ZPThickDiagCross
+    else
+    if (s = 'lightHorizontal') then
+      result := ZPThinHorzStripe
+    else
+    if (s = 'lightVertical') then
+      result := ZPThinVertStripe
+    else
+    if (s = 'lightDown') then
+      result := ZPThinReverseDiagStripe
+    else
+    if (s = 'lightUp') then
+      result := ZPThinDiagStripe
+    else
+    if (s = 'lightGrid') then
+      result := ZPThinHorzCross
+    else
+    if (s = 'lightTrellis') then
+      result := ZPThinDiagCross
+    //
+    else
+      result := ZPSolid; //{tut} потом подумать насчёт стилей границ
+  end; //_GetPatternFillByStr
+
+  //Определить стиль начертания границы
+  //INPUT
+  //  const st: string            - название стиля
+  //  var retWidth: byte          - возвращаемая ширина линии
+  //  var retStyle: TZBorderType  - возвращаемый стиль начертания линии
+  //RETURN
+  //      boolean - true - стиль определён
+  function XLSXGetBorderStyle(const st: string; var retWidth: byte; var retStyle: TZBorderType): boolean;
+  begin
+    result := true;
+    retWidth := 1;
+    if (st = 'thin') then
+    begin
+      retStyle := ZEContinuous;
+    end else
+    if (st = 'hair') then
+      retStyle := ZEContinuous
+    else
+    if (st = 'dashed') then
+      retStyle := ZEDash
+    else
+    if (st = 'dotted') then
+      retStyle := ZEDot
+    else
+    if (st = 'dashDot') then
+      retStyle := ZEDashDot
+    else
+    if (st = 'dashDotDot') then
+      retStyle := ZEDashDotDot
+    else
+    if (st = 'slantDashDot') then
+      retStyle := ZESlantDashDot
+    else
+    if (st = 'double') then
+      retStyle := ZEDouble
+    else
+    if (st = 'medium') then
+    begin
+      retStyle := ZEContinuous;
+      retWidth := 2;
+    end else
+    if (st = 'thick') then
+    begin
+      retStyle := ZEContinuous;
+      retWidth := 3;
+    end else
+    if (st = 'mediumDashed') then
+    begin
+      retStyle := ZEDash;
+      retWidth := 2;
+    end else
+    if (st = 'mediumDashDot') then
+    begin
+      retStyle := ZEDashDot;
+      retWidth := 2;
+    end else
+    if (st = 'mediumDashDotDot') then
+    begin
+      retStyle := ZEDashDotDot;
+      retWidth := 2;
+    end else
+    if (st = 'none') then
+      retStyle := ZENone
+    else
+      result := false;
+  end; //XLSXGetBorderStyle
+
   procedure _ReadBorders();
   var
     _diagDown, _diagUP: boolean;
@@ -1625,72 +2787,15 @@ var
     _isColor: boolean;
 
     procedure _SetCurBorder(borderNum: integer);
-    var
-      b: boolean;
-
     begin
       _currBorderItem := borderNum;
       s := xml.Attributes.ItemsByName['style'];
       if (s > '') then
       begin
-        b := true;
-        BorderArray[_currBorder][borderNum].width := 1;
-        if (s = 'thin') then
-        begin
-          BorderArray[_currBorder][borderNum].style := ZEContinuous;
-        end else
-        if (s = 'hair') then
-          BorderArray[_currBorder][borderNum].style := ZEContinuous
-        else
-        if (s = 'dashed') then
-          BorderArray[_currBorder][borderNum].style := ZEDash
-        else
-        if (s = 'dotted') then
-          BorderArray[_currBorder][borderNum].style := ZEDot
-        else
-        if (s = 'dashDot') then
-          BorderArray[_currBorder][borderNum].style := ZEDashDot
-        else
-        if (s = 'dashDotDot') then
-          BorderArray[_currBorder][borderNum].style := ZEDashDotDot
-        else
-        if (s = 'slantDashDot') then
-          BorderArray[_currBorder][borderNum].style := ZESlantDashDot
-        else
-        if (s = 'double') then
-          BorderArray[_currBorder][borderNum].style := ZEDouble
-        else
-        if (s = 'medium') then
-        begin
-          BorderArray[_currBorder][borderNum].style := ZEContinuous;
-          BorderArray[_currBorder][borderNum].width := 2;
-        end else
-        if (s = 'thick') then
-        begin
-          BorderArray[_currBorder][borderNum].style := ZEContinuous;
-          BorderArray[_currBorder][borderNum].width := 3;
-        end else
-        if (s = 'mediumDashed') then
-        begin
-          BorderArray[_currBorder][borderNum].style := ZEDash;
-          BorderArray[_currBorder][borderNum].width := 2;
-        end else
-        if (s = 'mediumDashDot') then
-        begin
-          BorderArray[_currBorder][borderNum].style := ZEDashDot;
-          BorderArray[_currBorder][borderNum].width := 2;
-        end else
-        if (s = 'mediumDashDotDot') then
-        begin
-          BorderArray[_currBorder][borderNum].style := ZEDashDotDot;
-          BorderArray[_currBorder][borderNum].width := 2;
-        end else
-        if (s = 'none') then
-          BorderArray[_currBorder][borderNum].style := ZENone
-        else
-          b := false;
-
-        BorderArray[_currBorder][borderNum].isEnabled := b;
+        BorderArray[_currBorder][borderNum].isEnabled :=
+          XLSXGetBorderStyle(s,
+                             BorderArray[_currBorder][borderNum].Weight,
+                             BorderArray[_currBorder][borderNum].style);
       end;
     end; //_SetCurBorder
 
@@ -1786,9 +2891,6 @@ var
   procedure _ReadFills();
   var
     _currFill: integer;
-    _l: integer;
-    _b: byte;
-    _t: TColor;
 
   begin
     _currFill := -1;
@@ -1803,11 +2905,7 @@ var
         _currFill := FillCount;
         inc(FillCount);
         SetLength(FillArray, FillCount);
-        FillArray[_currFill].patternfill := ZPNone;
-        FillArray[_currFill].bgcolor := clWindow;
-        FillArray[_currFill].patterncolor := clWindow;
-        FillArray[_currFill].bgColorType := 0;
-        FillArray[_currFill].patternColorType := 0;
+        ZEXLSXClearPatternFill(FillArray[_currFill]);
       end else
       if ((xml.TagName = 'patternFill') and (xml.TagType in [4, 5])) then
       begin
@@ -1837,129 +2935,28 @@ var
           }
 
           if (s > '') then
-          begin
-            if (s = 'solid') then
-              FillArray[_currFill].patternfill := ZPSolid
-            else
-            if (s = 'none') then
-              FillArray[_currFill].patternfill := ZPNone
-            else
-            if (s = 'gray125') then
-              FillArray[_currFill].patternfill := ZPGray125
-            else
-            if (s = 'gray0625') then
-              FillArray[_currFill].patternfill := ZPGray0625
-            else
-            if (s = 'darkUp') then
-              FillArray[_currFill].patternfill := ZPDiagStripe
-            else
-            if (s = 'mediumGray') then
-              FillArray[_currFill].patternfill := ZPGray50
-            else
-            if (s = 'darkGray') then
-              FillArray[_currFill].patternfill := ZPGray75
-            else
-            if (s = 'lightGray') then
-              FillArray[_currFill].patternfill := ZPGray25
-            else
-            if (s = 'darkHorizontal') then
-              FillArray[_currFill].patternfill := ZPHorzStripe
-            else
-            if (s = 'darkVertical') then
-              FillArray[_currFill].patternfill := ZPVertStripe
-            else
-            if (s = 'darkDown') then
-              FillArray[_currFill].patternfill := ZPReverseDiagStripe
-            else
-            if (s = 'darkUpDark') then
-              FillArray[_currFill].patternfill := ZPDiagStripe
-            else
-            if (s = 'darkGrid') then
-              FillArray[_currFill].patternfill := ZPDiagCross
-            else
-            if (s = 'darkTrellis') then
-              FillArray[_currFill].patternfill := ZPThickDiagCross
-            else
-            if (s = 'lightHorizontal') then
-              FillArray[_currFill].patternfill := ZPThinHorzStripe
-            else
-            if (s = 'lightVertical') then
-              FillArray[_currFill].patternfill := ZPThinVertStripe
-            else
-            if (s = 'lightDown') then
-              FillArray[_currFill].patternfill := ZPThinReverseDiagStripe
-            else
-            if (s = 'lightUp') then
-              FillArray[_currFill].patternfill := ZPThinDiagStripe
-            else
-            if (s = 'lightGrid') then
-              FillArray[_currFill].patternfill := ZPThinHorzCross
-            else
-            if (s = 'lightTrellis') then
-              FillArray[_currFill].patternfill := ZPThinDiagCross
-            //
-            else
-              FillArray[_currFill].patternfill := ZPSolid; //{tut} потом подумать насчёт стилей границ
-          end;
+            FillArray[_currFill].patternfill := _GetPatternFillByStr(s);
         end;
       end else
       if ((xml.TagName = 'bgColor') and (xml.TagType = 5)) then
       begin
         if (_currFill >= 0) then
         begin
-          s := xml.Attributes.ItemsByName['rgb'];
-          if (length(s) > 2) then
-          begin
-            delete(s, 1, 2);
-            if (s > '') then
-              FillArray[_currFill].patterncolor := HTMLHexToColor(s);
-          end;
-          s := xml.Attributes.ItemsByName['theme'];
-          if (s > '') then
-          begin
-            if (TryStrToInt(s, _l)) then
-            begin
-              FillArray[_currFill].patterncolor := _l;
-              FillArray[_currFill].patternColorType := 2;
-            end;
-          end;
+          ZXLSXGetColor(FillArray[_currFill].patterncolor,
+                        FillArray[_currFill].patternColorType,
+                        FillArray[_currFill].lumFactorPattern);
 
           //если не сплошная заливка - нужно поменять местами цвета (bgColor <-> fgColor)
-          if (not (FillArray[_currFill].patternfill in [ZPNone, ZPSolid])) then
-          begin
-            _t := FillArray[_currFill].patterncolor;
-            FillArray[_currFill].patterncolor := FillArray[_currFill].bgcolor;
-            FillArray[_currFill].bgColor := _t;
-
-            _b := FillArray[_currFill].patternColorType;
-            FillArray[_currFill].patternColorType := FillArray[_currFill].bgColorType;
-            FillArray[_currFill].bgColorType := _b;
-          end; //if
-
+          ZEXLSXSwapPatternFillColors(FillArray[_currFill]);
         end;
       end else
       if ((xml.TagName = 'fgColor') and (xml.TagType = 5)) then
       begin
         if (_currFill >= 0) then
-        begin
-          s := xml.Attributes.ItemsByName['rgb'];
-          if (length(s) > 2) then
-          begin
-            delete(s, 1, 2);
-            if (s > '') then
-              FillArray[_currFill].bgcolor := HTMLHexToColor(s);
-          end;
-          s := xml.Attributes.ItemsByName['theme'];
-          if (s > '') then
-          begin
-            if (TryStrToInt(s, _l)) then
-            begin
-              FillArray[_currFill].bgColorType := 2;
-              FillArray[_currFill].bgcolor := _l;
-            end;  
-          end;
-        end;
-      end;
+          ZXLSXGetColor(FillArray[_currFill].bgcolor,
+                        FillArray[_currFill].bgColorType,
+                        FillArray[_currFill].lumFactorBG);
+      end; //fgColor
     end; //while
   end; //_ReadFills
 
@@ -2188,6 +3185,384 @@ var
     end; //while
   end; //_ReadColors
 
+  //Конвертирует RGB в HSL
+  //http://en.wikipedia.org/wiki/HSL_color_space
+  //INPUT
+  //      r: byte     -
+  //      g: byte     -
+  //      b: byte     -
+  //  out h: double   - Hue - тон цвета
+  //  out s: double   - Saturation - насыщенность
+  //  out l: double   - Lightness (Intensity) - светлота (яркость)
+  procedure ZRGBToHSL(r, g, b: byte; out h, s, l: double);
+  var
+    _max, _min: double;
+    intMax, intMin: integer;
+    _r, _g, _b: double;
+    _delta: double;
+    _idx: integer;
+
+  begin
+    _r := r / 255;
+    _g := g / 255;
+    _b := b / 255;
+
+    intMax := Max(r, Max(g, b));
+    intMin := Min(r, Min(g, b));
+
+    _max := Max(_r, Max(_g, _b));
+    _min := Min(_r, Min(_g, _b));
+
+    h := (_max + _min) * 0.5;
+    s := h;
+    l := h;
+    if (intMax = intMin) then
+    begin
+      h := 0;
+      s := 0;
+    end else
+    begin
+      _delta := _max - _min;
+      if (l > 0.5) then
+        s := _delta / (2 - _max - _min)
+      else
+        s := _delta / (_max + _min);
+
+        if (intMax = r) then
+          _idx := 1
+        else
+        if (intMax = g) then
+          _idx := 2
+        else
+          _idx := 3;
+
+        case (_idx) of
+          1:
+            begin
+              h := (_g - _b) / _delta;
+              if (g < b) then
+                h := h + 6;
+            end;
+          2: h := (_b - _r) / _delta + 2;
+          3: h := (_r - _g) / _delta + 4;
+        end;
+        
+        h := h / 6;
+    end;
+  end; //ZRGBToHSL
+
+  //Конвертирует TColor (RGB) в HSL
+  //http://en.wikipedia.org/wiki/HSL_color_space
+  //INPUT
+  //      Color: TColor - цвет
+  //  out h: double     - Hue - тон цвета
+  //  out s: double     - Saturation - насыщенность
+  //  out l: double     - Lightness (Intensity) - светлота (яркость)
+  procedure ZColorToHSL(Color: TColor; out h, s, l: double);
+  var
+    _RGB: integer;
+
+  begin
+    _RGB := ColorToRGB(Color);
+    ZRGBToHSL(byte(_RGB), byte(_RGB shr 8), byte(_RGB shr 16), h, s, l);
+  end; //ZColorToHSL
+
+  //Конвертирует HSL в RGB
+  //http://en.wikipedia.org/wiki/HSL_color_space
+  //INPUT
+  //      h: double - Hue - тон цвета
+  //      s: double - Saturation - насыщенность
+  //      l: double - Lightness (Intensity) - светлота (яркость)
+  //  out r: byte   -
+  //  out g: byte   -
+  //  out b: byte   -
+  procedure ZHSLToRGB(h, s, l: double; out r, g, b: byte);
+  var
+    _r, _g, _b: double;
+    q, p: double;
+
+    function HueToRgb(p, q, t: double): double;
+    begin
+      result := p;
+      if (t < 0) then
+        t := t + 1;
+      if (t > 1) then
+        t := t - 1;
+      if (t < 1/6) then
+        result := p + (q - p) * 6 * t
+      else
+      if (t < 0.5) then
+        result := q
+      else
+      if (t < 2/3) then
+        result := p + (q - p) * (2/3 - t) * 6;
+    end; //HueToRgb
+
+  begin
+    if (s = 0) then
+    begin
+      //Оттенок серого
+      _r := l;
+      _g := l;
+      _b := l;
+    end else
+    begin
+      if (l < 0.5) then
+        q := l * (1 + s)
+      else
+        q := l + s - l * s;
+      p := 2 * l - q;
+      _r := HueToRgb(p, q, h + 1/3);
+      _g := HueToRgb(p, q, h);
+      _b := HueToRgb(p, q, h - 1/3);
+    end;
+    r := byte(round(_r * 255));
+    g := byte(round(_g * 255));
+    b := byte(round(_b * 255));
+  end; //ZHSLToRGB
+
+  //Конвертирует HSL в Color
+  //http://en.wikipedia.org/wiki/HSL_color_space
+  //INPUT
+  //      h: double - Hue - тон цвета
+  //      s: double - Saturation - насыщенность
+  //      l: double - Lightness (Intensity) - светлота (яркость)
+  //RETURN
+  //      TColor - цвет
+  function ZHSLToColor(h, s, l: double): TColor;
+  var
+    r, g, b: byte;
+
+  begin
+    ZHSLToRGB(h, s, l, r, g, b);
+    result := (b shl 16) or (g shl 8) or r;
+  end; //ZHSLToColor
+
+  //Применить tint к цвету
+  // Thanks Tomasz Wieckowski!
+  //   http://msdn.microsoft.com/en-us/library/ff532470%28v=office.12%29.aspx
+  procedure ApplyLumFactor(var Color: TColor; var lumFactor: double);
+  begin
+    //+delta?
+    if (lumFactor <> 0.0) then
+    begin
+      ZColorToHSL(Color, h1, s1, l1);
+      lumFactor := 1 - lumFactor;
+
+      if (l1 = 1) then
+        l1 := l1 * (1 - lumFactor)
+      else
+        l1 := l1 * lumFactor + (1 - lumFactor);
+
+      Color := ZHSLtoColor(h1, s1, l1);
+    end;
+  end; //ApplyLumFactor
+
+  //Differential Formatting для xlsx
+  procedure _Readdxfs();
+  var
+    _df: TZXLSXDiffFormattingItem;
+    _dfIndex: integer;
+    _tmptag: string;
+
+    procedure _addFontStyle(fnts: TFontStyle);
+    begin
+      _df.FontStyles := _df.FontStyles + [fnts];
+      _df.UseFontStyles := true;
+    end;
+
+    procedure _ReadDFFont();
+    begin
+      _df.UseFont := true;
+      while ((xml.TagType <> 6) and (xml.TagName <> 'font')) do
+      begin
+        xml.ReadTag();
+        if (xml.Eof) then
+          break;
+
+        _tmptag := xml.TagName;
+        if (_tmptag = 'i') then
+          _addFontStyle(fsItalic);
+        if (_tmptag = 'b') then
+          _addFontStyle(fsBold);
+        if (_tmptag = 'u') then
+          _addFontStyle(fsUnderline);
+        if (_tmptag = 'strike') then
+          _addFontStyle(fsStrikeOut);
+
+        if (_tmptag = 'color') then
+        begin
+          _df.UseFontColor := true;
+          ZXLSXGetColor(_dfFonts[_dfIndex].Color,
+                        _dfFonts[_dfIndex].ColorType,
+                        _dfFonts[_dfIndex].LumFactor);
+        end;
+      end; //while
+    end; //_ReadDFFont
+
+    procedure _ReadDFFill();
+    begin
+      _df.UseFill := true;
+      while ((xml.TagType <> 6) or (xml.TagName <> 'fill')) do
+      begin
+        xml.ReadTag();
+        if (xml.Eof) then
+          break;
+
+        if (xml.TagType in [4, 5]) then
+        begin
+          if (xml.TagName = 'patternFill') then
+          begin
+            s := xml.Attributes.ItemsByName['patternType'];
+            if (s <> '') then
+            begin
+              _df.UseCellPattern := true;
+              _df.CellPattern := _GetPatternFillByStr(s);
+            end;
+          end else
+          if (xml.TagName = 'bgColor') then
+          begin
+            _df.UseBGColor := true;
+            ZXLSXGetColor(_dfFills[_dfIndex].bgcolor,
+                          _dfFills[_dfIndex].bgColorType,
+                          _dfFills[_dfIndex].lumFactorBG)
+          end else
+          if (xml.TagName = 'fgColor') then
+          begin
+            _df.UsePatternColor := true;
+            ZXLSXGetColor(_dfFills[_dfIndex].patterncolor,
+                          _dfFills[_dfIndex].patternColorType,
+                          _dfFills[_dfIndex].lumFactorPattern);
+            ZEXLSXSwapPatternFillColors(_dfFills[_dfIndex]);
+          end;
+        end;
+      end; //while
+    end; //_ReadDFFill
+
+    procedure _ReadDFBorder();
+    var
+      _borderNum: integer;
+      t: byte;
+      _bt: TZBorderType;
+
+      procedure _SetDFBorder(BorderNum: integer);
+      begin
+        _borderNum := BorderNum;
+        s := xml.Attributes['style'];
+        if (s <> '') then
+          if (XLSXGetBorderStyle(s, t, _bt)) then
+          begin
+            _df.UseBorder := true;
+            _df.Borders[BorderNum].Weight := t;
+            _df.Borders[BorderNum].LineStyle := _bt;
+            _df.Borders[BorderNum].UseStyle := true;
+          end;
+      end; //_SetDFBorder
+
+    begin
+      _df.UseBorder := true;
+      _borderNum := 0;
+      while ((xml.TagType <> 6) or (xml.TagName <> 'border')) do
+      begin
+        xml.ReadTag();
+        if (xml.Eof) then
+          break;
+
+        if (xml.TagType in [4, 5]) then
+        begin
+          _tmptag := xml.TagName;
+          if (_tmptag = 'left') then
+            _SetDFBorder(0)
+          else
+          if (_tmptag = 'right') then
+            _SetDFBorder(2)
+          else
+          if (_tmptag = 'top') then
+            _SetDFBorder(1)
+          else
+          if (_tmptag = 'bottom') then
+            _SetDFBorder(3)
+          else
+          if (_tmptag = 'vertical') then
+            _SetDFBorder(4)
+          else
+          if (_tmptag = 'horizontal') then
+            _SetDFBorder(5)
+          else
+          if (_tmptag = 'color') then
+          begin
+            s := xml.Attributes['rgb'];
+            if (length(s) > 2) then
+              delete(s, 1, 2);
+            if ((_borderNum >= 0) and (_borderNum < 6)) then
+              if (s <> '') then
+              begin
+                _df.UseBorder := true;
+                _df.Borders[_borderNum].UseColor := true;
+                _df.Borders[_borderNum].Color := HTMLHexToColor(s);
+              end;
+          end;
+        end; //if
+      end; //while
+    end; //_ReadDFBorder
+
+    procedure _ReaddxfItem();
+    begin
+      _dfIndex := ReadHelper.DiffFormatting.Count;
+
+      SetLength(_dfFonts, _dfIndex + 1);
+      _dfFonts[_dfIndex].ColorType := 0;
+      _dfFonts[_dfIndex].LumFactor := 0;
+
+      SetLength(_dfFills, _dfIndex + 1);
+      ZEXLSXClearPatternFill(_dfFills[_dfIndex]);
+
+      ReadHelper.DiffFormatting.Add();
+      _df := ReadHelper.DiffFormatting[_dfIndex];
+      while ((xml.TagType <> 6) or (xml.TagName <> 'dxf')) do
+      begin
+        xml.ReadTag();
+        if (xml.Eof) then
+          break;
+        if (xml.TagType = 4) then
+        begin
+          if (xml.TagName = 'font') then
+            _ReadDFFont()
+          else
+          if (xml.TagName = 'fill') then
+            _ReadDFFill()
+          else
+          if (xml.TagName = 'border') then
+            _ReadDFBorder();
+        end;
+      end; //while
+    end; //_ReaddxfItem
+
+  begin
+    while ((xml.TagType <> 6) or (xml.TagName <> 'dxfs')) do
+    begin
+      xml.ReadTag();
+      if (xml.Eof) then
+        break;
+      if ((xml.TagType = 4) and (xml.TagName = 'dxf')) then
+        _ReaddxfItem();
+    end; //while
+  end; //_Readdxfs
+
+  procedure XLSXApplyColor(var AColor: TColor; ColorType: byte; LumFactor: double);
+  begin
+    if (ColorType = 2) then
+    begin
+      t := AColor;
+      if ((t >= 0) and (t < ThemaColorCount)) then
+        AColor := ThemaFillsColors[t];
+    end;
+    if (ColorType = 1) then
+      if ((AColor >= 0) and (AColor < indexedColorCount))  then
+        AColor := indexedColor[AColor];
+    ApplyLumFactor(AColor, LumFactor);
+  end; //XLSXApplyColor
+
   //Применить стиль
   //INPUT
   //  var XMLSSStyle: TZStyle         - стиль в хранилище
@@ -2209,8 +3584,8 @@ var
       i := XLSXStyle.alignment.textRotation;
       XMLSSStyle.Alignment.VerticalText := (i = 255);
       if (i >= 0) and (i <= 180) then begin
-         if i > 90 then i := 90 - i;
-         XMLSSStyle.Alignment.Rotate := i
+        if i > 90 then i := 90 - i;
+        XMLSSStyle.Alignment.Rotate := i
       end;
     end;
 
@@ -2222,7 +3597,7 @@ var
         if (BorderArray[n][i].isEnabled) then
         begin
           XMLSSStyle.Border[i].LineStyle := BorderArray[n][i].style;
-          XMLSSStyle.Border[i].Weight := BorderArray[n][i].width;
+          XMLSSStyle.Border[i].Weight := BorderArray[n][i].Weight;
           if (BorderArray[n][i].isColor) then
             XMLSSStyle.Border[i].Color := BorderArray[n][i].color;
         end;
@@ -2233,6 +3608,9 @@ var
       n := XLSXStyle.fontId;
       if ((n >= 0) and (n < FontCount)) then
       begin
+        XLSXApplyColor(FontArray[n].color,
+                       FontArray[n].ColorType,
+                       FontArray[n].LumFactor);
         XMLSSStyle.Font.Name := FontArray[n].name;
         XMLSSStyle.Font.Size := FontArray[n].fontsize;
         XMLSSStyle.Font.Charset := FontArray[n].charset;
@@ -2262,6 +3640,84 @@ var
       XMLSSStyle.PatternColor := FillArray[n].patterncolor;
     end;
   end; //_ApplyStyle
+
+  //I hate this f*****g format!
+  //  Sometimes in styles.xml there are no <Colors> .. </Colors>! =_="
+  //  Using standart colors.
+  procedure _CheckIndexedColors();
+  const
+    _standart: array [0..55] of string =
+    (
+      '#000000',
+      '#FFFFFF',
+      '#FF0000',
+      '#00FF00',
+      '#0000FF',
+      '#FFFF00',
+      '#FF00FF',
+      '#00FFFF',
+      '#800000',
+      '#008000',
+      '#000080',
+      '#808000',
+      '#800080',
+      '#008080',
+      '#C0C0C0',
+      '#808080',
+      '#9999FF',
+      '#993366',
+      '#FFFFCC',
+      '#CCFFFF',
+      '#660066',
+      '#FF8080',
+      '#0066CC',
+      '#CCCCFF',
+      '#000080',
+      '#FF00FF',
+      '#FFFF00',
+      '#00FFFF',
+      '#800080',
+      '#800000',
+      '#008080',
+      '#0000FF',
+      '#00CCFF',
+      '#CCFFFF',
+      '#CCFFCC',
+      '#FFFF99',
+      '#99CCFF',
+      '#FF99CC',
+      '#CC99FF',
+      '#FF66CC',
+      '#3366FF',
+      '#33CCCC',
+      '#99CC00',
+      '#FFCC00',
+      '#FF9900',
+      '#FF99CC',
+      '#666699',
+      '#969696',
+      '#003300',
+      '#339966',
+      '#003300',
+      '#333300',
+      '#993300',
+      '#993366',
+      '#333399',
+      '#333333'
+    );
+  var
+    i: integer;
+
+  begin
+    if (indexedColorCount = 0) then
+    begin
+      indexedColorCount := 56;
+      indexedColorMax := indexedColorCount + 10;
+      SetLength(indexedColor, indexedColorMax);
+      for i := 0 to 55 do
+        indexedColor[i] := HTMLHexToColor(_standart[i]);
+    end;
+  end; //_CheckIndexedColors
 
 begin
   result := false;
@@ -2307,26 +3763,21 @@ begin
         _ReadCellStyles()
       else
       if ((xml.TagName = 'colors') and (xml.TagType = 4)) then
-        _ReadColors();
+        _ReadColors()
+      else
+      if ((xml.TagType = 4) and (xml.TagName = 'dxfs')) then
+        _Readdxfs();
     end; //while
 
     //тут незабыть применить номера цветов, если были введены
 
+    _CheckIndexedColors();
+
     //
     for i := 0 to FillCount - 1 do
     begin
-      if (FillArray[i].bgColorType = 2) then
-      begin
-        t := FillArray[i].bgcolor;
-        if ((t >= 0) and (t < ThemaColorCount)) then
-          FillArray[i].bgcolor := ThemaFillsColors[t];
-      end;
-      if (FillArray[i].patternColorType = 2) then
-      begin
-        t := FillArray[i].patterncolor;
-        if ((t >= 0) and (t < ThemaColorCount)) then
-          FillArray[i].patterncolor := ThemaFillsColors[t];
-      end;
+      XLSXApplyColor(FillArray[i].bgcolor, FillArray[i].bgColorType, FillArray[i].lumFactorBG);
+      XLSXApplyColor(FillArray[i].patterncolor, FillArray[i].patternColorType, FillArray[i].lumFactorPattern);
     end; //for
 
     //{tut}
@@ -2339,6 +3790,26 @@ begin
       if ((t >= 0) and (t < CellStyleCount)) then
         _ApplyStyle(_Style, CellStyleArray[t]);
       _ApplyStyle(_Style, CellXfsArray[i]);
+    end;
+
+    //Применение цветов к DF
+    for i := 0 to ReadHelper.DiffFormatting.Count - 1 do
+    begin
+      if (ReadHelper.DiffFormatting[i].UseFontColor) then
+      begin
+        XLSXApplyColor(_dfFonts[i].Color, _dfFonts[i].ColorType, _dfFonts[i].LumFactor);
+        ReadHelper.DiffFormatting[i].FontColor := _dfFonts[i].Color;
+      end;
+      if (ReadHelper.DiffFormatting[i].UseBGColor) then
+      begin
+        XLSXApplyColor(_dfFills[i].bgcolor, _dfFills[i].bgColorType, _dfFills[i].lumFactorBG);
+        ReadHelper.DiffFormatting[i].BGColor := _dfFills[i].bgcolor;
+      end;
+      if (ReadHelper.DiffFormatting[i].UsePatternColor) then
+      begin
+        XLSXApplyColor(_dfFills[i].patterncolor, _dfFills[i].patternColorType, _dfFills[i].lumFactorPattern);
+        ReadHelper.DiffFormatting[i].PatternColor := _dfFills[i].patterncolor;
+      end;
     end;
 
     result := true;
@@ -2357,8 +3828,10 @@ begin
     CellXfsArray := nil;
     SetLength(FillArray, 0);
     FillArray := nil;
-    Setlength(indexedColor, 0);
+    SetLength(indexedColor, 0);
     indexedColor := nil;
+    SetLength(_dfFonts, 0);
+    SetLength(_dfFills, 0);
   end;
 end; //ZEXSLXReadStyles
 
@@ -2502,6 +3975,7 @@ begin
       end;
     end; //while
     result := true;
+
   finally
     if (Assigned(xml)) then
       FreeAndNil(xml);
@@ -2616,6 +4090,45 @@ begin
   end;
 end; //ZEXSLXReadComments
 
+procedure XLSXSortRelationArray(var arr: TZXLSXRelationsArray; count: integer);
+var
+  tmp: TZXLSXRelations;
+  i, j: integer;
+  _t1, _t2: integer;
+  s: string;
+  b: boolean;
+
+  function _cmp(): boolean;
+  begin
+    b := false;
+    s := arr[j].id;
+    delete(s, 1, 3);
+    b := TryStrToInt(s, _t1);
+    if (b) then
+    begin
+      s := arr[j + 1].id;
+      delete(s, 1, 3);
+      b := TryStrToInt(s, _t2);
+    end;
+
+    if (b) then
+      result := _t1 > _t2
+    else
+      result := arr[j].id > arr[j + 1].id;
+  end;
+
+begin
+  //TODO: do not forget update sorting.
+  for i := 0 to count - 2 do
+    for j := 0 to count - 2 do
+      if (_cmp()) then
+      begin
+        tmp := arr[j];
+        arr[j] := arr[j + 1];
+        arr[j + 1] := tmp;
+      end;
+end;
+
 //Читает распакованный xlsx
 //INPUT
 //  var XMLSS: TZEXMLSS - хранилище
@@ -2641,6 +4154,7 @@ var
   s: string;
   b: boolean;
   _no_sheets: boolean;
+  RH: TZEXLSXReadHelper;
 
   //Пытается прочитать rel для листа
   //INPUT
@@ -2758,6 +4272,7 @@ begin
   ThemaColorCount := 0;
   SheetRelationsCount := 0;
   ThemaColor := nil;
+  RH := nil;
 
   try
     try
@@ -2780,6 +4295,8 @@ begin
         b := true;
         break;
       end;
+
+      RH := TZEXLSXReadHelper.Create();
 
       if (not b) then
       begin
@@ -2871,7 +4388,7 @@ begin
       begin
         FreeAndNil(stream);
         stream := TFileStream.Create(DirName + FileArray[i].name, fmOpenRead or fmShareDenyNone);
-        if (not ZEXSLXReadStyles(XMLSS, stream, ThemaColor, ThemaColorCount)) then
+        if (not ZEXSLXReadStyles(XMLSS, stream, ThemaColor, ThemaColorCount, RH)) then
         begin
           result := 5;
           exit;
@@ -2896,20 +4413,20 @@ begin
           break;
         end; //if
 
-        for i := 1 to RelationsCounts[SheetRelationNumber] do
+        //for i := 1 to RelationsCounts[SheetRelationNumber] do
+        XLSXSortRelationArray(RelationsArray[SheetRelationNumber], RelationsCounts[SheetRelationNumber]);
         for j := 0 to RelationsCounts[SheetRelationNumber] - 1 do
-        if (RelationsArray[SheetRelationNumber][j].sheetid = i) then
-        begin
-          b := _CheckSheetRelations(FileArray[RelationsArray[SheetRelationNumber][j].fileid].name);
-          FreeAndNil(stream);
-          stream := TFileStream.Create(DirName + FileArray[RelationsArray[SheetRelationNumber][j].fileid].name, fmOpenRead or fmShareDenyNone);
-          if (not ZEXSLXReadSheet(XMLSS, stream, RelationsArray[SheetRelationNumber][j].name, StrArray, StrCount, SheetRelations, SheetRelationsCount)) then
-            result := result or 4;
-          if (b) then
-            _ReadComments();
-          _no_sheets := false;
-          break;
-        end; //if
+          if (RelationsArray[SheetRelationNumber][j].sheetid > 0) then
+          begin
+            b := _CheckSheetRelations(FileArray[RelationsArray[SheetRelationNumber][j].fileid].name);
+            FreeAndNil(stream);
+            stream := TFileStream.Create(DirName + FileArray[RelationsArray[SheetRelationNumber][j].fileid].name, fmOpenRead or fmShareDenyNone);
+            if (not ZEXSLXReadSheet(XMLSS, stream, RelationsArray[SheetRelationNumber][j].name, StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
+              result := result or 4;
+            if (b) then
+              _ReadComments();
+            _no_sheets := false;
+          end; //if
       end;
       //если прочитано 0 листов - пробуем прочитать все (не удалось прочитать workbook/rel)
       if (_no_sheets) then
@@ -2919,7 +4436,7 @@ begin
         b := _CheckSheetRelations(FileArray[i].name);
         FreeAndNil(stream);
         stream := TFileStream.Create(DirName + FileArray[i].name, fmOpenRead or fmShareDenyNone);
-        if (not ZEXSLXReadSheet(XMLSS, stream, '', StrArray, StrCount, SheetRelations, SheetRelationsCount)) then
+        if (not ZEXSLXReadSheet(XMLSS, stream, '', StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
           result := result or 4;
         if (b) then
             _ReadComments();
@@ -2948,6 +4465,8 @@ begin
     ThemaColor := nil;
     SetLength(SheetRelations, 0);
     SheetRelations := nil;
+    if (Assigned(RH)) then
+      FreeAndNil(RH);
   end;
 end; //ReadXLSXPath
 
@@ -3143,9 +4662,11 @@ begin
           break;
         end; //if
 
-        for i := 1 to ZH.RelationsCounts[ZH.SheetRelationNumber] do
+        //for i := 1 to ZH.RelationsCounts[ZH.SheetRelationNumber] do
+        ZH.SortRelationArray();
+        //XLSXSortRelationArray(ZH.RelationsArray[ZH.SheetRelationNumber], ZH.RelationsCounts[ZH.SheetRelationNumber]);
         for j := 0 to ZH.RelationsCounts[ZH.SheetRelationNumber] - 1 do
-        if (ZH.RelationsArray[ZH.SheetRelationNumber][j].sheetid = i) then
+        if (ZH.RelationsArray[ZH.SheetRelationNumber][j].sheetid > 0) then
         begin
           ZH.ListName := ZH.RelationsArray[ZH.SheetRelationNumber][j].name;
 
@@ -3364,7 +4885,10 @@ var
     _xml.WriteEndTagNode(); //sheetPr
 
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('ref', 'A1:' + ZEGetA1byCol(_sheet.ColCount - 1) + IntToStr(_sheet.RowCount));
+    s := 'A1';
+    if (_sheet.ColCount > 0) then
+      s := s + ':' + ZEGetA1byCol(_sheet.ColCount - 1) + IntToStr(_sheet.RowCount);
+    _xml.Attributes.Add('ref', s);
     _xml.WriteEmptyTag('dimension', true, false);
 
     _xml.Attributes.Clear();
@@ -3515,6 +5039,8 @@ var
     b: boolean;
     s: string;
     _r: TRect;
+    k1, k2, k: integer;
+    _in_merge_not_top: boolean; //if cell in merge area, but not top left
     
   begin
     _xml.Attributes.Clear();
@@ -3540,8 +5066,24 @@ var
         b := (_sheet.Cell[j, i].Data > '') or
              (_sheet.Cell[j, i].Formula > '');
         _xml.Attributes.Add('r', ZEGetA1byCol(j) + IntToStr(i + 1));
-        if (_sheet.Cell[j, i].CellStyle >= -1) and (_sheet.Cell[j, i].CellStyle < XMLSS.Styles.Count) then
-          s := IntToStr(_sheet.Cell[j, i].CellStyle + 1)
+        _in_merge_not_top := false;
+        k := _sheet.MergeCells.InMergeRange(j, i);
+        if (k >= 0) then
+          _in_merge_not_top := _sheet.MergeCells.InLeftTopCorner(j, i) < 0;
+
+        if (_in_merge_not_top) then
+        begin
+          k1 := _sheet.MergeCells.Items[k].Left;
+          k2 := _sheet.MergeCells.Items[k].top;
+        end
+        else
+        begin
+          k1 := j;
+          k2 := i;
+        end;
+
+        if (_sheet.Cell[k1, k2].CellStyle >= -1) and (_sheet.Cell[k1, k2].CellStyle < XMLSS.Styles.Count) then
+          s := IntToStr(_sheet.Cell[k1, k2].CellStyle + 1)
         else
           s := '0';
         _xml.Attributes.Add('s', s, false);
@@ -3615,8 +5157,8 @@ var
     _xml.Attributes.Add('right',  ZEFloatSeparator(FormatFloat(s, _sheet.SheetOptions.MarginRight / ZE_MMinInch)),  false);
     _xml.Attributes.Add('top',    ZEFloatSeparator(FormatFloat(s, _sheet.SheetOptions.MarginTop / ZE_MMinInch)),    false);
     _xml.Attributes.Add('bottom', ZEFloatSeparator(FormatFloat(s, _sheet.SheetOptions.MarginBottom / ZE_MMinInch)), false);
-    _xml.Attributes.Add('header', ZEFloatSeparator(FormatFloat(s, _sheet.SheetOptions.HeaderMargin / ZE_MMinInch)), false);
-    _xml.Attributes.Add('footer', ZEFloatSeparator(FormatFloat(s, _sheet.SheetOptions.FooterMargin / ZE_MMinInch)), false);
+    _xml.Attributes.Add('header', ZEFloatSeparator(FormatFloat(s, _sheet.SheetOptions.HeaderMargins.Height / ZE_MMinInch)), false);
+    _xml.Attributes.Add('footer', ZEFloatSeparator(FormatFloat(s, _sheet.SheetOptions.FooterMargins.Height / ZE_MMinInch)), false);
     _xml.WriteEmptyTag('pageMargins', true, false);
 
     _xml.Attributes.Clear();
@@ -3636,14 +5178,14 @@ var
 
     // ECMA 376 ed.4 part1 18.18.50: default|portrait|landscape
     _xml.Attributes.Add('orientation',
-        IfThen(_sheet.SheetOptions.PortraitOrientation, 'portrait','landscape'),
+        IfThen(_sheet.SheetOptions.PortraitOrientation, 'portrait', 'landscape'),
         false);
 
     _xml.Attributes.Add('pageOrder', 'downThenOver', false);
     _xml.Attributes.Add('paperSize', intToStr(_sheet.SheetOptions.PaperSize), false);
     _xml.Attributes.Add('scale', '100', false);
     _xml.Attributes.Add('useFirstPageNumber', 'true', false);
-    _xml.Attributes.Add('usePrinterDefaults', 'false', false);
+    //_xml.Attributes.Add('usePrinterDefaults', 'false', false); //do not use!
     _xml.Attributes.Add('verticalDpi', '300', false);
     _xml.WriteEmptyTag('pageSetup', true, false);
     //  <headerFooter differentFirst="false" differentOddEven="false">
@@ -3677,7 +5219,8 @@ begin
 
     _sheet := XMLSS.Sheets[SheetNum];
     WriteXLSXSheetHeader();
-    WriteXLSXSheetCols();
+    if (_sheet.ColCount > 0) then
+      WriteXLSXSheetCols();
     WriteXLSXSheetData();
     WriteXLSXSheetFooter();
 
@@ -4795,7 +6338,9 @@ begin
     _commentArray := nil;
     azg.Free;
   end;
-end; //SaveXmlssToXLSXPath     //Сохраняет незапакованный документ в формате Office Open XML (OOXML)
+end;
+
+//Сохраняет незапакованный документ в формате Office Open XML (OOXML)
 //INPUT
 //  var XMLSS: TZEXMLSS                   - хранилище
 //      PathName: string                  - путь к директории для сохранения (должна заканчиватся разделителем директории)
@@ -4808,7 +6353,7 @@ end; //SaveXmlssToXLSXPath     //Сохраняет незапакованный документ в формате Off
 //RETURN
 //      integer
 function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 var
   _pages: TIntegerDynArray;      //номера страниц
   _names: TStringDynArray;      //названия страниц
@@ -4920,6 +6465,35 @@ begin
     SetLength(_commentArray, 0);
     _commentArray := nil;
   end;
+end; //SaveXmlssToXLSXPath
+
+//SaveXmlssToXLSXPath
+//Сохраняет незапакованный документ в формате Office Open XML (OOXML)
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      PathName: string                  - путь к директории для сохранения (должна заканчиватся разделителем директории)
+//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
+//  const SheetsNames: array of string    - массив названий страниц
+//                                          (количество элементов в двух массивах должны совпадать)
+//RETURN
+//      integer
+function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
+                             const SheetsNames: array of string): integer; overload;
+
+begin
+  result := SaveXmlssToXLSXPath(XMLSS, PathName, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
+end; //SaveXmlssToXLSXPath
+
+//SaveXmlssToXLSXPath
+//Сохраняет незапакованный документ в формате Office Open XML (OOXML)
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      PathName: string                  - путь к директории для сохранения (должна заканчиватся разделителем директории)
+//RETURN
+//      integer
+function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string): integer; overload;
+begin
+  result := SaveXmlssToXLSXPath(XMLSS, PathName, [], []);
 end; //SaveXmlssToXLSXPath
 
 {$IFDEF FPC}
@@ -5068,6 +6642,32 @@ begin
   end;
   Result := 0;
 end; //SaveXmlssToXSLX
+
+//Сохраняет документ в формате Open Office XML (xlsx)
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      FileName: string                  - имя файла для сохранения
+//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
+//  const SheetsNames: array of string    - массив названий страниц
+//                                          (количество элементов в двух массивах должны совпадать)
+//RETURN
+//      integer
+function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
+                         const SheetsNames: array of string): integer; overload;
+begin
+  result := SaveXmlssToXLSX(XMLSS, FileName, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
+end; //SaveXmlssToXLSX
+
+//Сохраняет документ в формате Open Office XML (xlsx)
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      FileName: string                  - имя файла для сохранения
+//RETURN
+//      integer
+function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
+begin
+  result := SaveXmlssToXLSX(XMLSS, FileName, [], []);
+end; //SaveXmlssToXLSX
 
 {$ENDIF}
 

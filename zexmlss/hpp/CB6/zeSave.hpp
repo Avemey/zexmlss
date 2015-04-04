@@ -101,6 +101,8 @@ protected:
 	_di_IZXMLSSave __fastcall BOM(const AnsiString Unicode_BOM);
 	_di_IZXMLSSave __fastcall ZipWith(const TMetaClass* ZipGenerator);
 	_di_IZXMLSSave __fastcall NoZip();
+	_di_IZXMLSSave __fastcall OnErrorRaise();
+	_di_IZXMLSSave __fastcall OnErrorRetCode();
 	int __fastcall Save(void)/* overload */;
 	int __fastcall Save(const AnsiString FileName)/* overload */;
 	virtual void __fastcall Discard(void);
@@ -114,9 +116,11 @@ protected:
 	AnsiString FPath;
 	TMetaClass*FZipGen;
 	bool FDoNotDestroyMe;
+	bool FRaiseOnError;
 	TIntegerDynArray __fastcall GetPageNumbers();
 	TStringDynArray __fastcall GetPageTitles();
 	_di_IZXMLSSave __fastcall CreateSaverForDescription(const AnsiString desc);
+	void __fastcall CheckSaveRetCode(int Result);
 	HIDESBASE int __stdcall _AddRef(void);
 	HIDESBASE int __stdcall _Release(void);
 	/*         class method */ static void __fastcall RegisterFormat(TMetaClass* vmt, const TMetaClass* sv);

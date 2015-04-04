@@ -22,6 +22,15 @@ namespace Zeformula
 {
 //-- type declarations -------------------------------------------------------
 //-- var, const, procedure ---------------------------------------------------
+static const System::ShortInt ZE_RTA_ODF = 0x1;
+static const System::ShortInt ZE_RTA_ODF_PREFIX = 0x2;
+static const System::ShortInt ZE_RTA_NO_ABSOLUTE = 0x4;
+static const System::ShortInt ZE_RTA_ONLY_ABSOLUTE = 0x8;
+static const System::ShortInt ZE_RTA_ODF_NO_BRACKET = 0x10;
+static const System::ShortInt ZE_ATR_DEL_PREFIX = 0x1;
+extern PACKAGE bool __fastcall ZEGetCellCoords(const System::UnicodeString cell, /* out */ int &column, /* out */ int &row, bool StartZero = true);
+extern PACKAGE System::UnicodeString __fastcall ZER1C1ToA1(const System::UnicodeString formula, int CurCol, int CurRow, int options, bool StartZero = true);
+extern PACKAGE System::UnicodeString __fastcall ZEA1ToR1C1(const System::UnicodeString formula, int CurCol, int CurRow, int options, bool StartZero = true);
 extern PACKAGE int __fastcall ZEGetColByA1(System::UnicodeString AA, bool StartZero = true);
 extern PACKAGE System::UnicodeString __fastcall ZEGetA1byCol(int ColNum, bool StartZero = true);
 

@@ -281,7 +281,7 @@ class DELPHICLASS TZMergeCells;
 class DELPHICLASS TZSheet;
 class DELPHICLASS TZEXMLSS;
 class DELPHICLASS TZSheets;
-typedef DynamicArray<TZSheet* >  zexmlss__02;
+typedef DynamicArray<TZSheet* >  zexmlss__03;
 
 class PASCALIMPLEMENTATION TZSheets : public Classes::TPersistent 
 {
@@ -301,6 +301,7 @@ private:
 public:
 	__fastcall virtual TZSheets(TZEXMLSS* AStore);
 	__fastcall virtual ~TZSheets(void);
+	virtual void __fastcall Assign(Classes::TPersistent* Source);
 	__property int Count = {read=FCount, write=SetSheetCount, nodefault};
 	__property TZSheet* Sheet[int num] = {read=GetSheet, write=SetSheet/*, default*/};
 };
@@ -353,6 +354,66 @@ public:
 
 
 class DELPHICLASS TZSheetOptions;
+class DELPHICLASS TZHeaderFooterMargins;
+class PASCALIMPLEMENTATION TZHeaderFooterMargins : public Classes::TPersistent 
+{
+	typedef Classes::TPersistent inherited;
+	
+private:
+	Word FMarginTopBottom;
+	Word FMarginLeft;
+	Word FMarginRight;
+	Word FHeight;
+	bool FUseAutoFitHeight;
+	
+public:
+	__fastcall TZHeaderFooterMargins(void);
+	virtual void __fastcall Assign(Classes::TPersistent* Source);
+	virtual bool __fastcall IsEqual(Classes::TPersistent* Source);
+	
+__published:
+	__property Word MarginTopBottom = {read=FMarginTopBottom, write=FMarginTopBottom, default=13};
+	__property Word MarginLeft = {read=FMarginLeft, write=FMarginLeft, default=0};
+	__property Word MarginRight = {read=FMarginRight, write=FMarginRight, default=0};
+	__property Word Height = {read=FHeight, write=FHeight, default=7};
+	__property bool UseAutoFitHeight = {read=FUseAutoFitHeight, write=FUseAutoFitHeight, default=1};
+public:
+	#pragma option push -w-inl
+	/* TPersistent.Destroy */ inline __fastcall virtual ~TZHeaderFooterMargins(void) { }
+	#pragma option pop
+	
+};
+
+
+class DELPHICLASS TZSheetFooterHeader;
+class PASCALIMPLEMENTATION TZSheetFooterHeader : public Classes::TPersistent 
+{
+	typedef Classes::TPersistent inherited;
+	
+private:
+	AnsiString FDataLeft;
+	AnsiString FData;
+	AnsiString FDataRight;
+	bool FIsDisplay;
+	
+public:
+	__fastcall TZSheetFooterHeader(void);
+	virtual void __fastcall Assign(Classes::TPersistent* Source);
+	virtual bool __fastcall IsEqual(Classes::TPersistent* Source);
+	
+__published:
+	__property AnsiString DataLeft = {read=FDataLeft, write=FDataLeft};
+	__property AnsiString Data = {read=FData, write=FData};
+	__property AnsiString DataRight = {read=FDataRight, write=FDataRight};
+	__property bool IsDisplay = {read=FIsDisplay, write=FIsDisplay, nodefault};
+public:
+	#pragma option push -w-inl
+	/* TPersistent.Destroy */ inline __fastcall virtual ~TZSheetFooterHeader(void) { }
+	#pragma option pop
+	
+};
+
+
 class PASCALIMPLEMENTATION TZSheetOptions : public Classes::TPersistent 
 {
 	typedef Classes::TPersistent inherited;
@@ -364,22 +425,41 @@ private:
 	Word FMarginLeft;
 	Word FMarginTop;
 	Word FMarginRight;
+	TZHeaderFooterMargins* FHeaderMargins;
+	TZHeaderFooterMargins* FFooterMargins;
 	bool FPortraitOrientation;
 	bool FCenterHorizontal;
 	bool FCenterVertical;
 	int FStartPageNumber;
-	Word FHeaderMargin;
-	Word FFooterMargin;
-	AnsiString FHeaderData;
-	AnsiString FFooterData;
+	bool FIsEvenFooterEqual;
+	bool FIsEvenHeaderEqual;
+	TZSheetFooterHeader* FHeader;
+	TZSheetFooterHeader* FFooter;
+	TZSheetFooterHeader* FEvenHeader;
+	TZSheetFooterHeader* FEvenFooter;
+	Graphics::TColor FHeaderBGColor;
+	Graphics::TColor FFooterBGColor;
+	int FScaleToPercent;
+	int FScaleToPages;
 	Byte FPaperSize;
+	int FPaperWidth;
+	int FPaperHeight;
 	TZSplitMode FSplitVerticalMode;
 	TZSplitMode FSplitHorizontalMode;
 	int FSplitVerticalValue;
 	int FSplitHorizontalValue;
+	AnsiString __fastcall GetHeaderData();
+	void __fastcall SetHeaderData(AnsiString Value);
+	AnsiString __fastcall GetFooterData();
+	void __fastcall SetfooterData(AnsiString Value);
+	Word __fastcall GetHeaderMargin(void);
+	void __fastcall SetHeaderMargin(Word Value);
+	Word __fastcall GetFooterMargin(void);
+	void __fastcall SetFooterMargin(Word Value);
 	
 public:
 	__fastcall virtual TZSheetOptions(void);
+	__fastcall virtual ~TZSheetOptions(void);
 	virtual void __fastcall Assign(Classes::TPersistent* Source);
 	
 __published:
@@ -390,23 +470,32 @@ __published:
 	__property Word MarginTop = {read=FMarginTop, write=FMarginTop, default=25};
 	__property Word MarginRight = {read=FMarginRight, write=FMarginRight, default=20};
 	__property Byte PaperSize = {read=FPaperSize, write=FPaperSize, default=9};
+	__property int PaperWidth = {read=FPaperWidth, write=FPaperWidth, default=0};
+	__property int PaperHeight = {read=FPaperHeight, write=FPaperHeight, default=0};
 	__property bool PortraitOrientation = {read=FPortraitOrientation, write=FPortraitOrientation, default=1};
 	__property bool CenterHorizontal = {read=FCenterHorizontal, write=FCenterHorizontal, default=0};
 	__property bool CenterVertical = {read=FCenterVertical, write=FCenterVertical, default=0};
 	__property int StartPageNumber = {read=FStartPageNumber, write=FStartPageNumber, default=1};
-	__property Word HeaderMargin = {read=FHeaderMargin, write=FHeaderMargin, default=13};
-	__property Word FooterMargin = {read=FFooterMargin, write=FFooterMargin, default=13};
-	__property AnsiString HeaderData = {read=FHeaderData, write=FHeaderData};
-	__property AnsiString FooterData = {read=FFooterData, write=FFooterData};
+	__property Word HeaderMargin = {read=GetHeaderMargin, write=SetHeaderMargin, default=13};
+	__property Word FooterMargin = {read=GetFooterMargin, write=SetFooterMargin, default=13};
+	__property TZHeaderFooterMargins* HeaderMargins = {read=FHeaderMargins};
+	__property TZHeaderFooterMargins* FooterMargins = {read=FFooterMargins};
+	__property bool IsEvenFooterEqual = {read=FIsEvenFooterEqual, write=FIsEvenFooterEqual, default=1};
+	__property bool IsEvenHeaderEqual = {read=FIsEvenHeaderEqual, write=FIsEvenHeaderEqual, default=1};
+	__property AnsiString HeaderData = {read=GetHeaderData, write=SetHeaderData};
+	__property AnsiString FooterData = {read=GetFooterData, write=SetfooterData};
+	__property TZSheetFooterHeader* Header = {read=FHeader};
+	__property TZSheetFooterHeader* Footer = {read=FFooter};
+	__property TZSheetFooterHeader* EvenHeader = {read=FEvenHeader};
+	__property TZSheetFooterHeader* EvenFooter = {read=FEvenFooter};
+	__property Graphics::TColor HeaderBGColor = {read=FHeaderBGColor, write=FHeaderBGColor, default=-2147483643};
+	__property Graphics::TColor FooterBGColor = {read=FFooterBGColor, write=FFooterBGColor, default=-2147483643};
+	__property int ScaleToPercent = {read=FScaleToPercent, write=FScaleToPercent, default=100};
+	__property int ScaleToPages = {read=FScaleToPages, write=FScaleToPages, default=1};
 	__property TZSplitMode SplitVerticalMode = {read=FSplitVerticalMode, write=FSplitVerticalMode, default=0};
 	__property TZSplitMode SplitHorizontalMode = {read=FSplitHorizontalMode, write=FSplitHorizontalMode, default=0};
 	__property int SplitVerticalValue = {read=FSplitVerticalValue, write=FSplitVerticalValue, nodefault};
 	__property int SplitHorizontalValue = {read=FSplitHorizontalValue, write=FSplitHorizontalValue, nodefault};
-public:
-	#pragma option push -w-inl
-	/* TPersistent.Destroy */ inline __fastcall virtual ~TZSheetOptions(void) { }
-	#pragma option pop
-	
 };
 
 
@@ -429,6 +518,7 @@ private:
 public:
 	__fastcall virtual TZEXMLSS(Classes::TComponent* AOwner);
 	__fastcall virtual ~TZEXMLSS(void);
+	virtual void __fastcall Assign(Classes::TPersistent* Source);
 	void __fastcall GetPixelSize(HWND hdc);
 	__property TZSheets* Sheets = {read=FSheets, write=FSheets};
 	
@@ -440,14 +530,15 @@ __published:
 	__property double VertPixelSize = {read=FVertPixelSize, write=SetVertPixelSize};
 };
 
+
 class DELPHICLASS TZColOptions;
 class DELPHICLASS TZRowOptions;
 
-typedef DynamicArray<DynamicArray<TZCell* > >  zexmlss__61;
+typedef DynamicArray<DynamicArray<TZCell* > >  zexmlss__62;
 
-typedef DynamicArray<TZRowOptions* >  zexmlss__71;
+typedef DynamicArray<TZRowOptions* >  zexmlss__72;
 
-typedef DynamicArray<TZColOptions* >  zexmlss__81;
+typedef DynamicArray<TZColOptions* >  zexmlss__82;
 
 class DELPHICLASS TZSheetPrintTitles;
 class PASCALIMPLEMENTATION TZSheetPrintTitles : public Classes::TPersistent 
@@ -482,6 +573,40 @@ public:
 	
 };
 
+
+class DELPHICLASS TZConditionalStyle;
+class DELPHICLASS TZConditionalFormatting;
+typedef DynamicArray<TZConditionalStyle* >  zexmlss__42;
+
+class PASCALIMPLEMENTATION TZConditionalFormatting : public Classes::TPersistent 
+{
+	typedef Classes::TPersistent inherited;
+	
+public:
+	TZConditionalStyle* operator[](int num) { return Items[num]; }
+	
+private:
+	DynamicArray<TZConditionalStyle* >  FStyles;
+	int FCount;
+	void __fastcall SetCount(int Value);
+	TZConditionalStyle* __fastcall GetItem(int num);
+	void __fastcall SetItem(int num, TZConditionalStyle* Value);
+	
+public:
+	__fastcall virtual TZConditionalFormatting(void);
+	__fastcall virtual ~TZConditionalFormatting(void);
+	TZConditionalStyle* __fastcall Add(void)/* overload */;
+	TZConditionalStyle* __fastcall Add(TZConditionalStyle* Style)/* overload */;
+	TZConditionalStyle* __fastcall Add(int ColumnNum, int RowNum, int AreaWidth, int AreaHeight)/* overload */;
+	void __fastcall Clear(void);
+	bool __fastcall Delete(int num);
+	virtual void __fastcall Assign(Classes::TPersistent* Source);
+	virtual bool __fastcall IsEqual(Classes::TPersistent* Source);
+	__property int Count = {read=FCount, write=SetCount, nodefault};
+	__property TZConditionalStyle* Items[int num] = {read=GetItem, write=SetItem/*, default*/};
+};
+
+
 class PASCALIMPLEMENTATION TZSheet : public Classes::TPersistent 
 {
 	typedef Classes::TPersistent inherited;
@@ -504,6 +629,8 @@ private:
 	bool FSelected;
 	TZSheetPrintTitles* FPrintRows;
 	TZSheetPrintTitles* FPrintCols;
+	TZConditionalFormatting* FConditionalFormatting;
+	void __fastcall SetConditionalFormatting(TZConditionalFormatting* Value);
 	void __fastcall SetColumn(int num, const TZColOptions* Value);
 	TZColOptions* __fastcall GetColumn(int num);
 	void __fastcall SetRow(int num, const TZRowOptions* Value);
@@ -538,7 +665,7 @@ public:
 	__property double RowHeights[int num] = {read=GetRowHeight, write=SetRowHeight};
 	__property double DefaultColWidth = {read=FDefaultColWidth, write=SetDefaultColWidth};
 	__property double DefaultRowHeight = {read=FDefaultRowHeight, write=SetDefaultRowHeight};
-	__property TZCell* Cell[int ACol][int ARow] = {read=GetCell, write=SetCell};
+	__property TZCell* Cell[int ACol][int ARow] = {read=GetCell, write=SetCell/*, default*/};
 	__property bool Protect = {read=FProtect, write=FProtect, default=0};
 	__property Graphics::TColor TabColor = {read=FTabColor, write=FTabColor, default=-2147483643};
 	__property AnsiString Title = {read=FTitle, write=FTitle};
@@ -550,6 +677,7 @@ public:
 	__property bool Selected = {read=FSelected, write=FSelected, nodefault};
 	__property TZSheetPrintTitles* RowsToRepeat = {read=FPrintRows, write=SetPrintRows};
 	__property TZSheetPrintTitles* ColsToRepeat = {read=FPrintCols, write=SetPrintCols};
+	__property TZConditionalFormatting* ConditionalFormatting = {read=FConditionalFormatting, write=SetConditionalFormatting};
 };
 
 
@@ -660,6 +788,148 @@ public:
 	/* TPersistent.Destroy */ inline __fastcall virtual ~TZRowOptions(void) { }
 	#pragma option pop
 	
+};
+
+
+#pragma option push -b-
+enum TZCondition { ZCFIsTrueFormula, ZCFCellContentIsBetween, ZCFCellContentIsNotBetween, ZCFCellContentOperator, ZCFNumberValue, ZCFString, ZCFBoolTrue, ZCFBoolFalse, ZCFFormula, ZCFContainsText, ZCFNotContainsText, ZCFBeginsWithText, ZCFEndsWithText, ZCFCellIsEmpty, ZCFDuplicate, ZCFUnique, ZCFAboveAverage, ZCFBellowAverage, ZCFAboveEqualAverage, ZCFBelowEqualAverage, ZCFTopElements, ZCFBottomElements, ZCFTopPercent, ZCFBottomPercent, ZCFIsError, ZCFIsNoError };
+#pragma option pop
+
+#pragma option push -b-
+enum TZConditionalOperator { ZCFOpGT, ZCFOpLT, ZCFOpGTE, ZCFOpLTE, ZCFOpEqual, ZCFOpNotEqual };
+#pragma option pop
+
+class DELPHICLASS TZConditionalStyleItem;
+class PASCALIMPLEMENTATION TZConditionalStyleItem : public Classes::TPersistent 
+{
+	typedef Classes::TPersistent inherited;
+	
+private:
+	TZCondition FCondition;
+	TZConditionalOperator FConditionOperator;
+	AnsiString FValue1;
+	AnsiString FValue2;
+	int FApplyStyleID;
+	int FBaseCellPageIndex;
+	int FBaseCellRowIndex;
+	int FBaseCellColumnIndex;
+	
+public:
+	__fastcall virtual TZConditionalStyleItem(void);
+	void __fastcall Clear(void);
+	virtual void __fastcall Assign(Classes::TPersistent* Source);
+	virtual bool __fastcall IsEqual(Classes::TPersistent* Source);
+	__property int ApplyStyleID = {read=FApplyStyleID, write=FApplyStyleID, nodefault};
+	__property int BaseCellColumnIndex = {read=FBaseCellColumnIndex, write=FBaseCellColumnIndex, nodefault};
+	__property int BaseCellPageIndex = {read=FBaseCellPageIndex, write=FBaseCellPageIndex, nodefault};
+	__property int BaseCellRowIndex = {read=FBaseCellRowIndex, write=FBaseCellRowIndex, nodefault};
+	__property TZCondition Condition = {read=FCondition, write=FCondition, nodefault};
+	__property TZConditionalOperator ConditionOperator = {read=FConditionOperator, write=FConditionOperator, nodefault};
+	__property AnsiString Value1 = {read=FValue1, write=FValue1};
+	__property AnsiString Value2 = {read=FValue2, write=FValue2};
+public:
+	#pragma option push -w-inl
+	/* TPersistent.Destroy */ inline __fastcall virtual ~TZConditionalStyleItem(void) { }
+	#pragma option pop
+	
+};
+
+
+class DELPHICLASS TZConditionalAreaItem;
+class PASCALIMPLEMENTATION TZConditionalAreaItem : public Classes::TPersistent 
+{
+	typedef Classes::TPersistent inherited;
+	
+private:
+	int FRow;
+	int FColumn;
+	int FWidth;
+	int FHeight;
+	void __fastcall SetRow(int Value);
+	void __fastcall SetColumn(int Value);
+	void __fastcall SetWidth(int Value);
+	void __fastcall SetHeight(int Value);
+	
+public:
+	__fastcall virtual TZConditionalAreaItem(void)/* overload */;
+	__fastcall virtual TZConditionalAreaItem(int ColumnNum, int RowNum, int AreaWidth, int AreaHeight)/* overload */;
+	virtual void __fastcall Assign(Classes::TPersistent* Source);
+	virtual bool __fastcall IsEqual(Classes::TPersistent* Source);
+	__property int Row = {read=FRow, write=SetRow, nodefault};
+	__property int Column = {read=FColumn, write=SetColumn, nodefault};
+	__property int Width = {read=FWidth, write=SetWidth, nodefault};
+	__property int Height = {read=FHeight, write=SetHeight, nodefault};
+public:
+	#pragma option push -w-inl
+	/* TPersistent.Destroy */ inline __fastcall virtual ~TZConditionalAreaItem(void) { }
+	#pragma option pop
+	
+};
+
+
+typedef DynamicArray<TZConditionalAreaItem* >  zexmlss__02;
+
+class DELPHICLASS TZConditionalAreas;
+class PASCALIMPLEMENTATION TZConditionalAreas : public Classes::TPersistent 
+{
+	typedef Classes::TPersistent inherited;
+	
+public:
+	TZConditionalAreaItem* operator[](int num) { return Items[num]; }
+	
+private:
+	int FCount;
+	DynamicArray<TZConditionalAreaItem* >  FItems;
+	void __fastcall SetCount(int Value);
+	TZConditionalAreaItem* __fastcall GetItem(int num);
+	void __fastcall SetItem(int num, TZConditionalAreaItem* Value);
+	
+public:
+	__fastcall virtual TZConditionalAreas(void);
+	__fastcall virtual ~TZConditionalAreas(void);
+	TZConditionalAreaItem* __fastcall Add(void)/* overload */;
+	TZConditionalAreaItem* __fastcall Add(int ColumnNum, int RowNum, int AreaWidth, int AreaHeight)/* overload */;
+	virtual void __fastcall Assign(Classes::TPersistent* Source);
+	void __fastcall Delete(int num);
+	bool __fastcall IsCellInArea(int ColumnNum, int RowNum);
+	virtual bool __fastcall IsEqual(Classes::TPersistent* Source);
+	__property int Count = {read=FCount, write=SetCount, nodefault};
+	__property TZConditionalAreaItem* Items[int num] = {read=GetItem, write=SetItem/*, default*/};
+};
+
+
+typedef DynamicArray<TZConditionalStyleItem* >  zexmlss__22;
+
+class PASCALIMPLEMENTATION TZConditionalStyle : public Classes::TPersistent 
+{
+	typedef Classes::TPersistent inherited;
+	
+public:
+	TZConditionalStyleItem* operator[](int num) { return Items[num]; }
+	
+private:
+	int FCount;
+	int FMaxCount;
+	TZConditionalAreas* FAreas;
+	DynamicArray<TZConditionalStyleItem* >  FConditions;
+	TZConditionalStyleItem* __fastcall GetItem(int num);
+	void __fastcall SetItem(int num, TZConditionalStyleItem* Value);
+	void __fastcall SetCount(int value);
+	void __fastcall SetAreas(TZConditionalAreas* Value);
+	
+public:
+	__fastcall virtual TZConditionalStyle(void);
+	__fastcall virtual ~TZConditionalStyle(void);
+	TZConditionalStyleItem* __fastcall Add(void)/* overload */;
+	TZConditionalStyleItem* __fastcall Add(TZConditionalStyleItem* StyleItem)/* overload */;
+	void __fastcall Delete(int num);
+	void __fastcall Insert(int num)/* overload */;
+	void __fastcall Insert(int num, TZConditionalStyleItem* StyleItem)/* overload */;
+	virtual void __fastcall Assign(Classes::TPersistent* Source);
+	virtual bool __fastcall IsEqual(Classes::TPersistent* Source);
+	__property TZConditionalAreas* Areas = {read=FAreas, write=SetAreas};
+	__property int Count = {read=FCount, write=SetCount, nodefault};
+	__property TZConditionalStyleItem* Items[int num] = {read=GetItem, write=SetItem/*, default*/};
 };
 
 

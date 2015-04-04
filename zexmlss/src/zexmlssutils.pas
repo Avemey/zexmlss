@@ -5,9 +5,9 @@
 // Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
 // e-mail: avemey(мяу)tut(точка)by
 // URL:    http://avemey.com
-// Ver:    0.0.6
+// Ver:    0.0.8
 // Лицензия: zlib
-// Last update: 2013.11.05
+// Last update: 2015.01.24
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -75,9 +75,23 @@ function SaveXmlssToHtml(var XMLSS: TZEXMLSS; const PageNum: integer; Title: str
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 
+//Сохраняет в поток в формате Excel XML SpreadSheet
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string): integer; overload;
+
+//Сохраняет в поток в формате Excel XML SpreadSheet
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream): integer; overload;
+
 //Сохраняет в файл в формате Excel XML SpreadSheet
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
+
+//Сохраняет в файл в формате Excel XML SpreadSheet
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string): integer; overload;
+
+//Сохраняет в файл в формате Excel XML SpreadSheet
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
 
 //Читает из потока Excel XML SpreadSheet (EXMLSS)
 //      XMLSS: TZEXMLSS                 - хранилище
@@ -107,6 +121,46 @@ begin
    Result := StrUtils.SplitString(buffer, delimeter); // implicit typecast
 end;
 {$Else}
+var
+  i, from, till: integer;
+  L: array of integer;
+  _count, _maxcount: integer;
+
+  procedure _add(num: integer);
+  begin
+    if (_count + 1 >= _maxcount) then
+    begin
+      inc(_maxcount, 10);
+      setlength(L, _maxcount)
+    end;
+    L[_count] := num;
+    inc(_count);
+  end;
+
+begin
+  _maxcount := 20;
+  _count := 0;
+  SetLength(L, _maxcount);
+  try
+    for i := 1 to length(buffer) do
+      if delimeter = buffer[i] then
+        _add(i);
+    _add(length(buffer) + 1);
+
+    SetLength(Result, _count);
+
+    from := 1;
+    for i := 0 to _count - 1 do
+    begin
+      till := L[i];
+      Result[i] := Copy(buffer, from, till - from);
+      from := till + 1;
+    end;
+  finally
+    setlength(L, 0);
+  end;
+end;
+(* //FPC: warnings on pointer(i)
 var i, from, till: integer; L: TList;
 begin
   L := TList.Create;
@@ -127,6 +181,7 @@ begin
     L.Free;
   end;
 end;
+*)
 {$EndIf}
 
 
@@ -1745,8 +1800,8 @@ var
       Attributes.Clear();
       if (ProcessedSheet.SheetOptions.HeaderData > '') then
       begin
-        if ProcessedSheet.SheetOptions.HeaderMargin <> 13 then
-          Attributes.Add('x:Margin', ZEFloatSeparator(FormatFloat('0.##',ProcessedSheet.SheetOptions.HeaderMargin / ZE_MMinInch)));
+        if (ProcessedSheet.SheetOptions.HeaderMargins.Height) <> 13 then
+          Attributes.Add('x:Margin', ZEFloatSeparator(FormatFloat('0.##', ProcessedSheet.SheetOptions.HeaderMargins.Height / ZE_MMinInch)));
         Attributes.Add('x:Data', ProcessedSheet.SheetOptions.HeaderData, false);
         WriteEmptyTag('Header', true, true);
       end;
@@ -1755,8 +1810,8 @@ var
       Attributes.Clear();
       if (ProcessedSheet.SheetOptions.FooterData > '') then
       begin
-        if ProcessedSheet.SheetOptions.FooterMargin <> 13 then
-          Attributes.Add('x:Margin', ZEFloatSeparator(FormatFloat('0.##',ProcessedSheet.SheetOptions.FooterMargin / ZE_MMinInch)));
+        if ProcessedSheet.SheetOptions.FooterMargins.Height <> 13 then
+          Attributes.Add('x:Margin', ZEFloatSeparator(FormatFloat('0.##', ProcessedSheet.SheetOptions.FooterMargins.Height / ZE_MMinInch)));
         Attributes.Add('x:Data', ProcessedSheet.SheetOptions.FooterData, false);
         WriteEmptyTag('Footer', true, true);
       end;
@@ -1883,6 +1938,26 @@ begin
   end;
 end; //SaveXmlssToEXML
 
+//Сохраняет в поток в формате Excel XML SpreadSheet
+//      XMLSS: TZEXMLSS                 - хранилище
+//      Stream: TStream                 - поток
+//      SheetsNumbers: array of integer - массив номеров страниц в нужной последовательности
+//      SheetsNames: array of string    - массив названий страниц
+//              количество элементов в двух массивах должны совпадать
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string): integer; overload;
+begin
+  result := SaveXmlssToEXML(XMLSS, Stream, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
+end;
+
+//Сохраняет в поток в формате Excel XML SpreadSheet
+//      XMLSS: TZEXMLSS                 - хранилище
+//      Stream: TStream                 - поток
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream): integer; overload;
+begin
+  result := SaveXmlssToEXML(XMLSS, Stream, [], []);
+end;
+
 //Сохраняет в файл в формате Excel XML SpreadSheet
 //      XMLSS: TZEXMLSS                 - хранилище
 //      FileName: string            - Имя файла
@@ -1911,6 +1986,26 @@ begin
     if Stream <> nil then
       Stream.Free;
   end;
+end; //SaveXmlssToEXML
+
+//Сохраняет в файл в формате Excel XML SpreadSheet
+//      XMLSS: TZEXMLSS                 - хранилище
+//      FileName: string            - Имя файла
+//      SheetsNumbers: array of integer - массив номеров страниц в нужной последовательности
+//      SheetsNames: array of string    - массив названий страниц
+//              количество элементов в двух массивах должны совпадать
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
+                         const SheetsNames: array of string): integer; overload;
+begin
+  result := SaveXmlssToEXML(XMLSS, FileName, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
+end; //SaveXmlssToEXML
+
+//Сохраняет в файл в формате Excel XML SpreadSheet
+//      XMLSS: TZEXMLSS                 - хранилище
+//      FileName: string            - Имя файла
+function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
+begin
+  result := SaveXmlssToEXML(XMLSS, FileName, [], []);
 end; //SaveXmlssToEXML
 
 //Читает из потока Excel XML SpreadSheet (EXMLSS)
@@ -2462,14 +2557,14 @@ var
         begin
           s := _xml.Attributes.ItemsByName['x:Margin'];
           if (s > '') then
-            _SheetOptions.HeaderMargin := round(ZETryStrToFloat(s)*25.4);
+            _SheetOptions.HeaderMargins.Height := abs(round(ZETryStrToFloat(s)*25.4));
           _SheetOptions.HeaderData := _xml.Attributes.ItemsByName['x:Data'];
         end else
         if IfTag('Footer', 5) then
         begin
           s := _xml.Attributes.ItemsByName['x:Margin'];
           if (s > '') then
-            _SheetOptions.FooterMargin := round(ZETryStrToFloat(s)*25.4);
+            _SheetOptions.FooterMargins.Height := abs(round(ZETryStrToFloat(s)*25.4));
           _SheetOptions.FooterData := _xml.Attributes.ItemsByName['x:Data'];
         end;
       end else

@@ -24,7 +24,7 @@ typedef AnsiString __fastcall (*TAnsiToCPConverter)(const AnsiString AnsiText);
 
 typedef void __fastcall (__closure *TReadCPCharObj)(AnsiString &RetChar, bool &_eof);
 
-typedef void __fastcall (*TReadCPChar)(TReadCPCharObj ReadCPChar, AnsiString &text, bool &_eof);
+typedef void __fastcall (*TReadCPChar)(const TReadCPCharObj ReadCPChar, AnsiString &text, bool &_eof);
 
 typedef AnsiString __fastcall (*TCPToAnsiConverter)(const AnsiString AnsiText);
 
@@ -57,7 +57,7 @@ private:
 	AnsiString __fastcall GetAttrI(int num);
 	void __fastcall SetAttrI(int num, const AnsiString Value);
 	AnsiString __fastcall GetAttr(int num);
-	void __fastcall SetAttr(int num, const AnsiString Value);
+	void __fastcall SetAttr(int num, const AnsiString * Value);
 	
 protected:
 	void __fastcall ResizeItemsArray(int NewSize);
@@ -79,7 +79,7 @@ public:
 	virtual AnsiString __fastcall ToString(bool CheckEntity)/* overload */;
 	virtual AnsiString __fastcall ToString()/* overload */;
 	__property int Count = {read=FCount, nodefault};
-	__property AnsiString Items[int num] = {read=GetAttr, write=SetAttr};
+	//__property AnsiString Items[int num] = {read=GetAttr, write=SetAttr};
 	__property AnsiString ItemsByName[AnsiString Att] = {read=GetAttrS, write=SetAttrS/*, default*/};
 	__property AnsiString ItemsByNum[int num] = {read=GetAttrI, write=SetAttrI};
 };
@@ -273,11 +273,11 @@ typedef TZsspXMLReader TZsspXMLReaderH;
 #define BOMUTF16LE "ÿþ"
 #define BOMUTF32BE ""
 #define BOMUTF32LE "ÿþ"
-extern PACKAGE void __fastcall ReadCharUTF8(TReadCPCharObj ReadCPChar, AnsiString &text, bool &_eof);
-extern PACKAGE void __fastcall ReadCharUTF16LE(TReadCPCharObj ReadCPChar, AnsiString &text, bool &_eof);
-extern PACKAGE void __fastcall ReadCharUTF16BE(TReadCPCharObj ReadCPChar, AnsiString &text, bool &_eof);
-extern PACKAGE void __fastcall ReadCharUTF32(TReadCPCharObj ReadCPChar, AnsiString &text, bool &_eof);
-extern PACKAGE void __fastcall ReadCharOneByte(TReadCPCharObj ReadCPChar, AnsiString &text, bool &_eof);
+extern PACKAGE void __fastcall ReadCharUTF8(const TReadCPCharObj ReadCPChar, AnsiString &text, bool &_eof);
+extern PACKAGE void __fastcall ReadCharUTF16LE(const TReadCPCharObj ReadCPChar, AnsiString &text, bool &_eof);
+extern PACKAGE void __fastcall ReadCharUTF16BE(const TReadCPCharObj ReadCPChar, AnsiString &text, bool &_eof);
+extern PACKAGE void __fastcall ReadCharUTF32(const TReadCPCharObj ReadCPChar, AnsiString &text, bool &_eof);
+extern PACKAGE void __fastcall ReadCharOneByte(const TReadCPCharObj ReadCPChar, AnsiString &text, bool &_eof);
 extern PACKAGE AnsiString __fastcall conv_UTF8ToLocal(const AnsiString Text);
 extern PACKAGE AnsiString __fastcall conv_UTF16LEToLocal(const AnsiString Text);
 extern PACKAGE AnsiString __fastcall conv_UTF16BEToLocal(const AnsiString Text);
@@ -288,6 +288,7 @@ extern PACKAGE AnsiString __fastcall conv_CP866ToLocal(const AnsiString Text);
 extern PACKAGE AnsiString __fastcall ToAttribute(const AnsiString AttrName, const AnsiString Value);
 extern PACKAGE void __fastcall Correct_Entity(const AnsiString _St, int num, AnsiString &_result);
 extern PACKAGE AnsiString __fastcall CheckStrEntity(const AnsiString st, bool checkamp = true);
+extern PACKAGE TAnsiToCPConverter __fastcall ZEGetDefaultUTF8Converter(void);
 extern PACKAGE bool __fastcall RecognizeEncodingXML(int startpos, AnsiString &txt, /* out */ int &cpfromtext, /* out */ AnsiString &cpname, /* out */ int &ftype)/* overload */;
 extern PACKAGE int __fastcall RecognizeBOM(AnsiString &txt);
 extern PACKAGE bool __fastcall RecognizeEncodingXML(AnsiString &txt, /* out */ int &BOM, /* out */ int &cpfromtext, /* out */ AnsiString &cpname, /* out */ int &ftype)/* overload */;

@@ -36,6 +36,32 @@ begin
   end;
 end; //SaveXmlssToODFS
 
+//—охран€ет документ в формате Open Office XML (xlsx)
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      FileName: string                  - им€ файла дл€ сохранени€
+//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
+//  const SheetsNames: array of string    - массив названий страниц
+//                                          (количество элементов в двух массивах должны совпадать)
+//RETURN
+//      integer
+function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
+                         const SheetsNames: array of string): integer; overload;
+begin
+  result := SaveXmlssToXLSX(XMLSS, FileName, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
+end; //SaveXmlssToXLSX
+
+//—охран€ет документ в формате Open Office XML (xlsx)
+//INPUT
+//  var XMLSS: TZEXMLSS                   - хранилище
+//      FileName: string                  - им€ файла дл€ сохранени€
+//RETURN
+//      integer
+function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
+begin
+  result := SaveXmlssToXLSX(XMLSS, FileName, [], []);
+end; //SaveXmlssToXLSX
+
 //„итает xlsx
 //INPUT
 //  var XMLSS: TZEXMLSS - хранилище

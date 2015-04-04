@@ -1,6 +1,6 @@
 {
 interface: functions for XLSX zip (delphi)
-using TurboPower Abbrevia http://sourceforge.net/projects/tpabbrevia/
+usign kazip.pas https://raw.githubusercontent.com/JoseJimeniz/KaZip/master/KaZip.pas
 }
 function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;

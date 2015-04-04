@@ -1,6 +1,6 @@
 {
 implementation: function for XLSX zip (delphi)
-using TurboPower Abbrevia http://sourceforge.net/projects/tpabbrevia/
+usign kazip.pas https://raw.githubusercontent.com/JoseJimeniz/KaZip/master/KaZip.pas
 }
 
 //—охран€ет незапакованный документ в формате Office Open XML (OOXML)
@@ -27,7 +27,7 @@ begin
   try
     _isCreated := ZECreateUniqueTmpDir(ZEGetTempDir(), tmpdir);
     result := SaveXmlssToXLSXPath(XMLSS, tmpdir, SheetsNumbers, SheetsNames, TextConverter, CodePageName, BOM);
-    b := ZEZipPackAb(FileName, tmpdir);
+    b := ZEZipPackKazip(FileName, tmpdir);
     if (not b) then
       result := -1;
   finally
@@ -79,7 +79,7 @@ begin
   _isCreated := false;
   try
     _isCreated := ZECreateUniqueTmpDir(ZEGetTempDir(), tmpdir);
-    b := ZEZipUnpackAb(FileName, tmpdir);
+    b := ZEZipUnpackKazip(FileName, tmpdir);
     if (b) then
       result := ReadXLSXPath(XMLSS, tmpdir)
     else

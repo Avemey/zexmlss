@@ -2,6 +2,9 @@
 // Если не используется ZColorStringGrid 
 { $DEFINE NOZCOLORSTRINGGRID}
 
+// Условное форматирование
+{$DEFINE ZUSE_CONDITIONAL_FORMATTING}
+
 // Free Pascal / Lazarus
 {$IFDEF FPC}
   //для FPC пока нету ZColorStringGrid-а

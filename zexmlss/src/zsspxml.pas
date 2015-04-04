@@ -4,9 +4,9 @@
 // Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
 // e-mail: avemey(мяу)tut(точка)by
 // URL:    http://avemey.com
-// Ver:    0.0.5
+// Ver:    0.0.7
 // Лицензия: zlib
-// Last update: 2012.08.12
+// Last update: 2014.07.20
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -44,7 +44,7 @@ type
   TAnsiToCPConverter = function (const AnsiText: ansistring): ansistring;
 
   TReadCPCharObj = procedure(var RetChar: ansistring; var _eof: boolean) of object;
-  TReadCPChar = procedure(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+  TReadCPChar = procedure(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
   TCPToAnsiConverter = TAnsiToCPConverter;
 
   TZAttrArray = array [0..1] of ansistring;
@@ -83,7 +83,7 @@ type
     function ToString(quote: ansichar; CheckEntity: boolean): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
     function ToString(quote: ansichar): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
     function ToString(CheckEntity: boolean): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
-    function ToString(): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
+    function ToString(): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload;  {$IFDEF Z_FPC_USE_TOSTRING} override; {$ELSE} virtual; {$ENDIF}
     property Count: integer read FCount;
     property Items[num: integer]: TZAttrArray read GetAttr write SetAttr;
     property ItemsByName[const Att: ansistring]: ansistring read GetAttrS write SetAttrS; default;
@@ -462,11 +462,11 @@ type
 //конец для Delphi >=2009
 
 //Читатали
-procedure ReadCharUTF8(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
-procedure ReadCharUTF16LE(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
-procedure ReadCharUTF16BE(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
-procedure ReadCharUTF32(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
-procedure ReadCharOneByte(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF8(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF16LE(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF16BE(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF32(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharOneByte(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 
 //////////// Конвертеры
 function conv_UTF8ToLocal(const Text: ansistring): ansistring;
@@ -506,6 +506,9 @@ function RecognizeBOM(var txt: ansistring): integer;
 //Распознаёт кодировку XML и HTML текста вместе с BOM
 function RecognizeEncodingXML(var txt: ansistring; out BOM: integer; out cpfromtext: integer; out cpname: ansistring; out ftype: integer): boolean; overload;
 
+//Получить дефолтный UTF8 конвертер
+function ZEGetDefaultUTF8Converter(): TAnsiToCPConverter;
+
 implementation
 
 {$IFDEF DELPHI_UNICODE}
@@ -515,7 +518,7 @@ uses
 
 //// читатели
 
-procedure ReadCharUTF8(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF8(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 var
   s: ansistring;
   t, i: integer;
@@ -559,7 +562,7 @@ begin
     _eof := true;
 end;
 
-procedure ReadCharUTF16LE(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF16LE(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 var
   i, num: integer;
   s: ansistring;
@@ -589,7 +592,7 @@ begin
     _eof := true;
 end;
 
-procedure ReadCharUTF16BE(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF16BE(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 var
   i, num: integer;
   s: ansistring;
@@ -607,7 +610,9 @@ begin
     ReadCPChar(s, _eof);
     text := text + s;
     if _eof then exit;
+    {$HINTS OFF}
     num := num + (ord(s[1]) shl 8);
+    {$HINTS ON}
     if num >= $d800 then
     for i := 1 to 2 do
     begin
@@ -619,7 +624,7 @@ begin
     _eof := true;
 end;
 
-procedure ReadCharUTF32(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharUTF32(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 var
   s: ansistring;
   i: integer;
@@ -639,7 +644,7 @@ begin
 end;
 
 //для однобайтных кодировок
-procedure ReadCharOneByte(ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+procedure ReadCharOneByte(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 begin
   _eof := false;
   text := '';
@@ -990,6 +995,20 @@ begin
   end;
 end; //CheckStrEntity
 {$ENDIF}
+
+//Получить дефолтный UTF8 конвертер
+function ZEGetDefaultUTF8Converter(): TAnsiToCPConverter;
+begin
+  {$IFDEF FPC}
+  result := nil;
+  {$ELSE}
+    {$IFDEF DELPHI_UNICODE}
+  result := nil;
+    {$ELSE}
+  result := @AnsiToUtf8;
+    {$ENDIF}
+  {$ENDIF}
+end; //ZEGetDefaultUTF8Converter
 
 //Возвращает номер кодировки по его названию (UPCASE не забываем!)
 //INPUT
@@ -2994,9 +3013,9 @@ var
                   begin
                     FErrorCode := FErrorCode or 128;
                     _type_comment := -1;
-                    FValue := sl;
+                    FValue := sl + ss;
                   end;
-                  FValue := FValue + ss;
+                  //FValue := FValue + ss;
                 end else
                 begin
                   {$IFDEF DELPHI_UNICODE}
