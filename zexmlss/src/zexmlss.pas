@@ -776,6 +776,8 @@ type
   private
     FText: string;
     FFont: TFont;
+    FRotationAngle: integer;
+    FIsDisplay: boolean;
   protected
     procedure SetFont(const value: TFont);
   public
@@ -786,6 +788,8 @@ type
   published
     property Text: string read FText write FText;
     property Font: TFont read FFont write SetFont;
+    property RotationAngle: integer read FRotationAngle write FRotationAngle default 0;
+    property IsDisplay: boolean read FIsDisplay write FIsDisplay default true;
   end;
 
   //Chart legend
@@ -803,11 +807,27 @@ type
     property Align: TZELegendAlign read FAlign write FAlign;
   end;
 
-  TZEChartAxis = class (TPersistent)
+  //Chart axis
+  TZEChartAxis = class (TZEChartTitleItem)
   private
+    FLogarithmic: boolean;
+    FReverseDirection: boolean;
+    FScaleMin: double;
+    FScaleMax: double;
+    FAutoScaleMin: boolean;
+    FAutoScaleMax: boolean;
   protected
   public
+    constructor Create(); override;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; override;
   published
+    property Logarithmic: boolean read FLogarithmic write FLogarithmic default false;
+    property ReverseDirection: boolean read FReverseDirection write FReverseDirection default false;
+    property ScaleMin: double read FScaleMin write FScaleMin;
+    property ScaleMax: double read FScaleMax write FScaleMax;
+    property AutoScaleMin: boolean read FAutoScaleMin write FAutoScaleMin;
+    property AutoScaleMax: boolean read FAutoScaleMax write FAutoScaleMax;
   end;
 
   //Chart item
@@ -815,12 +835,20 @@ type
   private
     FTitle: TZEChartTitleItem;
     FSubtitle: TZEChartTitleItem;
+    FFooter: TZEChartTitleItem;
     FLegend: TZEChartLegend;
+    FAxisX: TZEChartAxis;
+    FAxisY: TZEChartAxis;
+    FAxisZ: TZEChartAxis;
   protected
     procedure SetTitle(const value: TZEChartTitleItem);
     procedure SetSubtitle(const value: TZEChartTitleItem);
+    procedure SetFooter(const value: TZEChartTitleItem);
     procedure SetLegend(const value: TZEChartLegend);
     procedure CommonInit();
+    procedure SetAxisX(const value: TZEChartAxis);
+    procedure SetAxisY(const value: TZEChartAxis);
+    procedure SetAxisZ(const value: TZEChartAxis);
   public
     constructor Create(); overload; override;
     constructor Create(AX, AY, AWidth, AHeight: integer); overload; override;
@@ -828,8 +856,12 @@ type
     procedure Assign(Source: TPersistent); override;
     function IsEqual(const Source: TPersistent): boolean; override;
   published
+    property AxisX: TZEChartAxis read FAxisX write SetAxisX;
+    property AxisY: TZEChartAxis read FAxisY write SetAxisY;
+    property AxisZ: TZEChartAxis read FAxisZ write SetAxisZ;
     property Title: TZEChartTitleItem read FTitle write SetTitle;
     property Subtitle: TZEChartTitleItem read FSubtitle write SetSubtitle;
+    property Footer: TZEChartTitleItem read FFooter write SetFooter;
     property Legend: TZEChartLegend read FLegend write SetLegend;
   end;
 
@@ -4279,6 +4311,8 @@ constructor TZEChartTitleItem.Create();
 begin
   FFont := TFont.Create();
   FText := '';
+  FRotationAngle := 0;
+  FIsDisplay := true;
 end;
 
 destructor TZEChartTitleItem.Destroy();
@@ -4304,6 +4338,8 @@ begin
 
       FText := tmp.Text;
       FFont.Assign(tmp.Font);
+      FRotationAngle := tmp.RotationAngle;
+      FIsDisplay := tmp.IsDisplay;
     end;
   end;
 
@@ -4325,13 +4361,10 @@ begin
       tmp := Source as TZEChartTitleItem;
       Result := false;
 
-      if (FText <> tmp.Text) then
-        exit;
-
-      if (ZEIsFontsEquals(FFont, tmp.Font)) then
-        exit;
-
-      Result := true;
+      if (FIsDisplay = tmp.IsDisplay) then
+        if (FRotationAngle = tmp.RotationAngle) then
+          if (FText = tmp.Text) then
+            Result := ZEIsFontsEquals(FFont, tmp.Font);
     end;
   end;
 end; //IsEqual
@@ -4386,6 +4419,68 @@ begin
   end;
 end; //IsEqual
 
+
+////::::::::::::: TZEChartAxis :::::::::::::::::////
+
+constructor TZEChartAxis.Create();
+begin
+  inherited;
+  FLogarithmic := false;
+  FReverseDirection := false;
+  FScaleMin := 0;
+  FScaleMax := 20000;
+  FAutoScaleMin := true;
+  FAutoScaleMax := true;
+end;
+
+procedure TZEChartAxis.Assign(Source: TPersistent);
+var
+  tmp: TZEChartAxis;
+
+begin
+  inherited Assign(Source);
+
+  if (Source is TZEChartAxis) then
+  begin
+    tmp := Source as TZEChartAxis;
+    FLogarithmic := tmp.Logarithmic;
+    FReverseDirection := tmp.ReverseDirection;
+    FScaleMin := tmp.ScaleMin;
+    FScaleMax := tmp.ScaleMax;
+    FAutoScaleMin := tmp.AutoScaleMin;
+    FAutoScaleMax := tmp.AutoScaleMax;
+  end
+end;
+
+function TZEChartAxis.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZEChartAxis;
+
+begin
+  Result := inherited IsEqual(Source);
+
+  if (Result) then
+  begin
+    Result := Source is TZEChartAxis;
+    if (Result) then
+    begin
+      tmp := Source as TZEChartAxis;
+      Result := (FLogarithmic = tmp.FLogarithmic) and
+                (FReverseDirection = tmp.FReverseDirection) and
+                (FAutoScaleMin = tmp.AutoScaleMin) and
+                (FAutoScaleMax = tmp.AutoScaleMax);
+      if (Result) then
+      begin
+        //TODO: for comparsion double values need check observational errors?
+        if (not FAutoScaleMin) then
+          Result := FScaleMin <> tmp.ScaleMin;
+        if (Result and (not FAutoScaleMin)) then
+          Result := FScaleMax <> tmp.ScaleMax;
+      end;
+    end;
+  end;
+end;
+
 ////::::::::::::: TZEChart :::::::::::::::::////
 
 procedure TZEChart.CommonInit();
@@ -4393,6 +4488,10 @@ begin
   FTitle := TZEChartTitleItem.Create();
   FSubtitle := TZEChartTitleItem.Create();
   FLegend := TZEChartLegend.Create();
+  FFooter := TZEChartTitleItem.Create();
+  FAxisX := TZEChartAxis.Create();
+  FAxisY := TZEChartAxis.Create();
+  FAxisZ := TZEChartAxis.Create();
 end;
 
 constructor TZEChart.Create(AX, AY, AWidth, AHeight: integer);
@@ -4412,6 +4511,10 @@ begin
   FreeAndNil(FSubtitle);
   FreeAndNil(FTitle);
   FreeAndNil(FLegend);
+  FreeAndNil(FFooter);
+  FreeAndNil(FAxisX);
+  FreeAndNil(FAxisY);
+  FreeAndNil(FAxisZ);
   inherited;
 end;
 
@@ -4430,8 +4533,35 @@ begin
       if (Result) then
         Result := FSubtitle.IsEqual(tmp.Subtitle) and
                   FTitle.IsEqual(tmp.Title) and
-                  FLegend.IsEqual(tmp.Legend);
+                  FLegend.IsEqual(tmp.Legend) and
+                  FAxisX.IsEqual(tmp.AxisX) and
+                  FAxisY.IsEqual(tmp.AxisY) and
+                  FAxisZ.IsEqual(tmp.AxisZ);
     end;
+end;
+
+procedure TZEChart.SetAxisX(const value: TZEChartAxis);
+begin
+  if (Assigned(value)) then
+    FAxisX.Assign(Value);
+end;
+
+procedure TZEChart.SetAxisY(const value: TZEChartAxis);
+begin
+  if (Assigned(value)) then
+    FAxisY.Assign(Value);
+end;
+
+procedure TZEChart.SetAxisZ(const value: TZEChartAxis);
+begin
+  if (Assigned(value)) then
+    FAxisZ.Assign(Value);
+end;
+
+procedure TZEChart.SetFooter(const value: TZEChartTitleItem);
+begin
+  if (Assigned(value)) then
+    FFooter.Assign(value);
 end;
 
 procedure TZEChart.SetLegend(const value: TZEChartLegend);
@@ -4465,6 +4595,9 @@ begin
       FSubtitle.Assign(tmp.Subtitle);
       FTitle.Assign(tmp.Title);
       FLegend.Assign(tmp.Legend);
+      FAxisX.Assign(tmp.AxisX);
+      FAxisY.Assign(tmp.AxisY);
+      FAxisZ.Assign(tmp.AxisZ);
     end;
 end;
 
