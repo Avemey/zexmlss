@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2015.01.4
+// Last update: 2015.04.25
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - added uniform save API
 //     to create ODS in Delphi/Windows
@@ -203,6 +203,18 @@ type
     constructor Create(AXMLSS: TZEXMLSS); virtual;
   end;
 
+  TODSManifestMediaType = (
+                          ZEODSMediaTypeSpreadSheet,
+                          ZEODSMediaTypeTextXml,
+                          ZEODSMediaTypeRdfXml,
+                          ZEODSMediaTypeConfig,
+                          ZEODSMediaTypeImagePng,
+                          ZEODSMediaTypeChart,
+                          ZEODSMediaTypeGdiMetaFile,
+                          ZEODSMediaTypeNull,
+                          ZEODSMediaTypeUnknown
+                          );
+
   //Для чтения стилей и всего такого
   TZEODFReadHelper = class(TZEODFReadWriteHelperParent)
   private
@@ -226,6 +238,7 @@ type
     destructor Destroy(); override;
     procedure ReadAutomaticStyles(xml: TZsspXMLReaderH);
     procedure ReadMasterStyles(xml: TZsspXMLReaderH);
+    function ODSReadManifest(const stream: TStream): boolean;
     procedure AddStyle();
     procedure ApplyMasterPageStyle(SheetOptions: TZSheetOptions; const MasterPageName: string);
     property StylesCount: integer read FStylesCount;
@@ -327,6 +340,10 @@ function ReadODFContent(var XMLSS: TZEXMLSS; stream: TStream; var ReadHelper: TZ
 //Чтение настроек документа ODS (settings.xml)
 function ReadODFSettings(var XMLSS: TZEXMLSS; stream: TStream): boolean;
 
+function GetODSMediaTypeByStr(const MediaType: string): TODSManifestMediaType;
+
+function GetODSStrByMediaType(const MediaType: TODSManifestMediaType): string;
+
 implementation
 
 uses
@@ -336,8 +353,8 @@ uses
 
 const
   ZETag_text_p              = 'text:p';
-  ZETag_StyleFontFace       = 'style:font-face';      //style:font-face
-  ZETag_Attr_StyleName      = 'style:name';           //style:name
+  ZETag_StyleFontFace       = 'style:font-face';
+  ZETag_Attr_StyleName      = 'style:name';
   ZETag_StyleStyle          = 'style:style';
   ZETag_config_name         = 'config:name';
   ZETag_config_config_item_map_named = 'config:config-item-map-named';
@@ -391,6 +408,12 @@ const
   const_calcext_target_range_address= 'calcext:target-range-address';
   {$ENDIF}
 
+  //tags and atributes for manifest.xml
+  ZETag_manifest_file_entry         = 'manifest:file-entry';
+  ZETag_manifest_full_path          = 'manifest:full-path';
+  ZETag_manifest_version            = 'manifest:version';
+  ZETag_manifest_media_type         = 'manifest:media-type';
+
   const_ODS_paper_sizes_count = 42;
 
   //Sizes in 10^(-4) m! A4 = 2100*10^(-4) m x 2970*10^(-4) m
@@ -438,6 +461,31 @@ const
                     (3778, 2794),       // 39       US Standard Fanfold     14 7/8" x 11"
                     (2159, 3048),       // 40       German Std. Fanfold      8 1/2" x 12"
                     (2159, 3302)        // 41       German Legal Fanfold     8 1/2" x 13"
+                  );
+
+   const_ODS_manifest_mediatypes_str: array [0..7] of string =
+                  (
+                    'application/vnd.oasis.opendocument.spreadsheet',  //ZEODSMediaTypeSpreadSheet
+                    'text/xml',                                        //ZEODSMediaTypeTextXml
+                    'application/rdf+xml',                             //ZEODSMediaTypeRdfXml
+                    'application/vnd.sun.xml.ui.configuration',        //ZEODSMediaTypeConfig
+                    'image/png',                                       //ZEODSMediaTypeImagePng,
+                    'application/vnd.oasis.opendocument.chart',        //ZEODSMediaTypeChart,
+                    'application/x-openoffice-gdimetafile;windows_formatname=&quot;GDIMetaFile&quot;',  //ZEODSMediaTypeGdiMetaFile,
+                    ''                                                 //ZEODSMediaTypeNull,
+                  );
+
+  const_ODS_manifest_mediatypes: array [0..8] of TODSManifestMediaType =
+                  (
+                          ZEODSMediaTypeSpreadSheet,
+                          ZEODSMediaTypeTextXml,
+                          ZEODSMediaTypeRdfXml,
+                          ZEODSMediaTypeConfig,
+                          ZEODSMediaTypeImagePng,
+                          ZEODSMediaTypeChart,
+                          ZEODSMediaTypeGdiMetaFile,
+                          ZEODSMediaTypeNull,
+                          ZEODSMediaTypeUnknown
                   );
 
 type
@@ -2818,6 +2866,54 @@ begin
       break;
   end; //while
 end; //ReadMasterStyles
+
+//Read manifest.xml
+//INPUT
+//  const stream: TStream - stream with manifest.xml
+//RETURN
+//      boolean - true - manifest read ok
+function TZEODFReadHelper.ODSReadManifest(const stream: TStream): boolean;
+var
+  _xml: TZsspXMLReaderH;
+  kol, maxkol: integer;
+  a: array of array [0..2] of string;
+
+  procedure _AddFileEntry();
+  begin
+    if (kol + 1 >= maxkol) then
+    begin
+      inc(maxkol, 20);
+      SetLength(a, maxkol);
+    end;
+    a[kol][0] := _xml.Attributes[ZETag_manifest_full_path];
+    a[kol][1] := _xml.Attributes[ZETag_manifest_media_type];
+    a[kol][2] := _xml.Attributes[ZETag_manifest_version];
+    inc(kol);
+  end;
+
+begin
+  Result := false;
+  kol := 0;
+
+  _xml := nil;
+  try
+    _xml := TZsspXMLReaderH.Create();
+    if (_xml.BeginReadStream(stream) = 0) then
+    begin
+      maxkol := 30;
+      SetLength(a, maxkol);
+      while (not _xml.Eof()) do
+        if (_xml.ReadTag()) then
+          if ((_xml.TagName = ZETag_manifest_file_entry) and (_xml.TagType in [4, 5])) then
+            _AddFileEntry();
+      Result := true;
+    end;
+  finally
+    SetLength(a, 0);
+    if (Assigned(_xml)) then
+      FreeAndNil(_xml);
+  end;
+end; //ODSReadManifest
 
 procedure TZEODFReadHelper.AddStyle();
 var
@@ -6662,7 +6758,45 @@ begin
       FreeAndNil(lst);
   end;
 end; //ReadODFS
-{$ENDIF}
+{$ENDIF} //FPC
+
+//Get MediaType by string (from manifest.xml)
+//INPUT
+//  const MediaType: string - string representation of media type
+//RETURN
+//      TODSManifestMediaType - media type
+function GetODSMediaTypeByStr(const MediaType: string): TODSManifestMediaType;
+var
+  i: integer;
+
+begin
+  Result := ZEODSMediaTypeUnknown;
+  for i := 0 to High(const_ODS_manifest_mediatypes_str) do
+    if (MediaType = const_ODS_manifest_mediatypes_str[i]) then
+    begin
+      Result := const_ODS_manifest_mediatypes[i];
+      break;
+    end;
+end;
+
+//Get string representation for manifest.xml MediaType
+//INPUT
+//  const MediaType: TODSManifestMediaType - media type
+//RETURN
+//      string
+function GetODSStrByMediaType(const MediaType: TODSManifestMediaType): string;
+var
+  i: integer;
+
+begin
+  Result := '';
+  for i := 0 to High(const_ODS_manifest_mediatypes) - 1 do
+    if (MediaType = const_ODS_manifest_mediatypes[i]) then
+    begin
+      Result := const_ODS_manifest_mediatypes_str[i];
+      break;
+    end;
+end;
 
 {$IFNDEF FPC}
 {$I odszipfuncimpl.inc}
