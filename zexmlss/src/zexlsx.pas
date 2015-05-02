@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2015.01.24
+// Last update: 2015.04.28
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - uniform save API for creating
 //     XLSX files in Delphi/Windows
@@ -1647,13 +1647,10 @@ var
         if (_max > _min) then
         begin
           _delta := _max - _min;
-          if (_delta < 100) then
-          begin
-            CheckCol(num + _delta);
-            for i := num + 1 to num + _delta do
-              _currSheet.Columns[i].Assign(_currSheet.Columns[num]);
-            inc(num, _delta);
-          end;
+          CheckCol(_max);
+          for i := _min to _max - 1 do
+            _currSheet.Columns[i].Assign(_currSheet.Columns[num]);
+          inc(num, _delta);
         end;
 
         inc(num);
@@ -3551,9 +3548,10 @@ var
 
   procedure XLSXApplyColor(var AColor: TColor; ColorType: byte; LumFactor: double);
   begin
+    //Thema color
     if (ColorType = 2) then
     begin
-      t := AColor;
+      t := AColor - 1;
       if ((t >= 0) and (t < ThemaColorCount)) then
         AColor := ThemaFillsColors[t];
     end;
@@ -3646,64 +3644,72 @@ var
   //  Using standart colors.
   procedure _CheckIndexedColors();
   const
-    _standart: array [0..55] of string =
+    _standart: array [0..63] of string =
     (
-      '#000000',
-      '#FFFFFF',
-      '#FF0000',
-      '#00FF00',
-      '#0000FF',
-      '#FFFF00',
-      '#FF00FF',
-      '#00FFFF',
-      '#800000',
-      '#008000',
-      '#000080',
-      '#808000',
-      '#800080',
-      '#008080',
-      '#C0C0C0',
-      '#808080',
-      '#9999FF',
-      '#993366',
-      '#FFFFCC',
-      '#CCFFFF',
-      '#660066',
-      '#FF8080',
-      '#0066CC',
-      '#CCCCFF',
-      '#000080',
-      '#FF00FF',
-      '#FFFF00',
-      '#00FFFF',
-      '#800080',
-      '#800000',
-      '#008080',
-      '#0000FF',
-      '#00CCFF',
-      '#CCFFFF',
-      '#CCFFCC',
-      '#FFFF99',
-      '#99CCFF',
-      '#FF99CC',
-      '#CC99FF',
-      '#FF66CC',
-      '#3366FF',
-      '#33CCCC',
-      '#99CC00',
-      '#FFCC00',
-      '#FF9900',
-      '#FF99CC',
-      '#666699',
-      '#969696',
-      '#003300',
-      '#339966',
-      '#003300',
-      '#333300',
-      '#993300',
-      '#993366',
-      '#333399',
-      '#333333'
+      '#000000',      //0
+      '#FFFFFF',      //1
+      '#FF0000',      //2
+      '#00FF00',      //3
+      '#0000FF',      //4
+      '#FFFF00',      //5
+      '#FF00FF',      //6
+      '#00FFFF',      //7
+      '#000000',      //8
+      '#FFFFFF',      //9
+      '#FF0000',      //10
+      '#00FF00',      //11
+      '#0000FF',      //12
+      '#FFFF00',      //13
+      '#FF00FF',      //14
+      '#00FFFF',      //15
+      '#800000',      //16
+      '#008000',      //17
+      '#000090',      //18
+      '#808000',      //19
+      '#800080',      //20
+      '#008080',      //21
+      '#C0C0C0',      //22
+      '#808080',      //23
+      '#9999FF',      //24
+      '#993366',      //25
+      '#FFFFCC',      //26
+      '#CCFFFF',      //27
+      '#660066',      //28
+      '#FF8080',      //29
+      '#0066CC',      //30
+      '#CCCCFF',      //31
+      '#000080',      //32
+      '#FF00FF',      //33
+      '#FFFF00',      //34
+      '#00FFFF',      //35
+      '#800080',      //36
+      '#800000',      //37
+      '#008080',      //38
+      '#0000FF',      //39
+      '#00CCFF',      //40
+      '#CCFFFF',      //41
+      '#CCFFCC',      //42
+      '#FFFF99',      //43
+      '#99CCFF',      //44
+      '#FF99CC',      //45
+      '#CC99FF',      //46
+      '#FFCC99',      //47
+      '#3366FF',      //48
+      '#33CCCC',      //49
+      '#99CC00',      //50
+      '#FFCC00',      //51
+      '#FF9900',      //52
+      '#FF6600',      //53
+      '#666699',      //54
+      '#969696',      //55
+      '#003366',      //56
+      '#339966',      //57
+      '#003300',      //58
+      '#333300',      //59
+      '#993300',      //60
+      '#993366',      //61
+      '#333399',      //62
+      '#333333'       //63
     );
   var
     i: integer;
@@ -3711,10 +3717,10 @@ var
   begin
     if (indexedColorCount = 0) then
     begin
-      indexedColorCount := 56;
+      indexedColorCount := 63;
       indexedColorMax := indexedColorCount + 10;
       SetLength(indexedColor, indexedColorMax);
-      for i := 0 to 55 do
+      for i := 0 to 63 do
         indexedColor[i] := HTMLHexToColor(_standart[i]);
     end;
   end; //_CheckIndexedColors
