@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2015.04.28
+// Last update: 2015.05.02
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - uniform save API for creating
 //     XLSX files in Delphi/Windows
