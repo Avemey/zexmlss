@@ -81,6 +81,9 @@ type
     procedure SetDataAsDouble(const Value: double);
     procedure SetDataAsInteger(const Value: integer);
     function GetDataAsInteger: integer;
+
+    function GetDataAsDateTime(): TDateTime;
+    procedure SetDataAsDateTime(const Value: TDateTime);
   public
     constructor Create();virtual;
     procedure Assign(Source: TPersistent); override;
@@ -98,6 +101,7 @@ type
 
     property AsDouble: double read GetDataAsDouble write SetDataAsDouble;
     property AsInteger: integer read GetDataAsInteger write SetDataAsInteger;
+    property AsDateTime: TDateTime read GetDataAsDateTime write SetDataAsDateTime;
   end;
 
   //стиль линии границы
@@ -1262,7 +1266,298 @@ function StrToZCellType(Value: string): TZCellType;
 
 function ZEIsFontsEquals(const Font1, Font2: TFont): boolean;
 
+//Переводит дату в строку для XML (YYYY-MM-DDTHH:MM:SS[.mmm])
+function ZEDateToStr(ATime: TDateTime; Addmms: boolean = false): string;
+
+//YYYY-MM-DDTHH:MM:SS[.mmm] to DateTime
+function TryZEStrToDateTime(const AStrDateTime: string; out retDateTime: TDateTime): boolean;
+
+function IntToStrN(value: integer; NullCount: integer): string;
+
 implementation
+
+//Переводит число в строку минимальной длины NullCount
+//TODO: надо глянуть что с функциями в FlyLogReader-е
+//INPUT
+//      value: integer     - число
+//      NullCount: integer - кол-во знаков в строке
+//RETURN
+//      string
+function IntToStrN(value: integer; NullCount: integer): string;
+var
+  t: integer;
+  k: integer;
+
+begin
+  t := value;
+  k := 0;
+  if (t = 0) then
+    k := 1;
+  while t > 0 do
+  begin
+    inc(k);
+    t := t div 10;
+  end;
+  result := IntToStr(value);
+  for t := 1 to (NullCount - k) do
+    result := '0' + result;
+end; //IntToStrN
+
+//Переводит дату в строку для XML (YYYY-MM-DDTHH:MM:SS[.mmm])
+//INPUT
+//    ATime: TDateTime - нужная дата/время
+function ZEDateToStr(ATime: TDateTime; Addmms: boolean = false): string;
+var
+  HH, MM, SS, MS: word;
+
+begin
+  DecodeDate(ATime, HH, MM, SS);
+  result := IntToStrN(HH, 4) + '-' + IntToStrN(MM, 2) + '-' + IntToStrN(SS, 2) + 'T';
+  DecodeTime(ATime, HH, MM, SS, MS);
+  result := result + IntToStrN(HH, 2) + ':' + IntToStrN(MM, 2) + ':' + IntToStrN(SS, 2);
+  if (Addmms) then
+    Result := Result + '.' + IntToStrN(MS, 3);
+end;
+
+//Try convert string (YYYY-MM-DDTHH:MM:SS[.mmm]) to datetime
+//INPUT
+//  const AStrDateTime: string  - string with datetime
+//  out retDateTime: TDateTime  - returns on success datetime
+//RETURN
+//      boolean - true - ok
+function TryZEStrToDateTime(const AStrDateTime: string; out retDateTime: TDateTime): boolean;
+var
+  a: array [0..10] of word;
+  i, l: integer;
+  s, ss: string;
+  count: integer;
+  ch: char;
+  datedelimeters: integer;
+  istimesign: boolean;
+  timedelimeters: integer;
+  istimezone: boolean;
+  lastdateindex: integer;
+  tmp: integer;
+  msindex: integer;
+  tzindex: integer;
+  timezonemul: integer;
+  _ms: word;
+
+  function TryAddToArray(const ST: string): boolean;
+  begin
+    if (count > 10) then
+    begin
+      Result := false;
+      exit;
+    end;
+    Result := TryStrToInt(ST, tmp);
+    if (Result) then
+    begin
+      a[Count] := word(tmp);
+      inc(Count);
+    end
+  end;
+
+  procedure _CheckDigits();
+  var
+    _l: integer;
+
+  begin
+    _l := length(s);
+    if (_l > 0) then
+    begin
+      if (_l > 4) then //it is not good
+      begin
+        if (istimesign) then
+        begin
+          // HHMMSS?
+          if (_l = 6) then
+          begin
+            ss := copy(s, 1, 2);
+            if (TryAddToArray(ss)) then
+            begin
+              ss := copy(s, 3, 2);
+              if (TryAddToArray(ss)) then
+              begin
+                ss := copy(s, 5, 2);
+                if (not TryAddToArray(ss)) then
+                  Result := false;
+              end
+              else
+                Result := false;
+            end
+            else
+              Result := false
+          end
+          else
+            Result := false;
+        end
+        else
+        begin
+          // YYYYMMDD?
+          if (_l = 8) then
+          begin
+            ss := copy(s, 1, 4);
+            if (not TryAddToArray(ss)) then
+              Result := false
+            else
+            begin
+              ss := copy(s, 5, 2);
+              if (not TryAddToArray(ss)) then
+                Result := false
+              else
+              begin
+                ss := copy(s, 7, 2);
+                if (not TryAddToArray(ss)) then
+                  Result := false;
+              end;
+            end;
+          end
+          else
+            Result := false;
+        end;
+      end
+      else
+        if (not TryAddToArray(s)) then
+          Result := false;
+    end; //if
+    if (Count > 10) then
+      Result := false;
+    s := '';
+  end;
+
+  procedure _processDigit();
+  begin
+    s := s + ch;
+  end;
+
+  procedure _processTimeSign();
+  begin
+    istimesign := true;
+    if (count > 0) then
+      lastdateindex := count;
+
+    _CheckDigits();
+  end;
+
+  procedure _processTimeDelimiter();
+  begin
+    _CheckDigits();
+    inc(timedelimeters)
+  end;
+
+  procedure _processDateDelimiter();
+  begin
+    _CheckDigits();
+    if (istimesign) then
+    begin
+      tzindex := count;
+      istimezone := true;
+      timezonemul := -1;
+    end
+    else
+      inc(datedelimeters);
+  end;
+
+  procedure _processMSDelimiter();
+  begin
+    _CheckDigits();
+    msindex := count;
+  end;
+
+  procedure _processTimeZoneSign();
+  begin
+    _CheckDigits();
+    istimezone := true;
+  end;
+
+  procedure _processTimeZonePlus();
+  begin
+    _CheckDigits();
+    istimezone := true;
+    timezonemul := -1;
+  end;
+
+  function _TryGetDateTime(): boolean;
+  var
+    _time: TDateTime;
+    _date: TDateTime;
+
+  begin
+    Result := true;
+    if (msindex >= 0) then
+      _ms := a[msindex];
+    if (lastdateindex >= 0) then
+    begin
+      Result := TryEncodeDate(a[0], a[1], a[2], _date);
+      if (Result) then
+      begin
+        Result := TryEncodeTime(a[lastdateindex + 1], a[lastdateindex + 2], a[lastdateindex + 3], _ms, _time);
+        if (Result) then
+          retDateTime := _date + _time;
+      end;
+    end
+    else
+      Result := TryEncodeTime(a[lastdateindex + 1], a[lastdateindex + 2], a[lastdateindex + 3], _ms, retDateTime);
+  end;
+
+  function _TryGetDate(): boolean;
+  begin
+    if (datedelimeters = 0) and (timedelimeters >= 2) then
+    begin
+      if (msindex >= 0) then
+        _ms := a[msindex];
+      result := TryEncodeTime(a[0], a[1], a[2], _ms, retDateTime);
+    end
+    else
+    if (count >= 3) then
+      Result := TryEncodeDate(a[0], a[1], a[2], retDateTime)
+    else
+      Result := false;
+  end;
+
+begin
+  Result := true;
+  datedelimeters := 0;
+  istimesign := false;
+  timedelimeters := 0;
+  istimezone := false;
+  msindex := -1;
+  tzindex := -1;
+  timezonemul := 0;
+  _ms := 0;
+  FillChar(a, sizeof(a), 0);
+
+  l := length(AStrDateTime);
+  s := '';
+  count := 0;
+  for i := 1 to l do
+  begin
+    ch := AStrDateTime[i];
+    case (ch) of
+      '0'..'9': _processDigit();
+      't', 'T': _processTimeSign();
+      '-': _processDateDelimiter();
+      ':': _processTimeDelimiter();
+      '.', ',': _processMSDelimiter();
+      'z', 'Z': _processTimeZoneSign();
+      '+': _processTimeZonePlus();
+    end;
+    if (not Result) then
+      break
+  end;
+
+  if (Result and (s <> '')) then
+    _CheckDigits();
+
+  if (Result) then
+  begin
+    if (istimesign) then
+      Result := _TryGetDateTime()
+    else
+      Result := _TryGetDate();
+  end;
+end; //TryZEStrToDateTime
 
 //Checks is Font1 equal Font2
 //INPUT
@@ -2395,6 +2690,21 @@ begin
   FCellStyle := -1; //по дефолту
   FAlwaysShowComment := false;
   FShowComment := false;
+end;
+
+function TZCell.GetDataAsDateTime(): TDateTime;
+begin
+  if (FData = '') then
+    Result := 0
+  else
+    if (not TryZEStrToDateTime(FData, Result)) then
+      Raise EConvertError.Create('ZxCell: Cannot cast data to DateTime');;
+end;
+
+procedure TZCell.SetDataAsDateTime(const Value: TDateTime);
+begin
+  FCellType := ZEDateTime;
+  FData := ZEDateToStr(Value, true);
 end;
 
 function TZCell.GetDataAsDouble: double;

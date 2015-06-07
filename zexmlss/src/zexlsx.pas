@@ -173,15 +173,44 @@ type
 
 ///end Differential Formatting
 
+  //List of cell number formats (date/numbers/currencies etc formats)
+  TZEXLSXNumberFormats = class
+  private
+    FFormatsCount: integer;
+    FFormats: array of string; //numFmts (include default formats)
+    FStyleFmtID: array of integer;
+    FStyleFmtIDCount: integer;
+  protected
+    function GetFormat(num: integer): string;
+    procedure SetFormat(num: integer; const value: string);
+    function GetStyleFMTID(num: integer): integer;
+    procedure SetStyleFMTID(num: integer; const value: integer);
+    procedure SetStyleFMTCount(value: integer);
+  public
+    constructor Create();
+    destructor Destroy(); override;
+
+    procedure ReadNumFmts(const xml: TZsspXMLReaderH);
+
+    function IsDateFormat(StyleNum: integer): boolean;
+
+    property FormatsCount: integer read FFormatsCount;
+    property Format[num: integer]: string read GetFormat write SetFormat; default;
+    property StyleFMTID[num: integer]: integer read GetStyleFMTID write SetStyleFMTID;
+    property StyleFMTCount: integer read FStyleFmtIDCount write SetStyleFMTCount;
+  end;
+
   TZEXLSXReadHelper = class
   private
     FDiffFormatting: TZXLSXDiffFormatting;
+    FNumberFormats: TZEXLSXNumberFormats;
   protected
     procedure SetDiffFormatting(const Value: TZXLSXDiffFormatting);
   public
     constructor Create();
     destructor Destroy(); override;
     property DiffFormatting: TZXLSXDiffFormatting read FDiffFormatting write SetDiffFormatting;
+    property NumberFormats: TZEXLSXNumberFormats read FNumberFormats;
   end;
 
 
@@ -246,7 +275,8 @@ uses
   AnsiStrings,  // AnsiString targeted overloaded versions of Pos, Trim, etc
 {$EndIf}
   StrUtils,
-  Math;
+  Math,
+  zenumberformats;
 
 {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
 const
@@ -938,15 +968,170 @@ end; //Clear
 // END Differential Formatting
 ////////////////////////////////////////////////////////////////////////////////
 
+////::::::::::::: TZEXLSXNumberFormats :::::::::::::::::////
+
+constructor TZEXLSXNumberFormats.Create();
+var
+  i: integer;
+  //_date_nums: set of byte;
+
+begin
+  FStyleFmtIDCount := 0;
+  FFormatsCount := 164;
+  SetLength(FFormats, FFormatsCount);
+  for i := 0 to FFormatsCount - 1 do
+    FFormats[i] := '';
+
+  //Some "Standart" formats for xlsx:
+  FFormats[1] := '0';
+  FFormats[2] := '0.00';
+  FFormats[3] := '#,##0';
+  FFormats[4] := '#,##0.00';
+  FFormats[9] := '0%';
+  FFormats[10] := '0.00%';
+  FFormats[11] := '0.00E+00';
+  FFormats[12] := '# ?/?';
+  FFormats[13] := '# ??/??';
+  FFormats[14] := 'mm-dd-yy';
+  FFormats[15] := 'd-mmm-yy';
+  FFormats[16] := 'd-mmm';
+  FFormats[17] := 'mmm-yy';
+  FFormats[18] := 'h:mm AM/PM';
+  FFormats[19] := 'h:mm:ss AM/PM';
+  FFormats[20] := 'h:mm';
+  FFormats[21] := 'h:mm:ss';
+  FFormats[22] := 'm/d/yy h:mm';
+  FFormats[37] := '#,##0 ;(#,##0)';
+  FFormats[38] := '#,##0 ;[Red](#,##0)';
+  FFormats[39] := '#,##0.00;(#,##0.00)';
+  FFormats[40] := '#,##0.00;[Red](#,##0.00)';
+  FFormats[45] := 'mm:ss';
+  FFormats[46] := '[h]:mm:ss';
+  FFormats[47] := 'mmss.0';
+  FFormats[48] := '##0.0E+0';
+  FFormats[49] := '@';
+
+  FFormats[30] := 'm/d/yy';
+  //27..36 - date
+  //50..58 - date
+
+  FFormats[59] := 't0';
+  FFormats[60] := 't0.00';
+  FFormats[61] := 't#,##0';
+  FFormats[62] := 't#,##0.00';
+  FFormats[67] := 't0%';
+  FFormats[68] := 't0.00%';
+  FFormats[69] := 't# ?/?';
+
+  FFormats[70] := 't# ??/?? ';
+
+  FFormats[81] := 'd/m/bb ';
+
+  //_date_nums := [14..22, 27..36, 45..47, 50..58, 71..76, 78..81];
+end;
+
+destructor TZEXLSXNumberFormats.Destroy();
+begin
+  SetLength(FFormats, 0);
+  SetLength(FStyleFmtID, 0);
+  inherited;
+end;
+
+function TZEXLSXNumberFormats.GetFormat(num: integer): string;
+begin
+  Result := '';
+  if ((num >= 0) and (num < FFormatsCount)) then
+    Result := FFormats[num];
+end;
+
+procedure TZEXLSXNumberFormats.SetFormat(num: integer; const value: string);
+var
+  i: integer;
+
+begin
+  if ((num >= 0) and (num < FFormatsCount)) then
+    FFormats[num] := value
+  else
+    if (num >= 0) then
+    begin
+      SetLength(FFormats, num + 1);
+      for i := FFormatsCount to num do
+        FFormats[i] := '';
+      FFormats[num] := value;
+      FFormatsCount := num + 1;
+    end;
+end;
+
+function TZEXLSXNumberFormats.GetStyleFMTID(num: integer): integer;
+begin
+  if ((num >= 0) and (num < FStyleFmtIDCount)) then
+    Result := FStyleFmtID[num]
+  else
+    Result := 0;
+end;
+
+function TZEXLSXNumberFormats.IsDateFormat(StyleNum: integer): boolean;
+var
+  _fmtId: integer;
+
+begin
+  Result := false;
+
+  if ((StyleNum >= 0) and (StyleNum < FStyleFmtIDCount)) then
+    _fmtId := FStyleFmtID[StyleNum]
+  else
+    exit;
+
+  //If default fmtID
+  if ((_fmtId >= 0) and (_fmtId < 100)) then
+    Result := _fmtId in [14..22, 27..36, 45..47, 50..58, 71..76, 78..81]
+  else
+    Result := GetXlsxNumberFormatType(FFormats[_fmtId]) = ZE_NUMFORMAT_IS_DATETIME;
+end;
+
+procedure TZEXLSXNumberFormats.ReadNumFmts(const xml: TZsspXMLReaderH);
+var
+  t: integer;
+
+begin
+  while (not((xml.TagName = 'numFmts') and (xml.TagType = 6))) and (not xml.Eof()) do
+  begin
+    xml.ReadTag();
+
+    if (xml.TagName = 'numFmt') then
+      if (TryStrToInt(xml.Attributes['numFmtId'], t)) then
+        Format[t] := xml.Attributes['formatCode'];
+  end;
+end;
+
+procedure TZEXLSXNumberFormats.SetStyleFMTID(num: integer; const value: integer);
+begin
+  if ((num >= 0) and (num < FStyleFmtIDCount)) then
+    FStyleFmtID[num] := value;
+end;
+
+procedure TZEXLSXNumberFormats.SetStyleFMTCount(value: integer);
+begin
+  if (value >= 0) then
+  begin
+    if (value > FStyleFmtIDCount) then
+      SetLength(FStyleFmtID, value);
+    FStyleFmtIDCount := value
+  end;
+end;
+
+////::::::::::::: TZEXLSXReadHelper :::::::::::::::::////
+
 constructor TZEXLSXReadHelper.Create();
 begin
   FDiffFormatting := TZXLSXDiffFormatting.Create();
+  FNumberFormats := TZEXLSXNumberFormats.Create();
 end;
 
 destructor TZEXLSXReadHelper.Destroy();
 begin
-  if (Assigned(FDiffFormatting)) then
-    FreeAndNil(FDiffFormatting);
+  FreeAndNil(FDiffFormatting);
+  FreeAndNil(FNumberFormats);
   inherited;
 end;
 
@@ -1765,6 +1950,12 @@ var
       xml.ReadTag();
       if (xml.Eof()) then
         break;
+
+      if ((xml.TagName = 'sheetView')) then
+      begin
+        s := xml.Attributes.ItemsByName['tabSelected'];
+        _currSheet.Selected := s = '1';
+      end;
 
       if ((xml.TagName = 'pane') and (xml.TagType = 5)) then
       begin
@@ -3772,7 +3963,10 @@ begin
         _ReadColors()
       else
       if ((xml.TagType = 4) and (xml.TagName = 'dxfs')) then
-        _Readdxfs();
+        _Readdxfs()
+      else
+      if ((xml.TagType = 4) and (xml.TagName = 'numFmts')) then
+        ReadHelper.NumberFormats.ReadNumFmts(xml);
     end; //while
 
     //тут незабыть применить номера цветов, если были введены
@@ -3789,9 +3983,12 @@ begin
     //{tut}
 
     XMLSS.Styles.Count := CellXfsCount;
+    ReadHelper.NumberFormats.StyleFMTCount := CellXfsCount;
     for i := 0 to CellXfsCount - 1 do
     begin
       t := CellXfsArray[i].xfId;
+      ReadHelper.NumberFormats.StyleFMTID[i] := CellXfsArray[i].numFmtId;
+
       _Style := XMLSS.Styles[i];
       if ((t >= 0) and (t < CellStyleCount)) then
         _ApplyStyle(_Style, CellStyleArray[t]);
@@ -4908,7 +5105,10 @@ var
     _xml.Attributes.Add('showOutlineSymbols', 'true', false);
     _xml.Attributes.Add('showRowColHeaders', 'true', false);
     _xml.Attributes.Add('showZeros', 'true', false);
-    _xml.Attributes.Add('tabSelected', 'true', false);
+
+    if (_sheet.Selected) then
+      _xml.Attributes.Add('tabSelected', 'true', false);
+
     _xml.Attributes.Add('topLeftCell', 'A1', false);
     _xml.Attributes.Add('view', 'normal', false);
     _xml.Attributes.Add('windowProtection', 'false', false);
@@ -4918,7 +5118,7 @@ var
     _xml.Attributes.Add('zoomScalePageLayoutView', '100', false);
     _xml.WriteTagNode('sheetView', true, true, false);
 
-    _SOptions := XMLSS.Sheets[SheetNum].SheetOptions;
+    _SOptions := _sheet.SheetOptions;
 
     b := (_SOptions.SplitVerticalMode <> ZSplitNone) or
          (_SOptions.SplitHorizontalMode <> ZSplitNone);
@@ -4993,7 +5193,7 @@ var
     _AddSelection('F16', 'topLeft');
     }
     
-    s := ZEGetA1byCol(XMLSS.Sheets[SheetNum].SheetOptions.ActiveCol) + IntToSTr(XMLSS.Sheets[SheetNum].SheetOptions.ActiveRow + 1);
+    s := ZEGetA1byCol(_sheet.SheetOptions.ActiveCol) + IntToSTr(_sheet.SheetOptions.ActiveRow + 1);
     _xml.Attributes.Clear();
     _xml.Attributes.Add('activeCell', s);
     _xml.Attributes.Add('sqref', s);
@@ -6091,7 +6291,7 @@ begin
   end;
 end; //ZEXLSXCreateSharedStrings
 
-//Создаёт app.xml 
+//Создаёт app.xml
 //INPUT
 //    Stream: TStream                   - поток для записи
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную

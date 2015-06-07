@@ -42,11 +42,6 @@ function ZETryStrToBoolean(const st: string; valueIfError: boolean = false): boo
 //заменяет все запятые на точки
 function ZEFloatSeparator(st: string): string;
 
-//Переводит дату в строку для XML (YYYY-MM-DDTHH:MM:SS)
-function ZEDateToStr(ATime: TDateTime): string;
-
-function IntToStrN(value: integer; NullCount: integer): string;
-
 //BOM<?xml version="1.0" encoding="CodePageName"?>
 procedure ZEWriteHeaderCommon(xml: TZsspXMLWriterH; const CodePageName: string; const BOM: ansistring);
 
@@ -83,7 +78,7 @@ function ZELibraryName: string;
 //Trying to convert string like "n%" to integer
 function TryStrToIntPercent(s: string; out Value: integer): boolean;
 
-const ZELibraryVersion = '0.0.7';
+const ZELibraryVersion = '0.0.9';
       ZELibraryFork = '';//'Arioch';  // or empty str   // URL ?
 
 implementation
@@ -380,47 +375,6 @@ begin
     k := pos(',', result);
   end;
   }
-end;
-
-//Переводит число в строку минимальной длины NullCount
-//TODO: надо глянуть что с функциями в FlyLogReader-е
-//INPUT
-//      value: integer     - число
-//      NullCount: integer - кол-во знаков в строке
-//RETURN
-//      string
-function IntToStrN(value: integer; NullCount: integer): string;
-var
-  t: integer;
-  k: integer;
-
-begin
-  t := value;
-  k := 0;
-  if (t = 0) then
-    k := 1;
-  while t > 0 do
-  begin
-    inc(k);
-    t := t div 10;
-  end;
-  result := IntToStr(value);
-  for t := 1 to (NullCount - k) do
-    result := '0' + result;
-end; //IntToStrN
-
-//Переводит дату в строку для XML (YYYY-MM-DDTHH:MM:SS)
-//INPUT
-//    ATime: TDateTime - нужная дата/время
-function ZEDateToStr(ATime: TDateTime): string;
-var
-  HH, MM, SS, MS: word;
-
-begin
-  DecodeDate(ATime, HH, MM, SS);
-  result := IntToStrN(HH, 4) + '-' + IntToStrN(MM, 2) + '-' + IntToStrN(SS, 2) + 'T';
-  DecodeTime(ATime, HH, MM, SS, MS);
-  result := result + IntToStrN(HH, 2) + ':' + IntToStrN(MM, 2) + ':' + IntToStrN(SS, 2);
 end;
 
 //BOM<?xml version="1.0" encoding="CodePageName"?>
