@@ -347,14 +347,14 @@ function GetODSStrByMediaType(const MediaType: TODSManifestMediaType): string;
 implementation
 
 uses
-   StrUtils
+   StrUtils,
+   zenumberformats
    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}, zeformula {$ENDIF} //пока формулы нужны только для условного форматирования
    ;
 
 const
   ZETag_text_p              = 'text:p';
   ZETag_StyleFontFace       = 'style:font-face';
-  ZETag_Attr_StyleName      = 'style:name';
   ZETag_StyleStyle          = 'style:style';
   ZETag_config_name         = 'config:name';
   ZETag_config_config_item_map_named = 'config:config-item-map-named';
@@ -4276,6 +4276,7 @@ var
   _xml: TZsspXMLWriterH;
   ColumnStyle, RowStyle: array of array of integer;  //стили столбцов/строк
   i: integer;
+  _dt: TDateTime;
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   _cfwriter: TZODFConditionalWriteHelper;
   {$ENDIF}
@@ -4287,7 +4288,7 @@ var
     kol: integer;
     n: integer;
     ColStyleNumber, RowStyleNumber: integer;
-    
+
     //Стили для колонок
     procedure WriteColumnStyle(now_i, now_j, now_StyleNumber, count_i{, count_j}: integer);
     var
@@ -4531,6 +4532,7 @@ var
     _CellData: string;
     ProcessedSheet: TZSheet;
     DivedIntoHeader: boolean; // начали запись повторяющегося на печати столбца
+    _t: Double;
 
     //Выводит содержимое ячейки с учётом переноса строк
     procedure WriteTextP(xml: TZsspXMLWriterH; const CellData: string; const href: string = '');
@@ -4724,6 +4726,22 @@ var
               ss := 'boolean';
               _xml.Attributes.Add('office:boolean-value', ODFBoolToStr(ZETryStrToBoolean(_CellData)), false);
             end;
+          ZEDateTime:
+            begin
+              b := TryZEStrToDateTime(_CellData, _dt);
+              if (not b) then
+                if (ZEIsTryStrToFloat(_CellData, _t)) then
+                begin
+                  b := true;
+                  _CellData := ZEDateTimeToStr(_t);
+                end;
+
+              if (b) then
+              begin
+                ss := 'date';
+                _xml.Attributes.Add('office:date-value', _CellData, false);
+              end;
+            end;
           else
             // всё остальное считаем строкой (потом подправить, возможно, добавить новые типы)
             {ZEansistring ZEError ZEDateTime}
@@ -4894,7 +4912,7 @@ begin
     _xml.Attributes.Clear();
     _xml.WriteTagNode('office:meta', true, true, true);
     //дата создания
-    s := ZEDateToStr(XMLSS.DocumentProperties.Created);
+    s := ZEDateTimeToStr(XMLSS.DocumentProperties.Created);
     _xml.WriteTag('meta:creation-date', s, true, false, true);
     //Дата последнего редактирования пусть будет равна дате создания
     _xml.WriteTag('dc:date', s, true, false, true);
@@ -6104,6 +6122,13 @@ var
           s := xml.Attributes.ItemsByName['office:value-type'];
         _CurrCell.CellType := ODFTypeToZCellType(s);
 
+        case (_CurrCell.CellType) of
+          ZENumber:
+            _CurrCell.Data := xml.Attributes.ItemsByName['office:value'];
+          ZEDateTime:
+            _CurrCell.Data := xml.Attributes.ItemsByName['office:date-value'];
+        end; //case
+
         //защищённость ячейки
         s := xml.Attributes.ItemsByName['table:protected']; //{tut} надо будет добавить ещё один стиль
         //table:number-matrix-rows-spanned ??
@@ -6215,7 +6240,8 @@ var
           end; //while *table-cell
         end; //if
 
-        _CurrCell.Data := ZEReplaceEntity(_celltext);
+        if (not (_CurrCell.CellType in [ZENumber, ZEDateTime])) then
+          _CurrCell.Data := ZEReplaceEntity(_celltext);
 
         //Если ячейку нужно повторить
         if (isRepeatCell) then

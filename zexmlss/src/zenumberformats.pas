@@ -42,7 +42,9 @@ unit zenumberformats;
 interface
 
 uses
-  SysUtils;
+  SysUtils,
+  zsspxml           //TZsspXMLReaderH
+  ;
 
 const
   ZE_NUMFORMAT_IS_UNKNOWN   = 0;
@@ -50,11 +52,120 @@ const
   ZE_NUMFORMAT_IS_DATETIME  = 2;
   ZE_NUMFORMAT_IS_STRING    = 4;
 
+  ZETag_number_date_style   = 'number:date-style';
+  ZETag_number_day          = 'number:day';
+  ZETag_number_text         = 'number:text';
+  ZETag_number_style        = 'number:style';
+  ZETag_number_month        = 'number:month';
+  ZETag_number_year         = 'number:year';
+  ZETag_number_hours        = 'number:hours';
+  ZETag_number_minutes      = 'number:minutes';
+  ZETag_number_day_of_week  = 'number:day-of-week';
+  ZETag_number_textual      = 'number:textual';
+  ZETag_number_possessive_form = 'number:possessive-form';
+
+  ZETag_Attr_StyleName      = 'style:name';
+  ZETag_long                = 'long';
+
+type
+  TZEODSNumberFormatReader = class
+  private
+    FItems: array of array [0..1] of string;  //index 0 - format num
+                                              //index 1 - format
+    FCount: integer;
+    FCountMax: integer;
+  protected
+    procedure AddItem();
+  public
+    constructor Create();
+    destructor Destroy();
+    procedure ReadDateFormat(const xml: TZsspXMLReaderH);
+    procedure ReadNumberFormat(const xml: TZsspXMLReaderH);
+    function TryGetFormatStrByNum(const DataStyleName: string; out retFormatStr): boolean;
+    property Count: integer read FCount;
+  end;
+
 function GetXlsxNumberFormatType(const FormatStr: string): integer;
+function ConvertFormatNativeToXlsx(const FormatNative: string): string;
 function ConvertFormatXlsxToNative(const FormatXlsx: string): string;
 function TryXlsxTimeToDateTime(const XlsxDateTime: string; out retDateTime: TDateTime; is1904: boolean = false): boolean;
 
 implementation
+
+uses
+  zesavecommon;
+
+{
+
+LO:
+
+M             Month as 3.
+MM            Month as 03.
+MMM           Month as Jan-Dec
+MMMM          Month as January-December 	MMMM
+MMMMM         First letter of Name of Month 	MMMMM
+D             Day as 2 	D
+DD            Day as 02 	DD
+NN or DDD     Day as Sun-Sat
+NNN or DDDD   Day as Sunday to Saturday
+NNNN          Day followed by comma, as in "Sunday," 	NNNN
+YY            Year as 00-99 	YY
+YYYY          Year as 1900-2078 	YYYY
+WW            Calendar week
+Q             Quarterly as Q1 to Q4 	Q
+QQ            Quarterly as 1st quarter to 4th quarter 	QQ
+G             Era on the Japanese Gengou calendar, single character (possible values are: M, T, S, H)
+GG            Era, abbreviation
+GGG           Era, full name
+E             Number of the year within an era, without a leading zero for single-digit years
+EE or R       Number of the year within an era, with a leading zero for single-digit years
+RR or GGGEE   Era, full name and year
+
+h             Hours as 0-23 	h
+hh            Hours as 00-23
+m             Minutes as 0-59
+mm            Minutes as 00-59
+s             Seconds as 0-59
+ss            Seconds as 00-59
+
+[~buddhist] 	  Thai Buddhist Calendar
+[~gengou] 	    Japanese Gengou Calendar
+[~gregorian] 	  Gregorian Calendar
+[~hanja]        Korean Calendar
+[~hanja_yoil] 	Korean Calendar
+[~hijri] 	      Arabic Islamic Calendar, currently supported for the following locales: ar_EG, ar_LB, ar_SA, and ar_TN
+[~jewish] 	    Jewish Calendar
+[~ROC] 	        Republic Of China Calendar
+
+  m$
+m       Displays the month as a number without a leading zero.
+mm      Displays the month as a number with a leading zero when appropriate.
+mmm     Displays the month as an abbreviation (Jan to Dec).
+mmmm    Displays the month as a full name (January to December).
+mmmmm   Displays the month as a single letter (J to D).
+d       Displays the day as a number without a leading zero.
+dd      Displays the day as a number with a leading zero when appropriate.
+ddd     Displays the day as an abbreviation (Sun to Sat).
+dddd    Displays the day as a full name (Sunday to Saturday).
+yy      Displays the year as a two-digit number.
+yyyy    Displays the year as a four-digit number.
+
+
+
+h       Displays the hour as a number without a leading zero.
+[h]     Displays elapsed time in hours. If you are working with a formula that returns a time in which the number of hours exceeds 24, use a number format that resembles [h]:mm:ss.
+hh      Displays the hour as a number with a leading zero when appropriate. If the format contains AM or PM, the hour is based on the 12-hour clock. Otherwise, the hour is based on the 24-hour clock.
+m       Displays the minute as a number without a leading zero.
+[m]     Displays elapsed time in minutes. If you are working with a formula that returns a time in which the number of minutes exceeds 60, use a number format that resembles [mm]:ss.
+mm      Displays the minute as a number with a leading zero when appropriate.
+        Note   The m or mm code must appear immediately after the h or hh code or immediately before the ss code; otherwise, Excel displays the month instead of minutes.
+s       Displays the second as a number without a leading zero.
+[s]     Displays elapsed time in seconds. If you are working with a formula that returns a time in which the number of seconds exceeds 60, use a number format that resembles [ss].
+ss      Displays the second as a number with a leading zero when appropriate. If you want to display fractions of a second, use a number format that resembles h:mm:ss.00.
+
+AM/PM, am/pm, A/P, a/p  Displays the hour using a 12-hour clock. Excel displays AM, am, A, or a for times from midnight unt
+
+}
 
 // Try to get xlsx number format type by string (very simplistic)
 //INPUT
@@ -113,6 +224,11 @@ begin
   end; //for i
 end; //GetXlsxNumberFormatType
 
+function ConvertFormatNativeToXlsx(const FormatNative: string): string;
+begin
+  Result := FormatNative;
+end; //ConvertFormatNativeToXlsx
+
 function ConvertFormatXlsxToNative(const FormatXlsx: string): string;
 var
   i, l: integer;
@@ -121,6 +237,93 @@ var
   s: string;
   ch: char;
   _semicolonCount: integer;
+  _prevCh: char;
+  _strDateList: string;
+  z: string;
+  b: boolean;
+  _isSlash: boolean;
+  t: integer;
+
+  procedure _AddToResult(const strItem: string; charDate: char);
+  begin
+    Result := Result + strItem;
+    _strDateList := _strDateList + charDate;
+    s := '';
+  end;
+
+  procedure _CheckStringItem(currCh: char);
+  begin
+    z := UpperCase(s);
+
+    if ((z = 'YY') or (z= 'YYYY')) then
+      _AddToResult(z, 'Y')
+    else
+    if ((z = 'D') or (z = 'DD')) then
+      _AddToResult(z, 'D')
+    else
+    if (z = 'DDD') then
+      _AddToResult('NN', 'D')
+    else
+    if (z = 'DDDD') then
+      _AddToResult('NNN', 'D')
+    else
+    if (z = 'H') then
+      _AddToResult('h', 'H')
+    else
+    if (z = 'HH') then
+      _AddToResult('hh', 'H')
+    else
+    if (z = 'S') then
+      _AddToResult('s', 'S')
+    else
+    if (z = 'SS') then
+      _AddToResult('ss', 'S')
+    else
+    if ((z = 'MMM') or (z = 'MMMM') or (z = 'MMMMM')) then
+      _AddToResult(z, 'M')
+    else
+    //Minute or Month?
+    //  If M/MM between 'H/S' - minutes
+    if (z = 'M') or (z = 'MM') then
+    begin
+      //Is it minute?
+      b := (_prevCh = ':') or (_prevCh = 'H') or
+           (currCh = 'S') or (currCh = ':');
+      if (not b) then
+      begin
+        t := Length(_strDateList);
+        //if some spaces (or some other symbols) between date symbols
+        if (t > 0) then
+        begin
+          if (_strDateList[t] = 'H') or (_strDateList[t] = 'S') then
+            b := true;
+          if (not b) then
+            //If previous date symbol was "month" then for now - "minute"
+            b := pos('M', _strDateList) <> 0;
+        end;
+      end;
+
+      //If previous date symbal was "minute" then for now - "month"
+      if (b) then
+        b := pos('N', _strDateList) = 0;
+
+      //minutes
+      if (b) then
+      begin
+        if (Z = 'M') then
+          _AddToResult('m', 'N')
+        else
+          _AddToResult('mm', 'N')
+      end
+      else
+        _AddToResult(z, 'M'); //months
+    end
+    else
+      Result := Result + s;
+
+    _prevCh := currCh;
+    s := '';
+  end; //_CheckStringItem
 
   procedure _ProcessOpenBracket();
   begin
@@ -128,7 +331,10 @@ var
       s := s + ch
     else
       if (not _isBracket) then
+      begin
+        _CheckStringItem(ch);
         _isBracket := true;
+      end;
   end; //_ProcessOpenBracket
 
   //[some data]
@@ -151,6 +357,7 @@ var
     //TODO: need add all possible colorXX (1..64??)
 
     Result := Result + '[' + s + ']';
+    _prevCh := ch;
     s := '';
   end; //_ProcessCloseBracket
 
@@ -171,6 +378,24 @@ var
     end;
 
     s := '';
+    _prevCh := ch;
+  end; //_ProcessQuote
+
+  procedure _ProcessSemicolon();
+  begin
+    inc(_semicolonCount);
+    _CheckStringItem(ch);
+  end; //_ProcessSemicolon
+
+  procedure _ProcessDateTimeSymbol(DTSymbol: char);
+  begin
+    if (_prevCh = #0) then
+      _prevCh := DTSymbol;
+
+    if (_prevCh <> DTSymbol) then
+      _CheckStringItem(DTSymbol);
+
+    s := s + ch;
   end;
 
 begin
@@ -179,13 +404,24 @@ begin
   _isBracket := false;
   s := '';
   _semicolonCount := 0;
+  _prevCh := #0;
+
+  _strDateList := '';
 
   l := length(FormatXlsx);
+
+  _isSlash := false;
 
   for i := 1 to l do
   begin
     ch := FormatXlsx[i];
 
+    if (_isSlash) then
+    begin
+      Result := Result + ch;
+      _isSlash := false;
+    end
+    else
     if (((_isQuote and (ch <> '"')) or (_isBracket and (ch <> ']')))) then
       s := s + ch
     else
@@ -196,11 +432,31 @@ begin
         ';':
           begin
             //only 3 sections maximum available!
+            _ProcessSemicolon();
+            if (_semicolonCount >= 3) then
+              break;
+            Result := Result + ch;
           end;
+        'y', 'Y': _ProcessDateTimeSymbol('Y');
+        'm', 'M': _ProcessDateTimeSymbol('M');
+        'd', 'D': _ProcessDateTimeSymbol('D');
+        's', 'S': _ProcessDateTimeSymbol('S');
+        'h', 'H': _ProcessDateTimeSymbol('H');
+        '\':
+          begin
+            _CheckStringItem(ch);
+            Result := Result + ch;
+            _isSlash := true;
+          end;
+        else
+        begin
+          _CheckStringItem(ch);
+          s := s + ch;
+        end;
       end; //case ch
   end; //for i
 
-  _ProcessQuote(false);
+  _CheckStringItem(#0);
 end; //TryConvertXlsxToNative
 
 //Try to convert xlsx datetime as number to DateTime
@@ -256,5 +512,98 @@ begin
     Result := true;
   end;
 end; //TryXlsxTimeToDateTime
+
+
+////::::::::::::: TZEODSNumberFormatReader :::::::::::::::::////
+
+procedure TZEODSNumberFormatReader.AddItem();
+begin
+  inc(FCount);
+  if (FCount >= FCountMax) then
+  begin
+    inc(FCountMax, 20);
+    SetLength(FItems, FCountMax);
+  end;
+end;
+
+constructor TZEODSNumberFormatReader.Create();
+begin
+  FCount := 0;
+  FCountMax := 20;
+  SetLength(FItems, FCountMax);
+end;
+
+destructor TZEODSNumberFormatReader.Destroy();
+begin
+  SetLength(FItems, 0);
+  inherited;
+end;
+
+procedure TZEODSNumberFormatReader.ReadDateFormat(const xml: TZsspXMLReaderH);
+var
+  num: integer;
+  s, _result: string;
+  _isLong: boolean;
+
+begin
+  num := FCount;
+  AddItem();
+  FItems[num][0] := xml.Attributes[ZETag_Attr_StyleName];
+  _result := '';
+  while ((xml.TagType <> 6) or (xml.TagName <> ZETag_number_date_style)) do
+  begin
+    if (xml.Eof()) then
+      break;
+
+    //Day
+    if ((xml.TagName = ZETag_number_day) and (xml.TagType and 4 = 4)) then
+    begin
+      _isLong := xml.Attributes[ZETag_number_style] = ZETag_long;
+      if (_isLong) then
+        _result := _result + 'NN'
+      else
+        _result := _result + 'DD'
+    end
+    else
+    //Text
+    if ((xml.TagName = ZETag_number_text) and (xml.TagType = 6)) then
+      _result := _result + xml.TextBeforeTag
+    else
+    //Month
+    if (xml.TagName = ZETag_number_month) then
+    begin
+      _isLong := xml.Attributes[ZETag_number_style] = ZETag_long;
+      s := xml.Attributes[ZETag_number_textual];
+      if (ZEStrToBoolean(s)) then
+      begin
+        if (_isLong) then
+          _result := _result + 'MMMM'
+        else
+          _result := _result + 'MMM'
+      end
+      else
+      begin
+        if (_isLong) then
+          _result := _result + 'MM'
+        else
+          _result := _result + 'M'
+      end;
+    end;
+
+
+  end; //while
+  FItems[num][1] := _result;
+end; //ReadDateFormat
+
+procedure TZEODSNumberFormatReader.ReadNumberFormat(const xml: TZsspXMLReaderH);
+begin
+
+end;
+
+function TZEODSNumberFormatReader.TryGetFormatStrByNum(const DataStyleName: string;
+                                                       out retFormatStr): boolean;
+begin
+  Result := false;
+end;
 
 end.

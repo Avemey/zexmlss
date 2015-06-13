@@ -194,6 +194,8 @@ type
 
     function IsDateFormat(StyleNum: integer): boolean;
 
+    function FindFormatID(const value: string): integer;
+
     property FormatsCount: integer read FFormatsCount;
     property Format[num: integer]: string read GetFormat write SetFormat; default;
     property StyleFMTID[num: integer]: integer read GetStyleFMTID write SetStyleFMTID;
@@ -987,6 +989,10 @@ begin
   FFormats[2] := '0.00';
   FFormats[3] := '#,##0';
   FFormats[4] := '#,##0.00';
+  FFormats[5] := '$#,##0;\-$#,##0';
+  FFormats[6] := '$#,##0;[Red]\-$#,##0';
+  FFormats[7] := '$#,##0.00;\-$#,##0.00';
+  FFormats[8] := '$#,##0.00;[Red]\-$#,##0.00';
   FFormats[9] := '0%';
   FFormats[10] := '0.00%';
   FFormats[11] := '0.00E+00';
@@ -1001,10 +1007,12 @@ begin
   FFormats[20] := 'h:mm';
   FFormats[21] := 'h:mm:ss';
   FFormats[22] := 'm/d/yy h:mm';
+  FFormats[27] := '[$-404]e/m/d';
   FFormats[37] := '#,##0 ;(#,##0)';
   FFormats[38] := '#,##0 ;[Red](#,##0)';
   FFormats[39] := '#,##0.00;(#,##0.00)';
   FFormats[40] := '#,##0.00;[Red](#,##0.00)';
+  FFormats[44] := '_("$"* #,##0.00_);_("$"* \(#,##0.00\);_("$"* "-"??_);_(@_)';
   FFormats[45] := 'mm:ss';
   FFormats[46] := '[h]:mm:ss';
   FFormats[47] := 'mmss.0';
@@ -1023,9 +1031,10 @@ begin
   FFormats[68] := 't0.00%';
   FFormats[69] := 't# ?/?';
 
-  FFormats[70] := 't# ??/?? ';
+  FFormats[70] := 't# ??/??';
 
-  FFormats[81] := 'd/m/bb ';
+  FFormats[81] := 'd/m/bb';
+
 
   //_date_nums := [14..22, 27..36, 45..47, 50..58, 71..76, 78..81];
 end;
@@ -1035,6 +1044,26 @@ begin
   SetLength(FFormats, 0);
   SetLength(FStyleFmtID, 0);
   inherited;
+end;
+
+//Find format in formats. Return -1 if format not foud.
+//INPUT
+//  const value: string - format
+//RETURN
+//      integer - >= 0 - index number if store.
+//                 -1 - not found
+function TZEXLSXNumberFormats.FindFormatID(const value: string): integer;
+var
+  i: integer;
+
+begin
+  Result := -1;
+  for i := 0 to FFormatsCount - 1 do
+    if (FFormats[i] = value) then
+    begin
+      Result := i;
+      break;
+    end;
 end;
 
 function TZEXLSXNumberFormats.GetFormat(num: integer): string;
@@ -1536,6 +1565,8 @@ var
   s: string;
   _tmpr: real;
   _t: integer;
+  _td: TDateTime;
+  _tfloat: Double;
 
   //Проверить кол-во строк
   procedure CheckRow(const RowCount: integer);
@@ -1622,9 +1653,20 @@ var
         //  e - error
         //  str - string
         //  inlineStr - inline string ??
+        //  d - date
         //По-умолчанию - number
         if ((_type = 'n') or (_type = '')) then
-          _currCell.CellType := ZENumber
+        begin
+          _currCell.CellType := ZENumber;
+          //Trouble: if cell style is number, and number format is date, then
+          // cell style is date. F****** m$!
+          if (ReadHelper.NumberFormats.IsDateFormat(_currCell.CellStyle)) then
+            if (ZEIsTryStrToFloat(v, _tfloat)) then
+            begin
+              _currCell.CellType := ZEDateTime;
+              v := ZEDateTimeToStr(_tfloat);
+            end;
+        end
         else
         if (_type = 's') then
         begin
@@ -1632,6 +1674,18 @@ var
           if (TryStrToInt(v, t)) then
             if ((t >= 0) and (t < StrCount)) then
               v := StrArray[t];
+        end
+        else
+        if (_type = 'd') then
+        begin
+          _currCell.CellType := ZEDateTime;
+          if (TryZEStrToDateTime(v, _td)) then
+            v := ZEDateTimeToStr(_td)
+          else
+          if (ZEIsTryStrToFloat(v, _tfloat)) then
+            v := ZEDateTimeToStr(_tfloat)
+          else
+            _currCell.CellType := ZEString;
         end;
 
         _currCell.Data := ZEReplaceEntity(v);
@@ -5296,7 +5350,7 @@ var
 
         case _sheet.Cell[j, i].CellType of
           ZENumber: s := 'n';
-          ZEDateTime: s := 'str'; //??
+          ZEDateTime: s := 'd'; //??
           ZEBoolean: s := 'b';
           ZEString: s := 'str';
           ZEError: s := 'e';
@@ -5556,7 +5610,149 @@ var
   _FontIndex: TIntegerDynArray;  //соответствия шрифтов
   _FillIndex: TIntegerDynArray;  //заливки
   _BorderIndex: TIntegerDynArray;//границы
-  _StylesCount: integer;        
+  _StylesCount: integer;
+  _NumFmtIndexes: array of integer;
+
+  // <numFmts> .. </numFmts>
+  procedure WritenumFmts();
+  var
+    kol: integer;
+    i: integer;
+    _nfmt: TZEXLSXNumberFormats;
+    _is_dateTime: array of boolean;
+    s: string;
+    _count: integer;
+    _idx: array of integer;
+    _fmt: array of string;
+    _style: TZStyle;
+    _currSheet: integer;
+    _currRow, _currCol: integer;
+    _sheet: TZSheet;
+    _currstylenum: integer;
+    _numfmt_counter: integer;
+
+    function _GetNumFmt(StyleNum: integer): integer;
+    var
+      i, j, k: integer;
+      b: boolean;
+      _cs, _cr, _cc: integer;
+
+    begin
+      Result := 0;
+      _style := XMLSS.Styles[StyleNum];
+
+      //If cell type is datetime and cell style is empty then need write default NumFmtId = 14.
+      if ((Trim(_style.NumberFormat) = '') or (UpperCase(_style.NumberFormat) = 'GENERAL')) then
+      begin
+        if (_is_dateTime[StyleNum + 1]) then
+          Result := 14
+        else
+        begin
+          b := false;
+          _cs := _currSheet;
+          for i := _cs to XMLSS.Sheets.Count - 1 do
+          begin
+            _sheet := XMLSS.Sheets[i];
+            _cr := _currRow;
+            for j := _cr to _sheet.RowCount - 1 do
+            begin
+              _cc := _currCol;
+              for k := _cc to _sheet.ColCount - 1 do
+              begin
+                _currstylenum := _sheet[k, j].CellStyle + 1;
+                if (_currstylenum >= 0) and (_currstylenum < kol) then
+                  if (_sheet[k, j].CellType = ZEDateTime) then
+                  begin
+                    _is_dateTime[_currstylenum] := true;
+                    if (_currstylenum = StyleNum + 1) then
+                    begin
+                      b := true;
+                      break;
+                    end;
+                  end;
+              end; //for k
+              _currRow := j + 1;
+              _currCol := 0;
+              if (b) then
+                break;
+            end; //for j
+
+            _currSheet := i + 1;
+            _currRow := 0;
+            _currCol := 0;
+            if (b) then
+              break;
+          end; //for i
+
+          if (b) then
+            Result := 14;
+        end;
+      end //if
+      else
+      begin
+        s := ConvertFormatNativeToXlsx(_style.NumberFormat);
+        i := _nfmt.FindFormatID(s);
+        if (i < 0) then
+        begin
+          i := _numfmt_counter;
+          _nfmt.Format[i] := s;
+          inc(_numfmt_counter);
+
+          SetLength(_idx, _count + 1);
+          SetLength(_fmt, _count + 1);
+          _idx[_count] := i;
+          _fmt[_count] := s;
+
+          inc(_count);
+        end;
+        Result := i;
+      end;
+    end; //_GetNumFmt
+
+  begin
+    kol := XMLSS.Styles.Count + 1;
+    SetLength(_NumFmtIndexes, kol);
+    SetLength(_is_dateTime, kol);
+    for i := 0 to kol - 1 do
+      _is_dateTime[i] := false;
+
+    _nfmt := nil;
+    _count := 0;
+
+    _numfmt_counter := 164;
+
+    _currSheet := 0;
+    _currRow := 0;
+    _currCol := 0;
+
+    try
+      _nfmt := TZEXLSXNumberFormats.Create();
+      for i := -1 to kol - 2 do
+        _NumFmtIndexes[i + 1] := _GetNumFmt(i);
+
+      if (_count > 0) then
+      begin
+        _xml.Attributes.Clear();
+        _xml.Attributes.Add('count', IntToStr(_count));
+        _xml.WriteTagNode('numFmts', true, true, false);
+
+        for i := 0 to _count - 1 do
+        begin
+          _xml.Attributes.Clear();
+          _xml.Attributes.Add('numFmtId', IntToStr(_idx[i]));
+          _xml.Attributes.Add('formatCode', _fmt[i]);
+          _xml.WriteEmptyTag('numFmt', true, true);
+        end;
+
+        _xml.WriteEndTagNode(); //numFmts
+      end;
+    finally
+      FreeAndNil(_nfmt);
+      SetLength(_idx, 0);
+      SetLength(_fmt, 0);
+      SetLength(_is_dateTime, 0);
+    end;
+  end; //WritenumFmts
 
   //Являются ли шрифты одинаковыми
   function _isFontsEqual(const fnt1, fnt2: TFont): boolean;
@@ -5988,7 +6184,9 @@ var
   var
     _addalignment: boolean;
     _style: TZStyle;
-    s: string; i: integer;
+    s: string;
+    i: integer;
+    _num: integer;
 
   begin
     _xml.Attributes.Clear();
@@ -6011,7 +6209,15 @@ var
 
     // ECMA 376 Ed.4:  12.3.20 Styles Part; 17.9.17 numFmt (Numbering Format); 18.8.30 numFmt (Number Format)
     // http://social.msdn.microsoft.com/Forums/sa/oxmlsdk/thread/3919af8c-644b-4d56-be65-c5e1402bfcb6
-    _xml.Attributes.Add('numFmtId', '0' {'164'}, false); // TODO: support formats
+    if (isxfId) then
+      _num := _NumFmtIndexes[NumStyle + 1]
+    else
+      _num := 0;
+
+    _xml.Attributes.Add('numFmtId', IntToStr(_num) {'164'}, false); // TODO: support formats
+
+    if (_num > 0) then
+      _xml.Attributes.Add('applyNumberFormat', '1', false);
 
     if (isxfId) then
       _xml.Attributes.Add('xfId', IntToStr(xfId), false);
@@ -6112,6 +6318,8 @@ begin
     _xml.Attributes.Add('xmlns', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
     _xml.WriteTagNode('styleSheet', true, true, true);
 
+    WritenumFmts();
+
     WriteXLSXFonts();
     WriteXLSXFills();
     WriteXLSXBorders();
@@ -6133,11 +6341,9 @@ begin
     if (Assigned(_xml)) then
       FreeAndNil(_xml);
     SetLength(_FontIndex, 0);
-    _FontIndex := nil;
     SetLength(_FillIndex, 0);
-    _FillIndex := nil;
     SetLength(_BorderIndex, 0);
-    _BorderIndex := nil;
+    SetLength(_NumFmtIndexes, 0);
   end;
 end; //ZEXLSXCreateStyles
 
@@ -6382,7 +6588,7 @@ begin
 
     _xml.Attributes.Clear();
     _xml.Attributes.Add('xsi:type', 'dcterms:W3CDTF');
-    s := ZEDateToStr(XMLSS.DocumentProperties.Created) + 'Z';
+    s := ZEDateTimeToStr(XMLSS.DocumentProperties.Created) + 'Z';
     _xml.WriteTag('dcterms:created', s, true, false, false);
     _xml.WriteTag('dcterms:modified', s, true, false, false);
 

@@ -1136,7 +1136,7 @@ var
       WriteTagNode('DocumentProperties',[ToAttribute('xmlns','urn:schemas-microsoft-com:office:office')], true, true, false);
       WriteTag('Author', XMLSS.DocumentProperties.Author);
       WriteTag('LastAuthor', XMLSS.DocumentProperties.LastAuthor);
-      WriteTag('Created', ZEDateToStr(XMLSS.DocumentProperties.Created) + 'Z'{s});
+      WriteTag('Created', ZEDateTimeToStr(XMLSS.DocumentProperties.Created) + 'Z'{s});
       WriteTag('Company', XMLSS.DocumentProperties.Company);
 
       WriteTag('Version', XMLSS.DocumentProperties.Version); // зачем ???

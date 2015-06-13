@@ -1267,7 +1267,11 @@ function StrToZCellType(Value: string): TZCellType;
 function ZEIsFontsEquals(const Font1, Font2: TFont): boolean;
 
 //Переводит дату в строку для XML (YYYY-MM-DDTHH:MM:SS[.mmm])
-function ZEDateToStr(ATime: TDateTime; Addmms: boolean = false): string;
+function ZEDateTimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
+
+function ZEDateToStr(ADate: TDateTime): string;
+
+function ZETimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
 
 //YYYY-MM-DDTHH:MM:SS[.mmm] to DateTime
 function TryZEStrToDateTime(const AStrDateTime: string; out retDateTime: TDateTime): boolean;
@@ -1305,8 +1309,9 @@ end; //IntToStrN
 
 //Переводит дату в строку для XML (YYYY-MM-DDTHH:MM:SS[.mmm])
 //INPUT
-//    ATime: TDateTime - нужная дата/время
-function ZEDateToStr(ATime: TDateTime; Addmms: boolean = false): string;
+//      ATime: TDateTime - нужная дата/время
+//      Addmms: boolean  - need add ms to result
+function ZEDateTimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
 var
   HH, MM, SS, MS: word;
 
@@ -1315,6 +1320,33 @@ begin
   result := IntToStrN(HH, 4) + '-' + IntToStrN(MM, 2) + '-' + IntToStrN(SS, 2) + 'T';
   DecodeTime(ATime, HH, MM, SS, MS);
   result := result + IntToStrN(HH, 2) + ':' + IntToStrN(MM, 2) + ':' + IntToStrN(SS, 2);
+  if (Addmms) then
+    Result := Result + '.' + IntToStrN(MS, 3);
+end;
+
+//Convert Date to string like "YYYY-MM-DD"
+//INPUT
+//      ADate: TDateTime - date
+function ZEDateToStr(ADate: TDateTime): string;
+var
+  YY, MM, DD: word;
+
+begin
+  DecodeDate(ADate, YY, MM, DD);
+  result := IntToStrN(YY, 4) + '-' + IntToStrN(MM, 2) + '-' + IntToStrN(DD, 2);
+end;
+
+//Convert time to string (THH:MM:SS[.mmm])
+//INPUT
+//      ATime: TDateTime - time
+//      Addmms: boolean  - need add ms to result
+function ZETimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
+var
+  HH, MM, SS, MS: word;
+
+begin
+  DecodeTime(ATime, HH, MM, SS, MS);
+  result := 'T' + IntToStrN(HH, 2) + ':' + IntToStrN(MM, 2) + ':' + IntToStrN(SS, 2);
   if (Addmms) then
     Result := Result + '.' + IntToStrN(MS, 3);
 end;
@@ -1522,6 +1554,7 @@ begin
   istimesign := false;
   timedelimeters := 0;
   istimezone := false;
+  lastdateindex := -1;
   msindex := -1;
   tzindex := -1;
   timezonemul := 0;
@@ -2415,7 +2448,7 @@ begin
   FBGColor := clWindow;
   FPatternColor := clWindow;
   FCellPattern := ZPNone;
-  FNumberFormat := 'General';
+  FNumberFormat := ''; // '' = General
   FProtect := true;
   FHideFormula := false;
 end;
@@ -2693,25 +2726,53 @@ begin
 end;
 
 function TZCell.GetDataAsDateTime(): TDateTime;
+var
+  b: boolean;
+
 begin
+  b := false;
   if (FData = '') then
     Result := 0
   else
     if (not TryZEStrToDateTime(FData, Result)) then
-      Raise EConvertError.Create('ZxCell: Cannot cast data to DateTime');;
+    begin
+      //If cell type is number then try convert "float" to datetime
+      if (CellType = ZENumber) then
+        Result := AsDouble
+      else
+        b := true;
+    end;
+
+  if (b) then
+    Raise EConvertError.Create('ZxCell: Cannot cast data to DateTime');;
 end;
 
 procedure TZCell.SetDataAsDateTime(const Value: TDateTime);
 begin
   FCellType := ZEDateTime;
-  FData := ZEDateToStr(Value, true);
+  FData := ZEDateTimeToStr(Value, true);
 end;
 
 function TZCell.GetDataAsDouble: double;
-Var err: integer;
+Var
+  err: integer;
+  b: boolean;
+  _dt: TDateTime;
+
 begin
   Val(FData, Result, err); // need old-school to ignore regional settings
-  if err>0 then Raise EConvertError.Create('ZxCell: Cannot cast data to number');
+  if (err > 0) then
+  begin
+    b := true;
+    //If datetime ...
+    if (CellType = ZEDateTime) then
+      b := not TryZEStrToDateTime(FData, _dt);
+
+    if (b) then
+      Raise EConvertError.Create('ZxCell: Cannot cast data to number')
+    else
+      Result := _dt;
+  end;
 end;
 
 function TZCell.GetDataAsInteger: integer;
