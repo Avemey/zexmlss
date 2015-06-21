@@ -52,30 +52,67 @@ const
   ZE_NUMFORMAT_IS_DATETIME  = 2;
   ZE_NUMFORMAT_IS_STRING    = 4;
 
-  ZETag_number_date_style   = 'number:date-style';
-  ZETag_number_day          = 'number:day';
-  ZETag_number_text         = 'number:text';
-  ZETag_number_style        = 'number:style';
-  ZETag_number_month        = 'number:month';
-  ZETag_number_year         = 'number:year';
-  ZETag_number_hours        = 'number:hours';
-  ZETag_number_minutes      = 'number:minutes';
-  ZETag_number_day_of_week  = 'number:day-of-week';
-  ZETag_number_textual      = 'number:textual';
+  //DateStyles
+  ZETag_number_date_style     = 'number:date-style';
+  ZETag_number_day            = 'number:day';
+  ZETag_number_text           = 'number:text';
+  ZETag_number_style          = 'number:style';
+  ZETag_number_month          = 'number:month';
+  ZETag_number_year           = 'number:year';
+  ZETag_number_hours          = 'number:hours';
+  ZETag_number_minutes        = 'number:minutes';
+  ZETag_number_seconds        = 'number:seconds';
+  ZETag_number_day_of_week    = 'number:day-of-week';
+  ZETag_number_textual        = 'number:textual';
   ZETag_number_possessive_form = 'number:possessive-form';
 
-  ZETag_Attr_StyleName      = 'style:name';
-  ZETag_long                = 'long';
+  ZETag_number_am_pm          = 'number:am-pm';
+  ZETag_number_quarter        = 'number:quarter';
+  ZETag_number_week_of_year   = 'number:week-of-year';
+  ZETag_number_era            = 'number:era';
+
+  //NumberStyles:
+  //WARNING: number style = currency style = percentage style!
+  //TODO:
+  //      Is need separate number/currency/percentage number styles?
+  ZETag_number_number_style         = 'number:number-style';
+  ZETag_number_currency_style       = 'number:currency-style';
+  ZETag_number_percentage_style     = 'number:percentage-style';
+
+  ZETag_number_fraction             = 'number:fraction';
+  ZETag_number_scientific_number    = 'number:scientific-number';
+  ZETag_number_embedded_text        = 'number:embedded-text';
+  ZETag_number_number               = 'number:number';
+  ZETag_number_decimal_places       = 'number:decimal-places';
+  ZETag_number_decimal_replacement  = 'number:decimal-replacement';
+  ZETag_number_display_factor       = 'number:display-factor';
+  ZETag_number_grouping             = 'number:grouping';
+  ZETag_number_min_integer_digits   = 'number:min-integer-digits';
+  ZETag_number_position             = 'number:position';
+  ZETag_number_min_exponent_digits  = 'number:min-exponent-digits';
+
+  ZETag_style_text_properties = 'style:text-properties';
+
+  ZETag_Attr_StyleName        = 'style:name';
+  ZETag_long                  = 'long';
 
 type
+  TZODSNumberItemOptions = record
+    isColor: boolean;
+    ColorStr: string;
+    StyleType: byte;
+  end;
+
   TZEODSNumberFormatReader = class
   private
     FItems: array of array [0..1] of string;  //index 0 - format num
                                               //index 1 - format
+    FItemsOptions: array of TZODSNumberItemOptions;
     FCount: integer;
     FCountMax: integer;
   protected
     procedure AddItem();
+    procedure ReadNumberFormatCommon(const xml: TZsspXMLReaderH; const NumberFormatTag: string);
   public
     constructor Create();
     destructor Destroy();
@@ -93,7 +130,14 @@ function TryXlsxTimeToDateTime(const XlsxDateTime: string; out retDateTime: TDat
 implementation
 
 uses
-  zesavecommon;
+  zesavecommon,
+  StrUtils            {IfThen}
+  ;
+
+  const
+    const_format_type_number    = 0;
+    const_format_type_datetime  = 1;
+    const_format_type_boolean   = 2;
 
 {
 
@@ -517,33 +561,63 @@ end; //TryXlsxTimeToDateTime
 ////::::::::::::: TZEODSNumberFormatReader :::::::::::::::::////
 
 procedure TZEODSNumberFormatReader.AddItem();
+var
+  i: integer;
+
 begin
   inc(FCount);
   if (FCount >= FCountMax) then
   begin
     inc(FCountMax, 20);
     SetLength(FItems, FCountMax);
+    SetLength(FItemsOptions, FCountMax);
+    for i := FCount to FCount - 1 do
+    begin
+      FItemsOptions[i].isColor := false;
+      FItemsOptions[i].ColorStr := '';
+    end;
   end;
 end;
 
 constructor TZEODSNumberFormatReader.Create();
+var
+  i: integer;
+
 begin
   FCount := 0;
   FCountMax := 20;
   SetLength(FItems, FCountMax);
+  SetLength(FItemsOptions, FCountMax);
+  for i := 0 to FCountMax - 1 do
+  begin
+    FItemsOptions[i].isColor := false;
+    FItemsOptions[i].ColorStr := '';
+  end;
 end;
 
 destructor TZEODSNumberFormatReader.Destroy();
 begin
   SetLength(FItems, 0);
+  SetLength(FItemsOptions, 0);
   inherited;
 end;
 
+//Read date format: <number:date-style>.. </number:date-style>
 procedure TZEODSNumberFormatReader.ReadDateFormat(const xml: TZsspXMLReaderH);
 var
   num: integer;
   s, _result: string;
   _isLong: boolean;
+  t: integer;
+  i: integer;
+
+  function CheckIsLong(const isTrue, isFalse: string): string;
+  begin
+    if (xml.Attributes[ZETag_number_style] = ZETag_long) then
+      Result := isTrue
+    else
+      Result := isFalse;
+  end;
 
 begin
   num := FCount;
@@ -552,18 +626,11 @@ begin
   _result := '';
   while ((xml.TagType <> 6) or (xml.TagName <> ZETag_number_date_style)) do
   begin
-    if (xml.Eof()) then
-      break;
+    xml.ReadTag();
 
     //Day
     if ((xml.TagName = ZETag_number_day) and (xml.TagType and 4 = 4)) then
-    begin
-      _isLong := xml.Attributes[ZETag_number_style] = ZETag_long;
-      if (_isLong) then
-        _result := _result + 'NN'
-      else
-        _result := _result + 'DD'
-    end
+      _result := _result + CheckIsLong('NN', 'DD')
     else
     //Text
     if ((xml.TagName = ZETag_number_text) and (xml.TagType = 6)) then
@@ -575,28 +642,134 @@ begin
       _isLong := xml.Attributes[ZETag_number_style] = ZETag_long;
       s := xml.Attributes[ZETag_number_textual];
       if (ZEStrToBoolean(s)) then
-      begin
-        if (_isLong) then
-          _result := _result + 'MMMM'
-        else
-          _result := _result + 'MMM'
-      end
+        _result := _result + IfThen(_isLong, 'MMMM', 'MMM')
       else
-      begin
-        if (_isLong) then
-          _result := _result + 'MM'
-        else
-          _result := _result + 'M'
-      end;
+        _result := _result + IfThen(_isLong, 'MM', 'M')
+    end
+    else
+    //Year
+    if (xml.TagName = ZETag_number_year) then
+      _result := _result + CheckIsLong('YYYY', 'YY')
+    else
+    //Hours
+    if (xml.TagName = ZETag_number_hours) then
+      _result := _result + CheckIsLong('HH', 'H')
+    else
+    //Minutes
+    if (xml.TagName = ZETag_number_minutes) then
+      _result := _result + CheckIsLong('mm', 'm')
+    else
+    //Seconds
+    if (xml.TagName = ZETag_number_seconds) then
+    begin
+      _result := _result + CheckIsLong('ss', 's');
+      s := xml.Attributes[ZETag_number_decimal_places];
+      if (s <> '') then
+        if (TryStrToInt(s, t)) then
+          if (t > 0) then
+          begin
+            _result := _result + '.';
+            for i := 1 to t do
+              _result := _result + '0';
+          end;
+    end
+    else
+    //AM/PM
+    if (xml.TagName = ZETag_number_am_pm) then
+    begin
+    end
+    else
+    //Era
+    if (xml.TagName = ZETag_number_era) then
+    begin
+    end
+    else
+    //Quarter
+    if (xml.TagName = ZETag_number_quarter) then
+    begin
     end;
 
-
+    if (xml.Eof()) then
+      break;
   end; //while
   FItems[num][1] := _result;
 end; //ReadDateFormat
 
+//Read number style: <number:number-style> .. </number:number-style>
 procedure TZEODSNumberFormatReader.ReadNumberFormat(const xml: TZsspXMLReaderH);
 begin
+  ReadNumberFormatCommon(xml, ZETag_number_number_style);
+end;
+
+//Read Number/currency/percentage number format style
+//INPUT
+//  const xml: TZsspXMLReaderH    - xml
+//  const NumberFormatTag: string - tag name
+procedure TZEODSNumberFormatReader.ReadNumberFormatCommon(const xml: TZsspXMLReaderH;
+                                                          const NumberFormatTag: string);
+var
+  num: integer;
+  s, _result: string;
+
+begin
+  num := FCount;
+  AddItem();
+  FItems[num][0] := xml.Attributes[ZETag_Attr_StyleName];
+  FItemsOptions[num].StyleType := const_format_type_number;
+  _result := '';
+  while ((xml.TagType <> 6) or (xml.TagName <> NumberFormatTag)) do
+  begin
+    xml.ReadTag();
+
+    if (xml.TagName = ZETag_number_number) then
+    begin
+      s := xml.Attributes[ZETag_number_decimal_places];
+
+    {
+    The <number:number> element specifies the display formatting properties for a decimal number.
+
+The <number:number> element has the following attributes:
+number:decimal-places
+number:decimal-replacement
+number:display-factor
+number:grouping
+number:min-integer-digits
+The <number:number> element has the following child element:
+number:embedded-text
+
+  ZETag_number_fraction       = 'number:fraction';
+  ZETag_number_scientific_number = 'number:scientific-number';
+  ZETag_number_embedded_text  = 'number:embedded-text';
+  ZETag_number_number         = 'number:number';
+  ZETag_number_decimal_places = 'number:decimal-places';
+  ZETag_number_decimal_replacement = 'number:decimal-replacement';
+  ZETag_number_display_factor = 'number:display-factor';
+  ZETag_number_grouping       = 'number:grouping';
+  ZETag_number_min_integer_digits = 'number:min-integer-digits';
+    }
+
+    end
+    else
+    if ((xml.TagName = ZETag_number_text) and (xml.TagType = 6)) then
+      _result := _result + xml.TextBeforeTag;
+
+
+
+    {
+    ZETag_number_fraction       = 'number:fraction';
+    ZETag_number_scientific_number = 'number:scientific-number';
+    ZETag_number_embedded_text  = 'number:embedded-text';
+    ZETag_number_number         = 'number:number';
+    }
+
+    if (xml.Eof()) then
+      break;
+  end; //while
+
+  {
+  <number:fraction> 16.27.6, <number:number> 16.27.3, <number:scientific-number> 16.27.5,
+  <number:text> 16.27.26, <style:map> 16.3 and <style:text-properties> 16.27.28.
+  }
 
 end;
 

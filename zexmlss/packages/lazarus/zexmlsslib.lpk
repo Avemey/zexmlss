@@ -22,8 +22,8 @@
     <Description Value="Работа с документами ODS, Excel XML SpreadSheet (excel xml) и XLSX
 (Write and read ODS, xlsx and excel xml spreadsheet formats). More info: http://avemey.com/zexmlss/index.php "/>
     <License Value="zlib"/>
-    <Version Release="8"/>
-    <Files Count="14">
+    <Version Release="9"/>
+    <Files Count="15">
       <Item1>
         <Filename Value="..\..\src\zexmlss.pas"/>
         <HasRegisterProc Value="True"/>
@@ -81,6 +81,10 @@
         <Filename Value="..\..\src\zearchhelper.pas"/>
         <UnitName Value="zearchhelper"/>
       </Item14>
+      <Item15>
+        <Filename Value="..\..\src\zenumberformats.pas"/>
+        <UnitName Value="zenumberformats"/>
+      </Item15>
     </Files>
     <RequiredPkgs Count="2">
       <Item1>

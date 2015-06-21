@@ -3987,7 +3987,7 @@ begin
     _xml.Attributes.Add('style:font-style-complex', s, false);
   end;
 
-  _xml.WriteEmptyTag('style:text-properties', true, true);
+  _xml.WriteEmptyTag(ZETag_style_text_properties, true, true);
 end; //ODFWriteTableStyle
 
 //Записывает в поток стили документа (styles.xml)
@@ -5564,7 +5564,7 @@ begin
       end; //if
     end else //if
 
-    if ((xml.TagName = 'style:text-properties') and (xml.TagType in [4, 5])) then
+    if ((xml.TagName = ZETag_style_text_properties) and (xml.TagType in [4, 5])) then
     begin
       //style:font-name (style:font-name-asian style:font-name-complex)
       s := xml.Attributes.ItemsByName['style:font-name'];
