@@ -47,10 +47,17 @@ uses
   ;
 
 const
+  //Main number formats
   ZE_NUMFORMAT_IS_UNKNOWN   = 0;
   ZE_NUMFORMAT_IS_NUMBER    = 1;
   ZE_NUMFORMAT_IS_DATETIME  = 2;
   ZE_NUMFORMAT_IS_STRING    = 4;
+
+  //Additional properties for number styles
+  ZE_NUMFORMAT_NUM_IS_PERCENTAGE  = 1 shl 10;
+  ZE_NUMFORMAT_NUM_IS_SCIENTIFIC  = 1 shl 11;
+  ZE_NUMFORMAT_NUM_IS_CURRENCY    = 1 shl 12;
+  ZE_NUMFORMAT_NUM_IS_FRACTION    = 1 shl 13;
 
   //DateStyles
   ZETag_number_date_style     = 'number:date-style';
@@ -112,13 +119,17 @@ type
     FCountMax: integer;
   protected
     procedure AddItem();
-    procedure ReadNumberFormatCommon(const xml: TZsspXMLReaderH; const NumberFormatTag: string);
+    procedure ReadNumberFormatCommon(const xml: TZsspXMLReaderH;
+                                     const NumberFormatTag: string;
+                                     sub_number_type: integer);
   public
     constructor Create();
     destructor Destroy();
+    procedure ReadKnownNumberFormat(const xml: TZsspXMLReaderH);
     procedure ReadDateFormat(const xml: TZsspXMLReaderH);
     procedure ReadNumberFormat(const xml: TZsspXMLReaderH);
-    function TryGetFormatStrByNum(const DataStyleName: string; out retFormatStr): boolean;
+    procedure ReadCurrencyFormat(const xml: TZsspXMLReaderH);
+    function TryGetFormatStrByNum(const DataStyleName: string; out retFormatStr: string): boolean;
     property Count: integer read FCount;
   end;
 
@@ -133,11 +144,6 @@ uses
   zesavecommon,
   StrUtils            {IfThen}
   ;
-
-  const
-    const_format_type_number    = 0;
-    const_format_type_datetime  = 1;
-    const_format_type_boolean   = 2;
 
 {
 
@@ -592,6 +598,7 @@ begin
   begin
     FItemsOptions[i].isColor := false;
     FItemsOptions[i].ColorStr := '';
+    FItemsOptions[i].StyleType := 0;
   end;
 end;
 
@@ -623,6 +630,7 @@ begin
   num := FCount;
   AddItem();
   FItems[num][0] := xml.Attributes[ZETag_Attr_StyleName];
+  FItemsOptions[num].StyleType := ZE_NUMFORMAT_IS_DATETIME;
   _result := '';
   while ((xml.TagType <> 6) or (xml.TagName <> ZETag_number_date_style)) do
   begin
@@ -682,11 +690,28 @@ begin
     //Era
     if (xml.TagName = ZETag_number_era) then
     begin
+      //Attr: number:calendar
+      //      number:style
     end
     else
     //Quarter
     if (xml.TagName = ZETag_number_quarter) then
     begin
+      //Attr: number:calendar
+      //      number:style
+    end
+    else
+    //Day of week
+    if (xml.TagName = ZETag_number_day_of_week) then
+    begin
+      //Attr: number:calendar
+      //      number:style
+    end
+    else
+    //Week of year
+    if (xml.TagName = ZETag_number_week_of_year) then
+    begin
+      //Attr: number:calendar
     end;
 
     if (xml.Eof()) then
@@ -695,35 +720,100 @@ begin
   FItems[num][1] := _result;
 end; //ReadDateFormat
 
+//Read known numbers formats (date/number/percentage etc)
+procedure TZEODSNumberFormatReader.ReadKnownNumberFormat(const xml: TZsspXMLReaderH);
+begin
+  if (xml.TagName = ZETag_number_number_style) then
+    ReadNumberFormat(xml)
+  else
+  if (xml.TagName = ZETag_number_date_style) then
+    ReadDateFormat(xml)
+  else
+  if (xml.TagName = ZETag_number_currency_style) then
+    ReadCurrencyFormat(xml);
+end;
+
+procedure TZEODSNumberFormatReader.ReadCurrencyFormat(const xml: TZsspXMLReaderH);
+begin
+  ReadNumberFormatCommon(xml, ZETag_number_currency_style, ZE_NUMFORMAT_NUM_IS_CURRENCY);
+end;
+
 //Read number style: <number:number-style> .. </number:number-style>
 procedure TZEODSNumberFormatReader.ReadNumberFormat(const xml: TZsspXMLReaderH);
 begin
-  ReadNumberFormatCommon(xml, ZETag_number_number_style);
+  ReadNumberFormatCommon(xml, ZETag_number_number_style, 0);
 end;
 
 //Read Number/currency/percentage number format style
 //INPUT
 //  const xml: TZsspXMLReaderH    - xml
 //  const NumberFormatTag: string - tag name
+//      sub_number_type: integer  - additional flag for number (percentage/scientific etc)
 procedure TZEODSNumberFormatReader.ReadNumberFormatCommon(const xml: TZsspXMLReaderH;
-                                                          const NumberFormatTag: string);
+                                                          const NumberFormatTag: string;
+                                                          sub_number_type: integer);
 var
   num: integer;
   s, _result: string;
+  _decimalPlaces: integer;
+  _min_int_digits: integer;
+  _display_factor: integer;
+  _number_grouping: boolean;
+  _number_position: integer;
 
-begin
-  num := FCount;
-  AddItem();
-  FItems[num][0] := xml.Attributes[ZETag_Attr_StyleName];
-  FItemsOptions[num].StyleType := const_format_type_number;
-  _result := '';
-  while ((xml.TagType <> 6) or (xml.TagName <> NumberFormatTag)) do
+  // <number:number>..</number:number>
+  procedure _ReadNumber_Number();
   begin
-    xml.ReadTag();
+    s := xml.Attributes[ZETag_number_decimal_places];
+    if (not TryStrToInt(s, _decimalPlaces)) then
+      _decimalPlaces := 0;
 
-    if (xml.TagName = ZETag_number_number) then
+    s := xml.Attributes[ZETag_number_min_integer_digits];
+    if (not TryStrToInt(s, _min_int_digits)) then
+      _min_int_digits := 0;
+
+    s := xml.Attributes[ZETag_number_display_factor];
+    if (s <> '') then
     begin
-      s := xml.Attributes[ZETag_number_decimal_places];
+      if (not TryStrToInt(s, _display_factor)) then
+        _display_factor := 1;
+    end
+    else
+      _display_factor := 1;
+
+    _number_grouping := false;
+    s := xml.Attributes[ZETag_number_grouping];
+    if (s <> '') then
+      _number_grouping := ZEStrToBoolean(s);
+
+    if (xml.TagType = 4) then
+    begin
+      _number_position := -100;
+      while ((xml.TagType <> 6) or (xml.TagName <> NumberFormatTag)) do
+      begin
+        xml.ReadTag();
+
+        //<number:embedded-text number:position="1">..</number:embedded-text>
+        if (xml.TagName = ZETag_number_embedded_text) then
+        begin
+          if (xml.TagType = 4) then
+          begin
+            s := xml.Attributes[ZETag_number_position];
+            if (not TryStrToInt(s, _number_position)) then
+              _number_position := -100;
+          end
+          else
+          if ((xml.TagType = 6) and (_number_position >= 0)) then
+          begin
+
+          end;
+        end;
+
+        if (xml.Eof()) then
+          break;
+      end; //while
+    end;
+
 
     {
     The <number:number> element specifies the display formatting properties for a decimal number.
@@ -734,6 +824,7 @@ number:decimal-replacement
 number:display-factor
 number:grouping
 number:min-integer-digits
+
 The <number:number> element has the following child element:
 number:embedded-text
 
@@ -747,13 +838,23 @@ number:embedded-text
   ZETag_number_grouping       = 'number:grouping';
   ZETag_number_min_integer_digits = 'number:min-integer-digits';
     }
+  end; //_ReadNumber_Number
 
-    end
+begin
+  num := FCount;
+  AddItem();
+  FItems[num][0] := xml.Attributes[ZETag_Attr_StyleName];
+  FItemsOptions[num].StyleType := ZE_NUMFORMAT_IS_NUMBER or sub_number_type;
+  _result := '';
+  while ((xml.TagType <> 6) or (xml.TagName <> NumberFormatTag)) do
+  begin
+    xml.ReadTag();
+
+    if (xml.TagName = ZETag_number_number) then
+      _ReadNumber_Number()
     else
     if ((xml.TagName = ZETag_number_text) and (xml.TagType = 6)) then
-      _result := _result + xml.TextBeforeTag;
-
-
+      _result := _result + '"' + ZEReplaceEntity(xml.TextBeforeTag) + '"';
 
     {
     ZETag_number_fraction       = 'number:fraction';
@@ -774,7 +875,7 @@ number:embedded-text
 end;
 
 function TZEODSNumberFormatReader.TryGetFormatStrByNum(const DataStyleName: string;
-                                                       out retFormatStr): boolean;
+                                                       out retFormatStr: string): boolean;
 begin
   Result := false;
 end;

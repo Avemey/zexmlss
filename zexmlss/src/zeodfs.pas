@@ -45,8 +45,15 @@ interface
 {$ENDIF}
 
 uses
-  SysUtils, Graphics, Classes, Types,
-  zsspxml, zexmlss, zesavecommon, zeZippy
+  SysUtils,
+  Graphics,
+  Classes,
+  Types,
+  zsspxml,
+  zexmlss,
+  zesavecommon,
+  zenumberformats,        //TZEODSNumberFormatReader etc
+  zeZippy
   {$IFDEF FPC},zipper {$ELSE}{$I odszipuses.inc}{$ENDIF};
 
 type
@@ -230,6 +237,7 @@ type
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     FConditionReader: TZODFConditionalReadHelper; //Для чтения условного форматирования
     {$ENDIF}
+    FNumberStylesHelper: TZEODSNumberFormatReader;
     function GetStyle(num: integer): TZStyle;
   protected
   public
@@ -246,6 +254,7 @@ type
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     property ConditionReader: TZODFConditionalReadHelper read FConditionReader;
     {$ENDIF}
+    property NumberStylesHelper: TZEODSNumberFormatReader read FNumberStylesHelper;
   end;
 
   //Для записи (пока нужно только условное форматирование)
@@ -347,8 +356,7 @@ function GetODSStrByMediaType(const MediaType: TODSManifestMediaType): string;
 implementation
 
 uses
-   StrUtils,
-   zenumberformats
+   StrUtils
    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}, zeformula {$ENDIF} //пока формулы нужны только для условного форматирования
    ;
 
@@ -2396,6 +2404,7 @@ begin
   FPageLayoutsCount := 0;
   SetLength(FPageLayouts, 0);
   SetLength(FPageLayoutsNames, 0);
+  FNumberStylesHelper := TZEODSNumberFormatReader.Create();
 end; //Create
 
 destructor TZEODFReadHelper.Destroy();
@@ -2428,6 +2437,9 @@ begin
 
   SetLength(FStyles, 0);
   SetLength(StylesProperties, 0);
+
+  FreeAndNil(FNumberStylesHelper);
+
   inherited;
 end;
 
@@ -5676,13 +5688,22 @@ var
       begin
         //style:style - стиль
         if (xml.TagName = ZETag_StyleStyle) then
-          _ReadOneStyle();
+          _ReadOneStyle()
+        else
         //office:automatic-styles (Page Layouts etc)
         if (xml.TagName = ZETag_office_automatic_styles) then
-          ReadHelper.ReadAutomaticStyles(xml);
+          ReadHelper.ReadAutomaticStyles(xml)
+        else
         //office:master-styles
         if (xml.TagName = ZETag_office_master_styles) then
-          ReadHelper.ReadMasterStyles(xml);
+          ReadHelper.ReadMasterStyles(xml)
+        else
+        //NumberStyles:
+        //    number:date-style
+        //    number:number-style
+        //    number:currency-style
+        //    number:percentage-style
+          ReadHelper.NumberStylesHelper.ReadKnownNumberFormat(xml);
       end; //if
 
       //style:default-style - стиль по умолчанию
@@ -5839,6 +5860,101 @@ var
       inc(StyleCount);
     end; //_ReadCellStyle
 
+    procedure _ReadTableColumnStyle();
+    begin
+      if (ColStyleCount >= MaxColStyleCount) then
+      begin
+        MaxColStyleCount := ColStyleCount + 20;
+        SetLength(ODFColumnStyles, MaxColStyleCount);
+      end;
+      ODFColumnStyles[ColStyleCount].name := '';
+      ODFColumnStyles[ColStyleCount].breaked := false;
+      ODFColumnStyles[ColStyleCount].width := 25;
+
+      while (not IfTag(ZETag_StyleStyle, 6)) do
+      begin
+        if (xml.Eof()) then
+          break;
+        xml.ReadTag();
+        if ((xml.TagName = 'style:table-column-properties') and (xml.TagType in [4, 5])) then
+        begin
+          ODFColumnStyles[ColStyleCount].name := _stylename;
+          s := xml.Attributes.ItemsByName['fo:break-before'];
+          if (s = 'column') then
+            ODFColumnStyles[ColStyleCount].breaked := true;
+          s := xml.Attributes.ItemsByName['style:column-width'];
+          if (s > '') then
+            ODFGetValueSizeMM(s, ODFColumnStyles[ColStyleCount].width);
+        end;
+      end; //while
+      inc(ColStyleCount);
+    end; //_ReadTableColumnStyle
+
+    procedure _ReadTableRowStyle();
+    begin
+      if (RowStyleCount >= MaxRowStyleCount) then
+      begin
+        MaxRowStyleCount := RowStyleCount + 20;
+        SetLength(ODFRowStyles, MaxRowStyleCount);
+      end;
+      ODFRowStyles[RowStyleCount].name := '';
+      ODFRowStyles[RowStyleCount].breaked := false;
+      ODFRowStyles[RowStyleCount].color := clBlack;
+      ODFRowStyles[RowStyleCount].height := 10;
+
+      while (not ifTag(ZETag_StyleStyle, 6)) do
+      begin
+        if (xml.Eof()) then
+          break;
+        xml.ReadTag();
+
+        if ((xml.TagName = 'style:table-row-properties') and (xml.TagType in [4, 5])) then
+        begin
+          ODFRowStyles[RowStyleCount].name := _stylename;
+          s := xml.Attributes.ItemsByName['fo:break-before'];
+          if (s = 'page') then
+            ODFRowStyles[RowStyleCount].breaked := true;
+          s := xml.Attributes.ItemsByName['style:row-height'];
+          if (s > '') then
+            ODFGetValueSizeMM(s, ODFRowStyles[RowStyleCount].height);
+          s := xml.Attributes.ItemsByName[ZETag_fo_background_color];
+         if (s > '') then
+           ODFRowStyles[RowStyleCount].color := HTMLHexToColor(s);
+        end;
+      end; //while
+      inc(RowStyleCount);
+    end; //_ReadTableRowStyle
+
+    procedure _ReadTableStyle();
+    begin
+      if (TableStyleCount >= MaxTableStyleCount) then
+      begin
+        MaxTableStyleCount := TableStyleCount + 20;
+        SetLength(ODFTableStyles, MaxTableStyleCount);
+      end;
+      ODFTableStyles[TableStyleCount].name := _stylename;
+      ODFTableStyles[TableStyleCount].isColor := false;
+      ODFTableStyles[TableStyleCount].MasterPageName := xml.Attributes.ItemsByName[ZETag_style_master_page_name];
+      while (not ifTag(ZETag_StyleStyle, 6)) do
+      begin
+        if (xml.Eof()) then
+          break;
+        xml.ReadTag();
+
+        if ((xml.TagName = ZETag_style_table_properties) and (xml.TagType in [4, 5])) then
+        begin
+          s := xml.Attributes.ItemsByName[ZETag_tableooo_tab_color];
+          if (s > '') then
+          begin
+            ODFTableStyles[TableStyleCount].isColor := true;
+            ODFTableStyles[TableStyleCount].Color := HTMLHexToColor(s);
+          end;
+        end;
+
+      end; //while
+      inc(TableStyleCount);
+    end; //_ReadTableStyle
+
   begin
     _style := nil;
     try
@@ -5855,105 +5971,19 @@ var
           _stylename := xml.Attributes.ItemsByName[ZETag_Attr_StyleName];
 
           if (_stylefamily = 'table-column') then //столбец
-          begin
-            if (ColStyleCount >= MaxColStyleCount) then
-            begin
-              MaxColStyleCount := ColStyleCount + 20;
-              SetLength(ODFColumnStyles, MaxColStyleCount);
-            end;
-            ODFColumnStyles[ColStyleCount].name := '';
-            ODFColumnStyles[ColStyleCount].breaked := false;
-            ODFColumnStyles[ColStyleCount].width := 25;
-
-            while (not IfTag(ZETag_StyleStyle, 6)) do
-            begin
-              if (xml.Eof()) then
-                break;
-              xml.ReadTag();
-              if ((xml.TagName = 'style:table-column-properties') and (xml.TagType in [4, 5])) then
-              begin
-                ODFColumnStyles[ColStyleCount].name := _stylename;
-                s := xml.Attributes.ItemsByName['fo:break-before'];
-                if (s = 'column') then
-                  ODFColumnStyles[ColStyleCount].breaked := true;
-                s := xml.Attributes.ItemsByName['style:column-width'];
-                if (s > '') then
-                  ODFGetValueSizeMM(s, ODFColumnStyles[ColStyleCount].width);
-              end;
-            end; //while
-            inc(ColStyleCount);
-
-          end else
+            _ReadTableColumnStyle()
+          else
           if (_stylefamily = 'table-row') then //строка
-          begin
-            if (RowStyleCount >= MaxRowStyleCount) then
-            begin
-              MaxRowStyleCount := RowStyleCount + 20;
-              SetLength(ODFRowStyles, MaxRowStyleCount);
-            end;
-            ODFRowStyles[RowStyleCount].name := '';
-            ODFRowStyles[RowStyleCount].breaked := false;
-            ODFRowStyles[RowStyleCount].color := clBlack;
-            ODFRowStyles[RowStyleCount].height := 10;
-
-            while (not ifTag(ZETag_StyleStyle, 6)) do
-            begin
-              if (xml.Eof()) then
-                break;
-              xml.ReadTag();
-
-              if ((xml.TagName = 'style:table-row-properties') and (xml.TagType in [4, 5])) then
-              begin
-                ODFRowStyles[RowStyleCount].name := _stylename;
-                s := xml.Attributes.ItemsByName['fo:break-before'];
-                if (s = 'page') then
-                  ODFRowStyles[RowStyleCount].breaked := true;
-                s := xml.Attributes.ItemsByName['style:row-height'];
-                if (s > '') then
-                  ODFGetValueSizeMM(s, ODFRowStyles[RowStyleCount].height);
-                s := xml.Attributes.ItemsByName[ZETag_fo_background_color];
-               if (s > '') then
-                 ODFRowStyles[RowStyleCount].color := HTMLHexToColor(s);
-              end;
-            end; //while
-            inc(RowStyleCount);
-
-          end else
+            _ReadTableRowStyle()
+          else
           if (_stylefamily = 'table') then //таблица
-          begin
-            if (TableStyleCount >= MaxTableStyleCount) then
-            begin
-              MaxTableStyleCount := TableStyleCount + 20;
-              SetLength(ODFTableStyles, MaxTableStyleCount);
-            end;
-            ODFTableStyles[TableStyleCount].name := _stylename;
-            ODFTableStyles[TableStyleCount].isColor := false;
-            ODFTableStyles[TableStyleCount].MasterPageName := xml.Attributes.ItemsByName[ZETag_style_master_page_name];
-            while (not ifTag(ZETag_StyleStyle, 6)) do
-            begin
-              if (xml.Eof()) then
-                break;
-              xml.ReadTag();
-
-              if ((xml.TagName = ZETag_style_table_properties) and (xml.TagType in [4, 5])) then
-              begin
-                s := xml.Attributes.ItemsByName[ZETag_tableooo_tab_color];
-                if (s > '') then
-                begin
-                  ODFTableStyles[TableStyleCount].isColor := true;
-                  ODFTableStyles[TableStyleCount].Color := HTMLHexToColor(s);
-                end;
-              end;
-
-            end; //while
-            inc(TableStyleCount);
-          end else
+            _ReadTableStyle()
+          else
           if (_stylefamily = 'table-cell') then //ячейка
-          begin
             _ReadCellStyle();
-          end;
-
-        end;
+        end
+        else
+          ReadHelper.NumberStylesHelper.ReadKnownNumberFormat(xml);
       end; //while
     finally
       if (Assigned(_style)) then

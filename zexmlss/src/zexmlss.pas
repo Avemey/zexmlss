@@ -48,7 +48,7 @@ type
       const ZEAnsiString = ZEString deprecated {$IFDEF USE_DEPRECATED_STRING}'use ZEString'{$ENDIF}; // backward compatibility
 type
   //Стиль начертания линий рамки ячейки
-  TZBorderType = (ZENone, ZEContinuous, ZEDot, ZEDash, ZEDashDot, ZEDashDotDot,ZESlantDashDot, ZEDouble);
+  TZBorderType = (ZENone, ZEContinuous, ZEDot, ZEDash, ZEDashDot, ZEDashDotDot, ZESlantDashDot, ZEDouble);
 
   //Горизонтальное выравнивание
   TZHorizontalAlignment = (ZHAutomatic, ZHLeft, ZHCenter, ZHRight, ZHFill, ZHJustify, ZHCenterAcrossSelection, ZHDistributed, ZHJustifyDistributed);
