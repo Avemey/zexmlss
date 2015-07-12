@@ -110,6 +110,12 @@ type
     StyleType: byte;
   end;
 
+  TODSEmbeded_text_props = record
+    Txt: string;
+    NumberPosition: integer;
+  end;
+
+  //Reads and stores number formats for ODS
   TZEODSNumberFormatReader = class
   private
     FItems: array of array [0..1] of string;  //index 0 - format num
@@ -117,6 +123,11 @@ type
     FItemsOptions: array of TZODSNumberItemOptions;
     FCount: integer;
     FCountMax: integer;
+
+    FEmbededTextCount: integer;
+    FEmbededMaxCount: integer;
+    FEmbededTextArray: array of TODSEmbeded_text_props;
+    procedure AddEmbededText(const AText: string; ANumberPosition: integer);
   protected
     procedure AddItem();
     procedure ReadNumberFormatCommon(const xml: TZsspXMLReaderH;
@@ -133,7 +144,29 @@ type
     property Count: integer read FCount;
   end;
 
+  TZEODSNumberFormatWriterItem = record
+    StyleIndex: integer;
+    NumberFormatName: string;
+  end;
+
+  //Writes to ODS number formats and stores number formats names
+  TZEODSNumberFormatWriter = class
+  private
+    FItems: array of TZEODSNumberFormatWriterItem;
+    FCount: integer;
+    FCountMax: integer;
+    FCurrentNFIndex: integer;
+  protected
+  public
+    constructor Create(const AMaxCount: integer);
+    destructor Destroy();
+    function TryGetNumberFormatName(StyleID: integer; out NumberFormatName: string): boolean;
+    function TryWriteNumberFormat(const xml: TZsspXMLWriterH; StyleID: integer; ANumberFormat: string): boolean;
+    property Count: integer read FCount;
+  end;
+
 function GetXlsxNumberFormatType(const FormatStr: string): integer;
+function GetNativeNumberFormatType(const FormatStr: string): integer;
 function ConvertFormatNativeToXlsx(const FormatNative: string): string;
 function ConvertFormatXlsxToNative(const FormatXlsx: string): string;
 function TryXlsxTimeToDateTime(const XlsxDateTime: string; out retDateTime: TDateTime; is1904: boolean = false): boolean;
@@ -144,6 +177,9 @@ uses
   zesavecommon,
   StrUtils            {IfThen}
   ;
+
+const
+  ZE_NUMBER_FORMAT_DECIMAL_SEPARATOR    = '.';
 
 {
 
@@ -222,9 +258,9 @@ AM/PM, am/pm, A/P, a/p  Displays the hour using a 12-hour clock. Excel displays 
 //  const FormatStr: string - format ("YYYY.MM.DD" etc)
 //RETURN
 //      integer - 0 - unknown
-//                1 - number
-//                2 - datetime
-//                4 - string
+//                1 and 1 = 1 - number
+//                2 and 2 = 2 - datetime
+//                4 and 4 = 4 - string
 function GetXlsxNumberFormatType(const FormatStr: string): integer;
 var
   i, l: integer;
@@ -258,6 +294,12 @@ begin
         '0', '#', 'E', 'e', '%', '?':
           begin
             Result := ZE_NUMFORMAT_IS_NUMBER;
+
+            case (ch) of
+              'e', 'E': Result := Result or ZE_NUMFORMAT_NUM_IS_SCIENTIFIC;
+              '%': Result := Result or ZE_NUMFORMAT_NUM_IS_PERCENTAGE;
+            end;
+
             exit;
           end;
         '@':
@@ -273,6 +315,69 @@ begin
       end;
   end; //for i
 end; //GetXlsxNumberFormatType
+
+// Try to get native number format type by string (very simplistic)
+//INPUT
+//  const FormatStr: string - format ("YYYY.MM.DD" etc)
+//RETURN
+//      integer - 0 - unknown
+//                1 and 1 = 1 - number
+//                2 and 2 = 2 - datetime
+//                4 and 4 = 4 - string
+function GetNativeNumberFormatType(const FormatStr: string): integer;
+var
+  i, l: integer;
+  s: string;
+  ch, _prev: char;
+  _isQuote: boolean;
+
+begin
+  Result := ZE_NUMFORMAT_IS_UNKNOWN;
+
+  _isQuote := false;
+  _prev := #0;
+
+  s := '';
+  l := length(FormatStr);
+  for i := 1 to l do
+  begin
+    ch := FormatStr[i];
+
+    if (ch = '"') then
+      _isQuote := not _isQuote;
+
+    if (not _isQuote) then
+      case (ch) of
+        '0', '#', '%', '?':
+          begin
+            Result := ZE_NUMFORMAT_IS_NUMBER;
+            if (ch = '%') then
+              Result := Result or ZE_NUMFORMAT_NUM_IS_PERCENTAGE;
+
+            exit;
+          end;
+        'E', 'e':
+          begin
+            if ((_prev = '0') or (_prev = '#')) then
+              Result := ZE_NUMFORMAT_IS_NUMBER or ZE_NUMFORMAT_NUM_IS_SCIENTIFIC
+            else
+              Result := ZE_NUMFORMAT_IS_DATETIME;
+            exit;
+          end;
+        '@':
+          begin
+            Result := ZE_NUMFORMAT_IS_STRING;
+            exit;
+          end;
+        'H', 'h', 'S', 's', 'm', 'M', 'd', 'D', 'Y', 'y', ':', 'G', 'Q', 'R', 'W', 'N':
+          begin
+            Result := ZE_NUMFORMAT_IS_DATETIME;
+            exit;
+          end;
+      end;
+    _prev := ch;
+  end; //for i
+end; //GetNativeNumberFormatType
 
 function ConvertFormatNativeToXlsx(const FormatNative: string): string;
 begin
@@ -566,6 +671,21 @@ end; //TryXlsxTimeToDateTime
 
 ////::::::::::::: TZEODSNumberFormatReader :::::::::::::::::////
 
+procedure TZEODSNumberFormatReader.AddEmbededText(const AText: string;
+                                                  ANumberPosition: integer);
+begin
+  if (FEmbededTextCount >= FEmbededMaxCount) then
+  begin
+    inc(FEmbededMaxCount, 10);
+    SetLength(FEmbededTextArray, FEmbededMaxCount);
+  end;
+
+  FEmbededTextArray[FEmbededTextCount].Txt := AText;
+  FEmbededTextArray[FEmbededTextCount].NumberPosition := ANumberPosition;
+
+  inc(FEmbededTextCount);
+end;
+
 procedure TZEODSNumberFormatReader.AddItem();
 var
   i: integer;
@@ -592,8 +712,10 @@ var
 begin
   FCount := 0;
   FCountMax := 20;
+  FEmbededMaxCount := 10;
   SetLength(FItems, FCountMax);
   SetLength(FItemsOptions, FCountMax);
+  SetLength(FEmbededTextArray, FEmbededMaxCount);
   for i := 0 to FCountMax - 1 do
   begin
     FItemsOptions[i].isColor := false;
@@ -606,6 +728,7 @@ destructor TZEODSNumberFormatReader.Destroy();
 begin
   SetLength(FItems, 0);
   SetLength(FItemsOptions, 0);
+  SetLength(FEmbededTextArray, 0);
   inherited;
 end;
 
@@ -754,16 +877,19 @@ procedure TZEODSNumberFormatReader.ReadNumberFormatCommon(const xml: TZsspXMLRea
                                                           sub_number_type: integer);
 var
   num: integer;
-  s, _result: string;
+  s, _result, _txt: string;
   _decimalPlaces: integer;
   _min_int_digits: integer;
   _display_factor: integer;
   _number_grouping: boolean;
   _number_position: integer;
+  _is_number_decimal_replacement: boolean;
+  ch: char;
 
-  // <number:number>..</number:number>
-  procedure _ReadNumber_Number();
+  procedure _ReadNumber_NumberPrepare();
   begin
+    FEmbededTextCount := 0;
+
     s := xml.Attributes[ZETag_number_decimal_places];
     if (not TryStrToInt(s, _decimalPlaces)) then
       _decimalPlaces := 0;
@@ -786,34 +912,94 @@ var
     if (s <> '') then
       _number_grouping := ZEStrToBoolean(s);
 
-    if (xml.TagType = 4) then
+    _is_number_decimal_replacement := xml.Attributes.IsContainsAttribute(ZETag_number_decimal_replacement);
+  end; //_ReadNumber_NumberPrepare
+
+  procedure _ReadEmbededText();
+  begin
+    _number_position := -100;
+    while ((xml.TagType <> 6) or (xml.TagName <> ZETag_number_number)) do
     begin
-      _number_position := -100;
-      while ((xml.TagType <> 6) or (xml.TagName <> NumberFormatTag)) do
+      xml.ReadTag();
+
+      //<number:embedded-text number:position="1">..</number:embedded-text>
+      if (xml.TagName = ZETag_number_embedded_text) then
       begin
-        xml.ReadTag();
-
-        //<number:embedded-text number:position="1">..</number:embedded-text>
-        if (xml.TagName = ZETag_number_embedded_text) then
+        if (xml.TagType = 4) then
         begin
-          if (xml.TagType = 4) then
-          begin
-            s := xml.Attributes[ZETag_number_position];
-            if (not TryStrToInt(s, _number_position)) then
-              _number_position := -100;
-          end
-          else
-          if ((xml.TagType = 6) and (_number_position >= 0)) then
-          begin
+          s := xml.Attributes[ZETag_number_position];
+          if (not TryStrToInt(s, _number_position)) then
+            _number_position := -100;
+        end
+        else
+        if ((xml.TagType = 6) and (_number_position >= 0)) then
+          if (xml.TextBeforeTag <> '') then
+            AddEmbededText(ZEReplaceEntity(xml.TextBeforeTag), _number_position);
+      end;
 
-          end;
+      if (xml.Eof()) then
+        break;
+    end; //while
+  end; //_ReadEmbededText
+
+  // <number:number>..</number:number>
+  procedure _ReadNumber_Number();
+  var
+    i: integer;
+    _pos: integer;
+    _count: integer;        // count of "#" or "0" in number format
+    _totallen: integer;     // total length of string with number format
+    _currentpos: integer;   // current position for embeded text
+    _l: integer;            // length of current embeded text (include quotes)
+
+  begin
+    _ReadNumber_NumberPrepare();
+
+    if (xml.TagType = 4) then
+      _ReadEmbededText();
+
+    if (_is_number_decimal_replacement) then
+      ch := '#'
+    else
+      ch := '0';
+
+    if (FEmbededTextCount > 0) then
+    begin
+      s := '';
+      for i := 0 to _min_int_digits - 1 do
+        s := s + '0';
+
+      _count := _min_int_digits;
+      _totallen := _count;
+      _pos := 0;
+
+      for i := 0 to FEmbededTextCount - 1 do
+        if (FEmbededTextArray[i].NumberPosition >= 0) then
+        begin
+          _currentpos := FEmbededTextArray[i].NumberPosition;
+          _txt := '"' + ZEReplaceEntity(FEmbededTextArray[i].Txt) + '"';
+          _l := length(_txt);
+
+          inc(_totallen, _l);
         end;
 
-        if (xml.Eof()) then
-          break;
-      end; //while
+      _result := _result + s;
+    end
+    else
+    begin
+      if (_min_int_digits = 0) then
+        _result := _result + '#'
+      else
+        for i := 0 to _min_int_digits - 1 do
+          _result := _result + '0';
     end;
 
+    if (_decimalPlaces > 0) then
+    begin
+      _result := _result + ZE_NUMBER_FORMAT_DECIMAL_SEPARATOR;
+      for i := 0 to _decimalPlaces - 1 do
+        _result := _result + ch;
+    end;
 
     {
     The <number:number> element specifies the display formatting properties for a decimal number.
@@ -867,17 +1053,158 @@ begin
       break;
   end; //while
 
+  FItems[num][1] := _result;
+
   {
   <number:fraction> 16.27.6, <number:number> 16.27.3, <number:scientific-number> 16.27.5,
   <number:text> 16.27.26, <style:map> 16.3 and <style:text-properties> 16.27.28.
   }
 
-end;
+end; //ReadNumberFormatCommon
 
 function TZEODSNumberFormatReader.TryGetFormatStrByNum(const DataStyleName: string;
                                                        out retFormatStr: string): boolean;
+var
+  i: integer;
+
 begin
   Result := false;
+  for i := 0 to FCount - 1 do
+    if (FItems[i][0] = DataStyleName) then
+    begin
+      Result := true;
+      retFormatStr := FItems[i][1];
+      break;
+    end;
+end; //TryGetFormatStrByNum
+
+
+////::::::::::::: TZEODSNumberFormatWriter :::::::::::::::::////
+
+constructor TZEODSNumberFormatWriter.Create(const AMaxCount: integer);
+begin
+  FCount := 0;
+  FCountMax := AMaxCount;
+  if (FCountMax < 10) then
+    FCountMax := 10;
+  SetLength(FItems, FCountMax);
+  FCurrentNFIndex := 100;
 end;
+
+destructor TZEODSNumberFormatWriter.Destroy();
+begin
+  SetLength(FItems, 0);
+  inherited;
+end;
+
+//Try to find number format name for style num StyleID
+//INPUT
+//      StyleID: integer          - style ID
+//  out NumberFormatName: string  - finded number format name
+//RETURN
+//      boolean - true - number format finded
+function TZEODSNumberFormatWriter.TryGetNumberFormatName(StyleID: integer;
+                                                         out NumberFormatName: string): boolean;
+var
+  i: integer;
+
+begin
+  Result := false;
+  for i := 0 to FCount - 1 do
+    if (FItems[i].StyleIndex = StyleID) then
+    begin
+      NumberFormatName := FItems[i].NumberFormatName;
+      Result := true;
+      break;
+    end;
+end; //TryGetNumberFormatName
+
+//Try to write number format to xml
+//INPUT
+//  const xml: TZsspXMLWriterH  - xml
+//      StyleID: integer        - Style ID
+//      ANumberFormat: string   - number format
+//RETURN
+//      boolean - true - NumberFormat writed ok
+function TZEODSNumberFormatWriter.TryWriteNumberFormat(const xml: TZsspXMLWriterH;
+                                                       StyleID: integer;
+                                                       ANumberFormat: string): boolean;
+var
+  s: string;
+  _nfType: integer;
+  _nfName: string;
+
+  function _WriteCurrency(): boolean;
+  begin
+    Result := false;
+  end;
+
+  function _WritePercentage(): boolean;
+  begin
+    Result := false;
+  end;
+
+  function _WriteNumberNumber(): boolean;
+  begin
+    Result := false;
+  end;
+
+  function _WriteDateTime(): boolean;
+  begin
+    Result := false;
+  end;
+
+  function _WriteNumberStyle(): boolean;
+  begin
+    _nfName := '';
+    Result := false;
+
+    _nfType := GetNativeNumberFormatType(ANumberFormat);
+
+    case (_nfType and $FF) of
+      ZE_NUMFORMAT_IS_NUMBER:
+        begin
+          if (_nfType and ZE_NUMFORMAT_NUM_IS_CURRENCY = ZE_NUMFORMAT_NUM_IS_CURRENCY) then
+            Result := _WriteCurrency()
+          else
+          if (_nfType and ZE_NUMFORMAT_NUM_IS_PERCENTAGE = ZE_NUMFORMAT_NUM_IS_PERCENTAGE) then
+            Result := _WritePercentage()
+          else
+            Result := _WriteNumberNumber();
+        end;
+      ZE_NUMFORMAT_IS_DATETIME:
+        Result := _WriteDateTime();
+    end;
+  end; //_WriteNumberStyle
+
+begin
+  Result := false;
+  ANumberFormat := Trim(ANumberFormat);
+
+  if ((ANumberFormat = '@') or (ANumberFormat = '')) then
+    exit;
+
+  s := UpperCase(ANumberFormat);
+
+  if ((s = 'GENERAL') or (s = 'STANDART')) then
+    exit;
+
+  Result := _WriteNumberStyle();
+
+  if (Result) then
+  begin
+    if (FCount >= FCountMax) then
+    begin
+      inc(FCountMax, 10);
+      SetLength(FItems, FCountMax);
+    end;
+
+    FItems[FCount].StyleIndex := StyleID;
+    FItems[FCount].NumberFormatName := _nfName;
+
+    inc(FCount);
+    inc(FCurrentNFIndex);
+  end;
+end; //TryWriteNumberFormat
 
 end.

@@ -73,7 +73,7 @@ type
     destructor Destroy(); override;
     procedure Add(const AttrName: ansistring; const Value: ansistring; TestMatch: boolean = true); overload;
     procedure Add(const Attr: TZAttrArray; TestMatch: boolean = true); overload;
-    procedure Add(Att: array of TZAttrArray;  TestMatch: boolean {$IFDEF VER130} {$ELSE}= true {$ENDIF}); overload;
+    procedure Add(Att: array of TZAttrArray; TestMatch: boolean {$IFDEF VER130} {$ELSE}= true {$ENDIF}); overload;
     procedure Assign(Source: TPersistent); override;
     procedure Clear();
     procedure DeleteItem(Index: integer);
@@ -84,6 +84,7 @@ type
     function ToString(quote: ansichar): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
     function ToString(CheckEntity: boolean): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
     function ToString(): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload;  {$IFDEF Z_FPC_USE_TOSTRING} override; {$ELSE} virtual; {$ENDIF}
+    function IsContainsAttribute(const AttrName: ansistring; CaseSensitivity: boolean = true): boolean;
     property Count: integer read FCount;
     property Items[num: integer]: TZAttrArray read GetAttr write SetAttr;
     property ItemsByName[const Att: ansistring]: ansistring read GetAttrS write SetAttrS; default;
@@ -319,6 +320,7 @@ type
     function ToString(quote: char): string; reintroduce; overload; virtual;
     function ToString(CheckEntity: boolean): string; reintroduce; overload; virtual;
     function ToString(): string; overload; override;
+    function IsContainsAttribute(const AttrName: string; CaseSensitivity: boolean = true): boolean;
     property Count: integer read GetAttrCount;
     property Items[num: integer]: TZAttrArrayH read GetAttr write SetAttr;
     property ItemsByName[Att: string]: string read GetAttrS write SetAttrS; default;
@@ -1585,6 +1587,34 @@ end;
 function TZAttributes.ToString(): ansistring;
 begin
   result := ToString('"', true);
+end;
+
+function TZAttributes.IsContainsAttribute(const AttrName: ansistring; CaseSensitivity: boolean = true): boolean;
+var
+  i: integer;
+  s: string;
+
+begin
+  Result := false;
+  if (not CaseSensitivity) then
+    s := UpperCase(AttrName)
+  else
+    s := AttrName;
+
+  for i := 0 to FCount - 1 do
+  begin
+    if (CaseSensitivity) then
+    begin
+      if (FItems[i][1] = s) then
+        Result := true;
+    end
+    else
+      if (UpperCase(FItems[i][1]) = s) then
+        Result := true;
+
+    if (Result) then
+      break;
+  end;
 end;
 
 procedure TZAttributes.Assign(Source: TPersistent);
@@ -3448,6 +3478,11 @@ end;
 function TZAttributesH.ToString(): string;
 begin
   result := UTF8ToString(FAttributes.ToString());
+end;
+
+function TZAttributesH.IsContainsAttribute(const AttrName: string; CaseSensitivity: boolean = true): boolean;
+begin
+  Result := FAttributes.IsContainsAttribute(UTF8ToString(AttrName), CaseSensitivity);
 end;
 
 ////////////////////////////////////////////////////////////////////////////////
