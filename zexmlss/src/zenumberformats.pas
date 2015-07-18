@@ -98,9 +98,17 @@ const
   ZETag_number_position             = 'number:position';
   ZETag_number_min_exponent_digits  = 'number:min-exponent-digits';
 
+  ZETag_number_min_numerator_digits = 'number:min-numerator-digits';
+  ZETag_number_min_denominator_digits = 'number:min-denominator-digits';
+  ZETag_number_denominator_value    = 'number:denominator-value';
+
   ZETag_style_text_properties = 'style:text-properties';
+  ZETag_style_map             = 'style:map';
+  ZETag_fo_color              = 'fo:color';
 
   ZETag_Attr_StyleName        = 'style:name';
+  ZETag_style_condition       = 'style:condition';
+  ZETag_style_apply_style_name = 'style:apply-style-name';
   ZETag_long                  = 'long';
 
 type
@@ -113,6 +121,24 @@ type
   TODSEmbeded_text_props = record
     Txt: string;
     NumberPosition: integer;
+  end;
+
+  TODSNumberFormatMapItem = class
+  private
+    FCondition: string;
+    FisCondition: boolean;
+    FColorStr: string;
+    FisColor: boolean;
+    FNumberFormat: string;
+  protected
+  public
+    procedure Clear();
+
+    property Condition: string read FCondition write FCondition;
+    property isCondition: boolean read FisCondition write FisCondition;
+    property ColorStr: string read FColorStr write FColorStr;
+    property isColor: boolean read FisColor write FisColor;
+    property NumberFormat: string read FNumberFormat write FNumberFormat;
   end;
 
   //Reads and stores number formats for ODS
@@ -135,7 +161,7 @@ type
                                      sub_number_type: integer);
   public
     constructor Create();
-    destructor Destroy();
+    destructor Destroy(); override;
     procedure ReadKnownNumberFormat(const xml: TZsspXMLReaderH);
     procedure ReadDateFormat(const xml: TZsspXMLReaderH);
     procedure ReadNumberFormat(const xml: TZsspXMLReaderH);
@@ -147,6 +173,7 @@ type
   TZEODSNumberFormatWriterItem = record
     StyleIndex: integer;
     NumberFormatName: string;
+    NUmberFormat: string;
   end;
 
   //Writes to ODS number formats and stores number formats names
@@ -156,10 +183,14 @@ type
     FCount: integer;
     FCountMax: integer;
     FCurrentNFIndex: integer;
+
+    FNFItems: array of TODSNumberFormatMapItem;
+    FNFItemsCount: integer;
   protected
+    function TryAddNFItem(const NFStr: string): boolean;
   public
     constructor Create(const AMaxCount: integer);
-    destructor Destroy();
+    destructor Destroy(); override;
     function TryGetNumberFormatName(StyleID: integer; out NumberFormatName: string): boolean;
     function TryWriteNumberFormat(const xml: TZsspXMLWriterH; StyleID: integer; ANumberFormat: string): boolean;
     property Count: integer read FCount;
@@ -180,6 +211,22 @@ uses
 
 const
   ZE_NUMBER_FORMAT_DECIMAL_SEPARATOR    = '.';
+
+  ZE_MAX_NF_ITEMS_COUNT                 = 3;
+
+  ZE_MAP_CONDITIONAL_COLORS_COUNT       = 8;
+
+  ZE_MAP_CONDITIONAL_COLORS: array [0 .. ZE_MAP_CONDITIONAL_COLORS_COUNT - 1] of
+                         array [0..1] of string =
+                         (('#000000', 'BLACK'),
+                          ('#FFFFFF', 'WHITE'),
+                          ('#FF0000', 'RED'),
+                          ('#00FF00', 'GREEN'),
+                          ('#0000FF', 'BLUE'),
+                          ('', 'MAGENTA'),
+                          ('', 'CYAN'),
+                          ('', 'YELLOW')
+                         );
 
 {
 
@@ -253,6 +300,42 @@ AM/PM, am/pm, A/P, a/p  Displays the hour using a 12-hour clock. Excel displays 
 
 }
 
+//Return true if in string AStr after position AStartPos have one of symbols SymbolsArr
+//INPUT
+//      AStartPos: integer              - start position
+//      ALen: integer                   - string length
+//  const AStr: string                  - string
+//  const SymbolsArr: array of string   - searching symbols
+//RETURN
+//      boolean - true - one of symbols was found in string after AStartPos
+function IsHaveSymbolsAfterPos(AStartPos: integer; ALen: integer; const AStr: string; const SymbolsArr: array of string): boolean;
+var
+  i, j: integer;
+  _IsQuote: boolean;
+  ch: char;
+  _max, _min: integer;
+
+begin
+  Result := false;
+  _IsQuote := false;
+  _min := Low(SymbolsArr);
+  _max := High(SymbolsArr);
+  for i := AStartPos + 1 to Alen do
+  begin
+    ch := AStr[i];
+    if (ch = '"') then
+      _IsQuote := not _IsQuote;
+
+    if (not _IsQuote) then
+      for j := _min to _max do
+        if (ch = SymbolsArr[j]) then
+        begin
+          Result := true;
+          exit;
+        end;
+  end; //for i
+end; //IsHaveSymbolsAfterPos
+
 // Try to get xlsx number format type by string (very simplistic)
 //INPUT
 //  const FormatStr: string - format ("YYYY.MM.DD" etc)
@@ -267,9 +350,11 @@ var
   s: string;
   ch: char;
   _isQuote: boolean;
+  _isFraction: boolean;
 
 begin
   Result := ZE_NUMFORMAT_IS_UNKNOWN;
+  _isFraction := false;
 
   //General is not for dates
   if ((UpperCase(FormatStr) = 'GENERAL') or (FormatStr = '')) then
@@ -295,10 +380,14 @@ begin
           begin
             Result := ZE_NUMFORMAT_IS_NUMBER;
 
-            case (ch) of
-              'e', 'E': Result := Result or ZE_NUMFORMAT_NUM_IS_SCIENTIFIC;
-              '%': Result := Result or ZE_NUMFORMAT_NUM_IS_PERCENTAGE;
-            end;
+            if (IsHaveSymbolsAfterPos(i - 1, l, FormatStr, ['e', 'E'])) then
+              Result := Result or ZE_NUMFORMAT_NUM_IS_SCIENTIFIC
+            else
+            if (IsHaveSymbolsAfterPos(i - 1, l, FormatStr, ['%'])) then
+              Result := Result or ZE_NUMFORMAT_NUM_IS_PERCENTAGE
+            else
+            if (IsHaveSymbolsAfterPos(i - 1, l, FormatStr, ['/']) or _isFraction) then
+              Result := Result or ZE_NUMFORMAT_NUM_IS_FRACTION;
 
             exit;
           end;
@@ -307,6 +396,7 @@ begin
             Result := ZE_NUMFORMAT_IS_STRING;
             exit;
           end;
+        '/': _isFraction := true;
         'H', 'h', 'S', 's', 'm', 'M', 'd', 'D', 'Y', 'y', ':':
           begin
             Result := ZE_NUMFORMAT_IS_DATETIME;
@@ -351,8 +441,15 @@ begin
         '0', '#', '%', '?':
           begin
             Result := ZE_NUMFORMAT_IS_NUMBER;
-            if (ch = '%') then
-              Result := Result or ZE_NUMFORMAT_NUM_IS_PERCENTAGE;
+
+            if (IsHaveSymbolsAfterPos(i - 1, l, FormatStr, ['e', 'E'])) then
+              Result := Result or ZE_NUMFORMAT_NUM_IS_SCIENTIFIC
+            else
+            if (IsHaveSymbolsAfterPos(i - 1, l, FormatStr, ['%'])) then
+              Result := Result or ZE_NUMFORMAT_NUM_IS_PERCENTAGE
+            else
+            if (IsHaveSymbolsAfterPos(i - 1, l, FormatStr, ['/'])) then
+              Result := Result or ZE_NUMFORMAT_NUM_IS_FRACTION;
 
             exit;
           end;
@@ -668,6 +765,20 @@ begin
   end;
 end; //TryXlsxTimeToDateTime
 
+function TryGetMapColorName(AColor: string; out retColorName: string): boolean;
+var
+  i: integer;
+
+begin
+  Result := false;
+  for i := 0 to ZE_MAP_CONDITIONAL_COLORS_COUNT - 1 do
+    if (ZE_MAP_CONDITIONAL_COLORS[i][0] = AColor) then
+    begin
+      Result := true;
+      retColorName := ZE_MAP_CONDITIONAL_COLORS[i][1];
+      break;
+    end;
+end; //TryGetMapColor
 
 ////::::::::::::: TZEODSNumberFormatReader :::::::::::::::::////
 
@@ -877,7 +988,9 @@ procedure TZEODSNumberFormatReader.ReadNumberFormatCommon(const xml: TZsspXMLRea
                                                           sub_number_type: integer);
 var
   num: integer;
-  s, _result, _txt: string;
+  s, _result, _txt, _style_name: string;
+  _cond_text: string;
+  _cond: string;
   _decimalPlaces: integer;
   _min_int_digits: integer;
   _display_factor: integer;
@@ -886,17 +999,23 @@ var
   _is_number_decimal_replacement: boolean;
   ch: char;
 
+  _min_numerator_digits: integer;
+  _min_denominator_digits: integer;
+  _denominator_value: integer;
+
+  procedure _TryGetIntValue(const ATagName: string; out retIntValue: integer; const ADefValue: integer = 0);
+  begin
+    s := xml.Attributes[ATagName];
+    if (not TryStrToInt(s, retIntValue)) then
+      retIntValue := ADefValue;
+  end;
+
   procedure _ReadNumber_NumberPrepare();
   begin
     FEmbededTextCount := 0;
 
-    s := xml.Attributes[ZETag_number_decimal_places];
-    if (not TryStrToInt(s, _decimalPlaces)) then
-      _decimalPlaces := 0;
-
-    s := xml.Attributes[ZETag_number_min_integer_digits];
-    if (not TryStrToInt(s, _min_int_digits)) then
-      _min_int_digits := 0;
+    _TryGetIntValue(ZETag_number_decimal_places, _decimalPlaces);
+    _TryGetIntValue(ZETag_number_min_integer_digits, _min_int_digits);
 
     s := xml.Attributes[ZETag_number_display_factor];
     if (s <> '') then
@@ -926,11 +1045,7 @@ var
       if (xml.TagName = ZETag_number_embedded_text) then
       begin
         if (xml.TagType = 4) then
-        begin
-          s := xml.Attributes[ZETag_number_position];
-          if (not TryStrToInt(s, _number_position)) then
-            _number_position := -100;
-        end
+          _TryGetIntValue(ZETag_number_position, _number_position, -100)
         else
         if ((xml.TagType = 6) and (_number_position >= 0)) then
           if (xml.TextBeforeTag <> '') then
@@ -942,15 +1057,22 @@ var
     end; //while
   end; //_ReadEmbededText
 
+  function _GetRepeatedString(ACount: integer; const AStr: string): string;
+  var
+    i: integer;
+
+  begin
+    Result := '';
+    for i := 1 to ACount do
+      Result := Result + AStr;
+  end;
+
   // <number:number>..</number:number>
   procedure _ReadNumber_Number();
   var
-    i: integer;
+    i, j: integer;
     _pos: integer;
-    _count: integer;        // count of "#" or "0" in number format
-    _totallen: integer;     // total length of string with number format
     _currentpos: integer;   // current position for embeded text
-    _l: integer;            // length of current embeded text (include quotes)
 
   begin
     _ReadNumber_NumberPrepare();
@@ -958,19 +1080,9 @@ var
     if (xml.TagType = 4) then
       _ReadEmbededText();
 
-    if (_is_number_decimal_replacement) then
-      ch := '#'
-    else
-      ch := '0';
-
     if (FEmbededTextCount > 0) then
     begin
       s := '';
-      for i := 0 to _min_int_digits - 1 do
-        s := s + '0';
-
-      _count := _min_int_digits;
-      _totallen := _count;
       _pos := 0;
 
       for i := 0 to FEmbededTextCount - 1 do
@@ -978,9 +1090,16 @@ var
         begin
           _currentpos := FEmbededTextArray[i].NumberPosition;
           _txt := '"' + ZEReplaceEntity(FEmbededTextArray[i].Txt) + '"';
-          _l := length(_txt);
 
-          inc(_totallen, _l);
+          if (_currentpos <= _min_int_digits) then
+            ch := '0'
+          else
+            ch := '#';
+
+          for j := _pos to _currentpos - 1 do
+            s := s + ch;
+          s := s + _txt;
+          _pos := _currentpos;
         end;
 
       _result := _result + s;
@@ -996,35 +1115,108 @@ var
 
     if (_decimalPlaces > 0) then
     begin
+      if (_is_number_decimal_replacement) then
+        ch := '#'
+      else
+        ch := '0';
+
       _result := _result + ZE_NUMBER_FORMAT_DECIMAL_SEPARATOR;
       for i := 0 to _decimalPlaces - 1 do
         _result := _result + ch;
     end;
-
-    {
-    The <number:number> element specifies the display formatting properties for a decimal number.
-
-The <number:number> element has the following attributes:
-number:decimal-places
-number:decimal-replacement
-number:display-factor
-number:grouping
-number:min-integer-digits
-
-The <number:number> element has the following child element:
-number:embedded-text
-
-  ZETag_number_fraction       = 'number:fraction';
-  ZETag_number_scientific_number = 'number:scientific-number';
-  ZETag_number_embedded_text  = 'number:embedded-text';
-  ZETag_number_number         = 'number:number';
-  ZETag_number_decimal_places = 'number:decimal-places';
-  ZETag_number_decimal_replacement = 'number:decimal-replacement';
-  ZETag_number_display_factor = 'number:display-factor';
-  ZETag_number_grouping       = 'number:grouping';
-  ZETag_number_min_integer_digits = 'number:min-integer-digits';
-    }
   end; //_ReadNumber_Number
+
+  // <number:fraction />
+  procedure _ReadNumber_Fraction();
+  begin
+    _ReadNumber_NumberPrepare();
+
+    _TryGetIntValue(ZETag_number_min_numerator_digits, _min_numerator_digits);
+    _TryGetIntValue(ZETag_number_min_denominator_digits, _min_denominator_digits);
+    //TODO: do not forget about denominator_value!
+    _TryGetIntValue(ZETag_number_denominator_value, _denominator_value);
+
+    if (_min_int_digits <= 0) then
+      s := '#'
+    else
+      s := _GetRepeatedString(_min_int_digits, '0');
+
+    _result := _result + s;
+
+    if ((_min_numerator_digits > 0) and (_min_denominator_digits > 0)) then
+      _result := _result + ' ' +
+                _GetRepeatedString(_min_numerator_digits, '?') +
+                '/' +
+                _GetRepeatedString(_min_denominator_digits, '?');
+
+    FItemsOptions[num].StyleType := FItemsOptions[num].StyleType or ZE_NUMFORMAT_NUM_IS_FRACTION;
+  end; //_ReadNumber_Fraction
+
+  // <number:scientific-number .. />
+  procedure _ReadNumber_Scientific();
+  var
+    _min_exponent_digits: integer;
+
+  begin
+    _ReadNumber_NumberPrepare();
+
+    _TryGetIntValue(ZETag_number_min_exponent_digits, _min_exponent_digits);
+
+    if (_min_exponent_digits > 0) then
+    begin
+      _result := _result + _GetRepeatedString(_min_int_digits, '0') +
+                ZE_NUMBER_FORMAT_DECIMAL_SEPARATOR +
+                _GetRepeatedString(_decimalPlaces, '0') +
+                'E+' +
+                _GetRepeatedString(_min_exponent_digits, '0');
+
+      FItemsOptions[num].StyleType := FItemsOptions[num].StyleType or ZE_NUMFORMAT_NUM_IS_SCIENTIFIC;
+    end;
+  end; //_ReadNumber_Scientific
+
+  // <style:map />
+  procedure _ReadStyleMap();
+  var
+    i: integer;
+
+  begin
+    _cond := ZEReplaceEntity(xml.Attributes[ZETag_style_condition]);
+    if (_cond <> '') then
+    begin
+      i := pos('value()', _cond);
+      if (i = 1) then
+        delete(_cond, 1, 7)
+      else
+        exit;
+
+      if (_cond <> '') then
+      begin
+        _style_name := xml.Attributes[ZETag_style_apply_style_name];
+        for i := 0 to FCount - 1 do
+          if (FItems[i][0] = _style_name) then
+          begin
+            _txt := FItems[i][1];
+
+            _cond_text := _cond_text + '[' + _cond + ']' + _txt + ';';
+
+            break;
+          end;
+      end; //if
+    end; //if
+  end; //_ReadStyleMap
+
+  // <style:text-properties .. /> (color by condition)
+  procedure _ReadStyleTextProperties();
+  begin
+    //for now only colors
+    s := UpperCase(xml.Attributes[ZETag_fo_color]);
+    if (TryGetMapColorName(s, _txt)) then
+    begin
+      FItemsOptions[num].isColor := true;
+      FItemsOptions[num].ColorStr := _txt;
+      _result := _result + '[' + _txt + ']';
+    end;
+  end; //_ReadStyleTextProperties
 
 begin
   num := FCount;
@@ -1032,6 +1224,8 @@ begin
   FItems[num][0] := xml.Attributes[ZETag_Attr_StyleName];
   FItemsOptions[num].StyleType := ZE_NUMFORMAT_IS_NUMBER or sub_number_type;
   _result := '';
+  _cond_text := '';
+
   while ((xml.TagType <> 6) or (xml.TagName <> NumberFormatTag)) do
   begin
     xml.ReadTag();
@@ -1039,27 +1233,27 @@ begin
     if (xml.TagName = ZETag_number_number) then
       _ReadNumber_Number()
     else
+    if (xml.TagName = ZETag_number_fraction) then
+      _ReadNumber_Fraction()
+    else
+    if (xml.TagName = ZETag_number_scientific_number) then
+      _ReadNumber_Scientific()
+    else
     if ((xml.TagName = ZETag_number_text) and (xml.TagType = 6)) then
-      _result := _result + '"' + ZEReplaceEntity(xml.TextBeforeTag) + '"';
-
-    {
-    ZETag_number_fraction       = 'number:fraction';
-    ZETag_number_scientific_number = 'number:scientific-number';
-    ZETag_number_embedded_text  = 'number:embedded-text';
-    ZETag_number_number         = 'number:number';
-    }
+      _result := _result + '"' + ZEReplaceEntity(xml.TextBeforeTag) + '"'
+    else
+    if (xml.TagName = ZETag_style_map) then
+      _ReadStyleMap()
+    else
+    if (xml.TagName = ZETag_style_text_properties) then
+      _ReadStyleTextProperties();
 
     if (xml.Eof()) then
       break;
   end; //while
 
-  FItems[num][1] := _result;
-
-  {
-  <number:fraction> 16.27.6, <number:number> 16.27.3, <number:scientific-number> 16.27.5,
-  <number:text> 16.27.26, <style:map> 16.3 and <style:text-properties> 16.27.28.
-  }
-
+  //first - map number styles, after - current readed number format
+  FItems[num][1] := _cond_text + _result;
 end; //ReadNumberFormatCommon
 
 function TZEODSNumberFormatReader.TryGetFormatStrByNum(const DataStyleName: string;
@@ -1082,6 +1276,9 @@ end; //TryGetFormatStrByNum
 ////::::::::::::: TZEODSNumberFormatWriter :::::::::::::::::////
 
 constructor TZEODSNumberFormatWriter.Create(const AMaxCount: integer);
+var
+  i: integer;
+
 begin
   FCount := 0;
   FCountMax := AMaxCount;
@@ -1089,11 +1286,23 @@ begin
     FCountMax := 10;
   SetLength(FItems, FCountMax);
   FCurrentNFIndex := 100;
+
+  FNFItemsCount := 0;
+  SetLength(FNFItems, ZE_MAX_NF_ITEMS_COUNT);
+  for i := 0 to ZE_MAX_NF_ITEMS_COUNT - 1 do
+    FNFItems[i] := TODSNumberFormatMapItem.Create();
 end;
 
 destructor TZEODSNumberFormatWriter.Destroy();
+var
+  i: integer;
+
 begin
   SetLength(FItems, 0);
+  for i := 0 to ZE_MAX_NF_ITEMS_COUNT - 1 do
+    FreeAndNil(FNFItems[i]);
+  SetLength(FNFItems, 0);
+
   inherited;
 end;
 
@@ -1119,20 +1328,29 @@ begin
     end;
 end; //TryGetNumberFormatName
 
+function TZEODSNumberFormatWriter.TryAddNFItem(const NFStr: string): boolean;
+begin
+  Result := false;
+
+end;
+
 //Try to write number format to xml
 //INPUT
 //  const xml: TZsspXMLWriterH  - xml
 //      StyleID: integer        - Style ID
 //      ANumberFormat: string   - number format
 //RETURN
-//      boolean - true - NumberFormat writed ok
+//      boolean - true - NumberFormat was written ok
 function TZEODSNumberFormatWriter.TryWriteNumberFormat(const xml: TZsspXMLWriterH;
                                                        StyleID: integer;
                                                        ANumberFormat: string): boolean;
 var
   s: string;
+  _tmp: string;
   _nfType: integer;
   _nfName: string;
+  l: integer;
+  ch: char;
 
   function _WriteCurrency(): boolean;
   begin
@@ -1145,9 +1363,51 @@ var
   end;
 
   function _WriteNumberNumber(): boolean;
+  var
+    i: integer;
+    b: boolean;
+
   begin
+    //  NumberFormat = "part1;part2;part3"
+    //    part1 - for numbers > 0 (or for condition1)
+    //    part2 - for numbers < 0 (or for condition2)
+    //    part3 - for 0 (or for other numbers if used condition1 and condition2)
+    //  partX = [condition][color]number_format
+
+    b := true;
     Result := false;
-  end;
+    s := '';
+
+    _tmp := ANumberFormat;
+
+    l := length(ANumberFormat);
+
+    for i := 1 to l do
+    begin
+      ch := ANumberFormat[i];
+
+      if (ch = '"') then
+        b := not b;
+
+      if (b) then
+      begin
+        if (ch = ';') then
+        begin
+          TryAddNFItem(s);
+          s := '';
+        end
+        else
+          s := s +ch;
+      end
+      else
+        s := s + ch;
+    end; //for i
+
+    if (s <> '') then
+      TryAddNFItem(s);
+
+
+  end; //_WriteNumberNumber
 
   function _WriteDateTime(): boolean;
   begin
@@ -1177,6 +1437,37 @@ var
     end;
   end; //_WriteNumberStyle
 
+  procedure _AddItem(const NFName: string);
+  begin
+    if (FCount >= FCountMax) then
+    begin
+      inc(FCountMax, 10);
+      SetLength(FItems, FCountMax);
+    end;
+
+    FItems[FCount].StyleIndex := StyleID;
+    FItems[FCount].NumberFormatName := NFName;
+    FItems[FCount].NUmberFormat := ANumberFormat;
+
+    inc(FCount);
+  end;
+
+  function _CheckIsDuplicate(): boolean;
+  var
+    i: integer;
+
+  begin
+    Result := false;
+    for i := 0 to FCount - 1 do
+      if (FItems[i].NUmberFormat = ANumberFormat) then
+      begin
+        _AddItem(FItems[i].NumberFormatName);
+        Result := true;
+        break;
+      end;
+  end; //_CheckIsDuplicate
+
+
 begin
   Result := false;
   ANumberFormat := Trim(ANumberFormat);
@@ -1189,22 +1480,30 @@ begin
   if ((s = 'GENERAL') or (s = 'STANDART')) then
     exit;
 
-  Result := _WriteNumberStyle();
-
-  if (Result) then
+  if (_CheckIsDuplicate()) then
+    Result := true
+  else
   begin
-    if (FCount >= FCountMax) then
+    Result := _WriteNumberStyle();
+
+    if (Result) then
     begin
-      inc(FCountMax, 10);
-      SetLength(FItems, FCountMax);
+      _AddItem(_nfName);
+      inc(FCurrentNFIndex);
     end;
-
-    FItems[FCount].StyleIndex := StyleID;
-    FItems[FCount].NumberFormatName := _nfName;
-
-    inc(FCount);
-    inc(FCurrentNFIndex);
   end;
 end; //TryWriteNumberFormat
+
+
+////::::::::::::: TODSNumberFormatMapItem :::::::::::::::::////
+
+procedure TODSNumberFormatMapItem.Clear();
+begin
+  FCondition := '';
+  FisCondition := false;
+  FColorStr := '';
+  FisColor := false;
+  FNumberFormat := '';
+end; //Clear
 
 end.

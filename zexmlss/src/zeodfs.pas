@@ -1017,10 +1017,10 @@ var
         for j := 0 to CFMapsCount - 1 do
         begin
           xml.Attributes.Clear();
-          xml.Attributes.Add('style:condition', CFMaps[j][0]);
-          xml.Attributes.Add('style:apply-style-name', CFMaps[j][1]);
+          xml.Attributes.Add(ZETag_style_condition, CFMaps[j][0]);
+          xml.Attributes.Add(ZETag_style_apply_style_name, CFMaps[j][1]);
           xml.Attributes.Add('style:base-cell-address', CFMaps[j][2]);
-          xml.WriteEmptyTag('style:map', true, true);
+          xml.WriteEmptyTag(ZETag_style_map, true, true);
         end;
 
         xml.WriteEndTagNode(); //style:style
@@ -3999,7 +3999,7 @@ begin
 
   //צגוע רנטפעא
   if ((ProcessedFont.Color <> XMLSS.Styles.DefaultStyle.Font.Color) or (isDefaultStyle)) then
-    _xml.Attributes.Add('fo:color', '#' + ColorToHTMLHex(ProcessedFont.Color), false);
+    _xml.Attributes.Add(ZETag_fo_color, '#' + ColorToHTMLHex(ProcessedFont.Color), false);
 
   if (fsItalic in ProcessedFont.Style) then
   begin
@@ -5630,19 +5630,19 @@ begin
           _style.Font.Style := _style.Font.Style + [fsItalic];
 
       //צגוע fo:color
-      s := xml.Attributes.ItemsByName['fo:color'];
+      s := xml.Attributes.ItemsByName[ZETag_fo_color];
       if (s > '') then
         _style.Font.Color := HTMLHexToColor(s);
     end; //if
 
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-    if ((xml.TagType = 5) and (xml.TagName = 'style:map')) then
+    if ((xml.TagType = 5) and (xml.TagName = ZETag_style_map)) then
     begin
       t := StyleProperties.ConditionsCount;
       inc(StyleProperties.ConditionsCount);
       SetLength(StyleProperties.Conditions, StyleProperties.ConditionsCount);
-      StyleProperties.Conditions[t].ConditionValue := xml.Attributes['style:condition'];
-      StyleProperties.Conditions[t].ApplyStyleName := xml.Attributes['style:apply-style-name'];
+      StyleProperties.Conditions[t].ConditionValue := xml.Attributes[ZETag_style_condition];
+      StyleProperties.Conditions[t].ApplyStyleName := xml.Attributes[ZETag_style_apply_style_name];
       StyleProperties.Conditions[t].ApplyBaseCellAddres := xml.Attributes['style:base-cell-address'];
       StyleProperties.Conditions[t].ApplyStyleIDX := -1;
     end;
