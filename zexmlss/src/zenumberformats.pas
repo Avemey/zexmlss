@@ -133,6 +133,7 @@ type
   protected
   public
     procedure Clear();
+    function TryToParse(const FNStr: string): boolean;
 
     property Condition: string read FCondition write FCondition;
     property isCondition: boolean read FisCondition write FisCondition;
@@ -186,8 +187,10 @@ type
 
     FNFItems: array of TODSNumberFormatMapItem;
     FNFItemsCount: integer;
+
   protected
     function TryAddNFItem(const NFStr: string): boolean;
+    function SeparateNFItems(const NFStr: string): integer;
   public
     constructor Create(const AMaxCount: integer);
     destructor Destroy(); override;
@@ -223,10 +226,19 @@ const
                           ('#FF0000', 'RED'),
                           ('#00FF00', 'GREEN'),
                           ('#0000FF', 'BLUE'),
-                          ('', 'MAGENTA'),
-                          ('', 'CYAN'),
-                          ('', 'YELLOW')
+                          ('#FF00FF', 'MAGENTA'),
+                          ('#00FFFF', 'CYAN'),
+                          ('#FFFF00', 'YELLOW')
                          );
+
+  ZE_VALID_CONDITIONS_STR: array [0..4] of string =
+                        (
+                          '>',
+                          '<',
+                          '>=',
+                          '<=',
+                          '='
+                        );
 
 {
 
@@ -780,6 +792,106 @@ begin
     end;
 end; //TryGetMapColor
 
+function TryGetMapColorColor(AColorName: string; out retColor: string): boolean;
+var
+  i: integer;
+
+begin
+  Result := false;
+  for i := 0 to ZE_MAP_CONDITIONAL_COLORS_COUNT - 1 do
+    if (ZE_MAP_CONDITIONAL_COLORS[i][1] = AColorName) then
+    begin
+      Result := true;
+      retColor := ZE_MAP_CONDITIONAL_COLORS[i][1];
+      break;
+    end;
+end; //TryGetMapColorColor
+
+function TryGetMapCondition(AConditionStr: string; out retODSCondution: string): boolean;
+var
+  i: integer;
+  s: string;
+  a: array [0..3] of string;
+  kol: integer;
+  ch: char;
+  _isNumber: boolean;
+  _isCond: boolean;
+
+  procedure _AddItem();
+  begin
+    if (kol < 3) then
+    begin
+      a[kol] := s;
+      s := '';
+      inc(kol);
+    end;
+  end; //_AddItem
+
+  procedure _ProcessSymbol(var isPrevTypeSymbol: boolean; var newTypeSymbol: boolean);
+  begin
+    if (isPrevTypeSymbol and (s <> '')) then
+      _AddItem();
+
+    s := s + ch;
+
+    isPrevTypeSymbol := false;
+    newTypeSymbol := true;
+  end; //_ProcessSymbol
+
+  function _CheckCondition(): boolean;
+  var
+    i: integer;
+    d: double;
+
+  begin
+    Result := false;
+    for i := Low(ZE_VALID_CONDITIONS_STR) to High(ZE_VALID_CONDITIONS_STR) do
+      if (a[0] = ZE_VALID_CONDITIONS_STR[i]) then
+      begin
+        Result := true;
+        break;
+      end;
+
+    if (Result) then
+      Result := ZEIsTryStrToFloat(a[1], d);
+
+    if (Result) then
+      retODSCondution := 'value()' + a[0] + a[1];
+  end; //_CheckCondition
+
+begin
+  Result := false;
+  retODSCondution := '';
+
+  kol := 0;
+
+  _isNumber := false;
+  _isCond := false;
+
+  for i := 1 to length(AConditionStr) do
+  begin
+    ch := AConditionStr[i];
+    case (ch) of
+      '0'..'9', '.', ',':
+        begin
+          if (ch = ',') then
+            ch := '.';
+          _ProcessSymbol(_isCond, _isNumber);
+        end;
+      '>', '<', '=':  _ProcessSymbol(_isNumber, _isCond);
+      ' ':
+        if (s <> '') then
+           _AddItem();
+    end;
+  end; //for i
+
+  if (s <> '') then
+    _AddItem();
+
+  if (kol >= 2) then
+    Result := _CheckCondition();
+end; //TryGetMapCondition
+
 ////::::::::::::: TZEODSNumberFormatReader :::::::::::::::::////
 
 procedure TZEODSNumberFormatReader.AddEmbededText(const AText: string;
@@ -1328,11 +1440,73 @@ begin
     end;
 end; //TryGetNumberFormatName
 
+//Separate number format string  by ";".
+//INPUT
+//  const NFStr: string - Number format string (like "nf1;nf2;nf3")
+//RETURN
+//      integer - count of number format items
+function TZEODSNumberFormatWriter.SeparateNFItems(const NFStr: string): integer;
+var
+  i, l: integer;
+  b: boolean;
+  s: string;
+  _tmp: string;
+  ch: char;
+
+begin
+  b := true;
+  s := '';
+
+  _tmp := NFStr;
+
+  l := length(NFStr);
+
+  for i := 1 to l do
+  begin
+    ch := NFStr[i];
+
+    if (ch = '"') then
+      b := not b;
+
+    if (b) then
+    begin
+      if (ch = ';') then
+      begin
+        TryAddNFItem(s);
+        s := '';
+      end
+      else
+        s := s +ch;
+    end
+    else
+      s := s + ch;
+  end; //for i
+
+  if (s <> '') then
+    TryAddNFItem(s);
+
+  Result := FNFItemsCount;
+end; //PrepareNFItems
+
+//Try to add NumberFormat item (from string "NF1;NF2;NF3")
+//Checks:
+//  1. Count of NF items (max = 3)
+//  2. is NF item valid
+//INPUT
+//  const NFStr: string - NF item
+//RETURN
+//      boolean - true - item added
 function TZEODSNumberFormatWriter.TryAddNFItem(const NFStr: string): boolean;
 begin
   Result := false;
 
-end;
+  if (FNFItemsCount < ZE_MAX_NF_ITEMS_COUNT) then
+  begin
+    Result := FNFItems[FNFItemsCount].TryToParse(NFStr);
+    if (Result) then
+      inc(FNFItemsCount);
+  end;
+end; //TryAddNFItem
 
 //Try to write number format to xml
 //INPUT
@@ -1350,7 +1524,6 @@ var
   _nfType: integer;
   _nfName: string;
   l: integer;
-  ch: char;
 
   function _WriteCurrency(): boolean;
   begin
@@ -1364,47 +1537,17 @@ var
 
   function _WriteNumberNumber(): boolean;
   var
-    i: integer;
     b: boolean;
 
   begin
+    Result := false;
     //  NumberFormat = "part1;part2;part3"
     //    part1 - for numbers > 0 (or for condition1)
     //    part2 - for numbers < 0 (or for condition2)
     //    part3 - for 0 (or for other numbers if used condition1 and condition2)
     //  partX = [condition][color]number_format
 
-    b := true;
-    Result := false;
-    s := '';
-
-    _tmp := ANumberFormat;
-
-    l := length(ANumberFormat);
-
-    for i := 1 to l do
-    begin
-      ch := ANumberFormat[i];
-
-      if (ch = '"') then
-        b := not b;
-
-      if (b) then
-      begin
-        if (ch = ';') then
-        begin
-          TryAddNFItem(s);
-          s := '';
-        end
-        else
-          s := s +ch;
-      end
-      else
-        s := s + ch;
-    end; //for i
-
-    if (s <> '') then
-      TryAddNFItem(s);
+    if (SeparateNFItems(ANumberFormat) > 0) then
 
 
   end; //_WriteNumberNumber
@@ -1416,6 +1559,7 @@ var
 
   function _WriteNumberStyle(): boolean;
   begin
+    FNFItemsCount := 0;
     _nfName := '';
     Result := false;
 
@@ -1505,5 +1649,127 @@ begin
   FisColor := false;
   FNumberFormat := '';
 end; //Clear
+
+function TODSNumberFormatMapItem.TryToParse(const FNStr: string): boolean;
+var
+  s: string;
+  i: integer;
+  _isQuote: boolean;
+  _isBracket: boolean;
+  ch: char;  
+  _isError: boolean;
+  _raw: string; //raw string without brackets
+  _tmp: string;
+
+  procedure _ProcessOpenBracket();
+  begin
+    if (_isBracket) then
+      _isError := true
+    else
+    begin  
+      _raw := _raw + s;
+      s := '';
+      _isBracket := true;
+    end;  
+  end; //_ProcessOpenBracket
+  
+  procedure _ProcessCloseBracket();
+  begin
+    if (_isBracket) then
+    begin
+      //is it color?
+      if (TryGetMapColorColor(Trim(UpperCase(s)), _tmp)) then
+      begin
+        FisColor := true;
+        FColorStr :=  _tmp;      
+      end
+      else
+      //is it condition?
+      if (TryGetMapCondition(s, _tmp)) then
+      begin
+        FisCondition := true;
+        FCondition := _tmp;
+      end;
+
+      //TODO: need add:
+      //    calendar:
+      //            [~buddhist]
+      //            [~gengou]
+      //            [~gregorian])
+      //            [~hanja] [~hanja_yoil]
+      //            [~hijri]
+      //            [~jewish]
+      //            [~ROC]
+      //    NatNumX / DBNumX transliteration
+      //    currency
+      
+      _isBracket := true;
+      s := '';
+    end
+    else
+      _isError := true  
+  end; //_ProcessCloseBracket
+  
+  procedure _ProcessQuote();
+  begin            
+    if (not _isBracket) then
+      _isQuote := not _isQuote;
+  end; //_ProcessQuote
+
+  function _FinalCheck(): boolean;
+  begin
+    Result := true;
+
+    if (not _isQuote) then
+    begin
+      _raw := _raw + s;
+      s := '';
+    end;
+    
+    if (_isQuote and (not _isError) and (s <> '')) then
+    begin
+      _raw := _raw + s + '"';
+      s := '';
+      _ProcessQuote();
+    end;
+
+    //TODO: add checking for valid NF here
+    
+  end; //_FinalCheck
+  
+begin
+  Result := false;
+  Clear();
+  _raw := '';
+
+  _isError := false;
+  _isQuote := false;
+  _isBracket := false;
+  s := '';
+
+  for i := 1 to length(FNStr) do
+  begin  
+    ch := FNStr[i];
+
+    if (ch = '"') then
+      _ProcessQuote();
+    
+    if (_isQuote) then
+      s := s + ch
+    else  
+      case (ch) of
+        '[': _ProcessOpenBracket();
+        ']': _ProcessCloseBracket();
+        else
+          s := s + ch;
+      end; //case
+  end; //for i
+
+  if (_FinalCheck()) then    
+    Result := not (_isError or _isQuote or _isBracket or (_raw = ''));  
+
+  if (Result) then
+    FNumberFormat := _raw;
+end; //TryToParse
 
 end.
