@@ -490,6 +490,7 @@ end; //GetNativeNumberFormatType
 
 function ConvertFormatNativeToXlsx(const FormatNative: string): string;
 begin
+  //TODO:
   Result := FormatNative;
 end; //ConvertFormatNativeToXlsx
 

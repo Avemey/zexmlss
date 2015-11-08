@@ -5,9 +5,9 @@
 // Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
 // e-mail: avemey(мяу)tut(точка)by
 // URL:    http://avemey.com
-// Ver:    0.0.8
+// Ver:    0.0.9
 // Лицензия: zlib
-// Last update: 2015.01.24
+// Last update: 2015.11.08
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -109,11 +109,14 @@ function SplitString(const buffer: string; const delimeter: char): TStringDynArr
 {$IfDef DELPHI_UNICODE} overload; {$EndIf}
 
 implementation
+uses
+  zenumberformats  //ConvertFormatNativeToXlsx / ConvertFormatXlsxToNative
 {$IfDef DELPHI_UNICODE}
-uses  StrUtils,  // stock SplitString(string, string) implementation
-      AnsiStrings;  // AnsiString targeted overloaded versions of Pos, Trim, etc
+  ,
+  StrUtils,  // stock SplitString(string, string) implementation
+  AnsiStrings  // AnsiString targeted overloaded versions of Pos, Trim, etc
 {$EndIf}
-
+  ;
 
 function SplitString(const buffer: string; const delimeter: char): TStringDynArray;
 {$IfDef DELPHI_UNICODE}
@@ -1410,10 +1413,10 @@ var
       if Attributes.Count > 0 then
         WriteEmptyTag('Interior', true, true);
       //=====NumberFormat======
-      if (XMLSS.Styles.DefaultStyle.NumberFormat > '') then
+      if (_style.NumberFormat <> '') then
       begin
         Attributes.Clear();
-        AddAttribute('ss:Format', _style.NumberFormat, 'General', XMLSS.Styles.DefaultStyle.NumberFormat, _def);
+        AddAttribute('ss:Format', _style.NumberFormat, 'General', ConvertFormatNativeToXlsx(XMLSS.Styles.DefaultStyle.NumberFormat), _def);
         if Attributes.Count > 0 then
           WriteEmptyTag('NumberFormat', true, true);
       end;
@@ -2168,7 +2171,7 @@ var
         end else
         //NumberFormat
         if _xml.TagName = 'NumberFormat' then
-          NumberFormat := _xml.Attributes.ItemsByName['ss:Format']
+          NumberFormat := ConvertFormatXlsxToNative(_xml.Attributes.ItemsByName['ss:Format'])
         else
         //Protection
         if _xml.TagName = 'Protection' then
