@@ -1349,6 +1349,7 @@ procedure TZEXLSXWriteHelper.AddSheetHyperlink(PageNum: integer);
 begin
   SetLength(FSheetHyperlinksArray, FSheetHyperlinksCount + 1);
   FSheetHyperlinksArray[FSheetHyperlinksCount] := PageNum;
+  inc(FSheetHyperlinksCount);
 end;
 
 function TZEXLSXWriteHelper.IsSheetHaveHyperlinks(PageNum: integer): boolean;
