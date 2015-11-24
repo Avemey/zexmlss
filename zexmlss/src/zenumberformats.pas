@@ -5,7 +5,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2015.06.06
+// Last update: 2015.11.21
 //----------------------------------------------------------------
 {
  Copyright (C) 2015 Ruslan Neborak
@@ -30,6 +30,7 @@
     distribution.
 }
 //****************************************************************
+//Sorry for my english.
 unit zenumberformats;
 
 {$I zexml.inc}
@@ -110,6 +111,7 @@ const
   ZETag_style_condition       = 'style:condition';
   ZETag_style_apply_style_name = 'style:apply-style-name';
   ZETag_long                  = 'long';
+  ZETag_style_volatile        = 'style:volatile';
 
 type
   TZODSNumberItemOptions = record
@@ -123,6 +125,7 @@ type
     NumberPosition: integer;
   end;
 
+  //Number format item for write
   TODSNumberFormatMapItem = class
   private
     FCondition: string;
@@ -130,10 +133,29 @@ type
     FColorStr: string;
     FisColor: boolean;
     FNumberFormat: string;
+    FConditionsArray: array[0..1] of array[0..1] of string;
+    FConditionsCount: integer;
+    FEmbededTextCount: integer;
+    FEmbededMaxCount: integer;
+    FEmbededTextArray: array of TODSEmbeded_text_props;
   protected
   public
+    constructor Create();
+    destructor Destroy(); override;
     procedure Clear();
     function TryToParse(const FNStr: string): boolean;
+    //Add condition for this number format (max 2)
+    //INPUT
+    //     const ACondition: string
+    //     const AStyleName: string
+    function AddCondition(const ACondition, AStyleName: string): boolean;
+
+    //Write number style item (<number:number-style> </number:number-style>)
+    //INPUT
+    //     const xml: TZsspXMLWriterH - xml
+    //     const AStyleName: string   - style name
+    //           isVolatile: boolean  - is volatile?
+    procedure WriteNumberStyle(const xml: TZsspXMLWriterH; const AStyleName: string; isVolatile: boolean = false);
 
     property Condition: string read FCondition write FCondition;
     property isCondition: boolean read FisCondition write FisCondition;
@@ -199,7 +221,24 @@ type
     property Count: integer read FCount;
   end;
 
+// Try to get xlsx number format type by string (very simplistic)
+//INPUT
+//  const FormatStr: string - format ("YYYY.MM.DD" etc)
+//RETURN
+//      integer - 0 - unknown
+//                1 and 1 = 1 - number
+//                2 and 2 = 2 - datetime
+//                4 and 4 = 4 - string
 function GetXlsxNumberFormatType(const FormatStr: string): integer;
+
+// Try to get native number format type by string (very simplistic)
+//INPUT
+//  const FormatStr: string - format ("YYYY.MM.DD" etc)
+//RETURN
+//      integer - 0 - unknown
+//                1 and 1 = 1 - number
+//                2 and 2 = 2 - datetime
+//                4 and 4 = 4 - string
 function GetNativeNumberFormatType(const FormatStr: string): integer;
 function ConvertFormatNativeToXlsx(const FormatNative: string): string;
 function ConvertFormatXlsxToNative(const FormatXlsx: string): string;
@@ -897,6 +936,10 @@ end; //TryGetMapCondition
 
 procedure TZEODSNumberFormatReader.AddEmbededText(const AText: string;
                                                   ANumberPosition: integer);
+var
+  i: integer;
+  _pos: integer;
+
 begin
   if (FEmbededTextCount >= FEmbededMaxCount) then
   begin
@@ -904,8 +947,25 @@ begin
     SetLength(FEmbededTextArray, FEmbededMaxCount);
   end;
 
-  FEmbededTextArray[FEmbededTextCount].Txt := AText;
-  FEmbededTextArray[FEmbededTextCount].NumberPosition := ANumberPosition;
+  _pos := -1;
+
+  for i := 0 to FEmbededTextCount - 1 do
+    if (ANumberPosition < FEmbededTextArray[i].NumberPosition) then
+    begin
+      _pos := i;
+      break;
+    end;
+
+  if (_pos >= 0) then
+  begin
+    for i := FEmbededTextCount + 1 downto _pos + 1 do
+      FEmbededTextArray[i] := FEmbededTextArray[i - 1];
+  end
+  else
+    _pos := FEmbededTextCount;
+
+  FEmbededTextArray[_pos].Txt := AText;
+  FEmbededTextArray[_pos].NumberPosition := ANumberPosition;
 
   inc(FEmbededTextCount);
 end;
@@ -1210,10 +1270,14 @@ var
             ch := '#';
 
           for j := _pos to _currentpos - 1 do
-            s := s + ch;
-          s := s + _txt;
+            s := ch + s;
+          s := _txt + s ;
           _pos := _currentpos;
         end;
+
+      if (_currentpos < _min_int_digits) then
+        for j := _pos to _min_int_digits - 1 do
+          s := '0' + s;
 
       _result := _result + s;
     end
@@ -1477,7 +1541,7 @@ begin
         s := '';
       end
       else
-        s := s +ch;
+        s := s + ch;
     end
     else
       s := s + ch;
@@ -1549,8 +1613,9 @@ var
     //  partX = [condition][color]number_format
 
     if (SeparateNFItems(ANumberFormat) > 0) then
-
-
+    begin
+      //if (FNFItemsCount)
+    end;
   end; //_WriteNumberNumber
 
   function _WriteDateTime(): boolean;
@@ -1561,7 +1626,7 @@ var
   function _WriteNumberStyle(): boolean;
   begin
     FNFItemsCount := 0;
-    _nfName := '';
+    _nfName := 'N' + IntToStr(FCurrentNFIndex);
     Result := false;
 
     _nfType := GetNativeNumberFormatType(ANumberFormat);
@@ -1642,6 +1707,18 @@ end; //TryWriteNumberFormat
 
 ////::::::::::::: TODSNumberFormatMapItem :::::::::::::::::////
 
+constructor TODSNumberFormatMapItem.Create();
+begin
+  FEmbededMaxCount := 10;
+  SetLength(FEmbededTextArray, FEmbededMaxCount);
+end;
+
+destructor TODSNumberFormatMapItem.Destroy();
+begin
+  SetLength(FEmbededTextArray, 0);
+  inherited Destroy;
+end;
+
 procedure TODSNumberFormatMapItem.Clear();
 begin
   FCondition := '';
@@ -1649,6 +1726,7 @@ begin
   FColorStr := '';
   FisColor := false;
   FNumberFormat := '';
+  FConditionsCount := 0;
 end; //Clear
 
 function TODSNumberFormatMapItem.TryToParse(const FNStr: string): boolean;
@@ -1772,5 +1850,109 @@ begin
   if (Result) then
     FNumberFormat := _raw;
 end; //TryToParse
+
+function TODSNumberFormatMapItem.AddCondition(const ACondition, AStyleName: string): boolean;
+begin
+  Result := FConditionsCount < 2;
+  if (Result) then
+  begin
+    FConditionsArray[FConditionsCount][0] := ACondition;
+    FConditionsArray[FConditionsCount][1] := AStyleName;
+    inc(FConditionsCount);
+  end;
+end; //AddCondition
+
+procedure TODSNumberFormatMapItem.WriteNumberStyle(const xml: TZsspXMLWriterH;
+                                                   const AStyleName: string;
+                                                   isVolatile: boolean = false);
+var
+  i: integer;
+  _DecimalCount: integer;
+  _CurrentPos: integer;
+
+  // <style:map style:condition="" style:apply-style-name=""/>
+  procedure _WriteStyleMap(num: integer);
+  begin
+    xml.Attributes.Clear();
+    xml.Attributes.Add(ZETag_style_condition, FConditionsArray[num][0]);
+    xml.Attributes.Add(ZETag_style_apply_style_name, FConditionsArray[num][1]);
+    xml.WriteEmptyTag(ZETag_style_map, true, true);
+  end; //_WriteConditionItem
+
+  //<style:text-properties />
+  procedure _WriteTextProperties();
+  begin
+    if (isColor) then
+    begin
+      xml.Attributes.Clear();
+      xml.Attributes.Add(ZETag_fo_color, ColorStr);
+      xml.WriteEmptyTag(ZETag_style_text_properties, true, true);
+    end;
+  end; //_WriteTextProperties
+
+  procedure _ParseFormat();
+  var
+    i: integer;
+    s: string;
+    _isQuote: boolean;
+    ch: char;
+
+  begin
+    s := '';
+    _isQuote := false;
+    for i := 1 to Length(FNumberFormat) do
+    begin
+      ch := FNumberFormat[i];
+
+      if (ch = '"') then
+      begin
+        if (_isQuote) then
+        begin
+          if (FEmbededTextCount + 1 >= FEmbededMaxCount) then
+          begin
+            //inc();
+          end;
+        end;
+        _isQuote := not _isQuote;
+      end;
+
+      if (_isQuote) then
+        s := s + ch
+      else
+        case (ch) of
+          '0':;
+          '#':;
+          '.':;
+          '?':;
+          '/':;
+          ' ':;
+        end;
+    end; //for i
+  end; //_ParseFormat
+
+  //<number:number > </number:number>
+  procedure _WriteNumberMain();
+  begin
+    FEmbededTextCount := 0;
+    _ParseFormat();
+  end; //_WriteNumberMain
+
+begin
+  xml.Attributes.Clear();
+  xml.Attributes.Add(ZETag_Attr_StyleName, AStyleName);
+  if (isVolatile) then
+     xml.Attributes.Add(ZETag_style_volatile, 'true');
+
+  xml.WriteTagNode(ZETag_number_number_style, true, true, false);
+
+  _WriteTextProperties();
+
+  _WriteNumberMain();
+
+  for i := 0 to FConditionsCount - 1 do
+    _WriteStyleMap(i);
+
+  xml.WriteEndTagNode(); //number:number-style
+end; //WriteNumberStyle
 
 end.

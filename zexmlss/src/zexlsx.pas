@@ -233,6 +233,8 @@ type
     FMaxHyperLinksCount: integer;
     FCurrentRID: integer;                      //Current rID number (for HyperLinks/comments etc)
     FisHaveComments: boolean;                  //Is Need create comments*.xml?
+    FSheetHyperlinksArray: array of integer;
+    FSheetHyperlinksCount: integer;
   protected
     function GenerateRID(): integer;
   public
@@ -241,6 +243,8 @@ type
     procedure AddHyperLink(const ACellRef, ATarget, AScreenTip, ATargetMode: string);
     procedure WriteHyperLinksTag(const xml: TZsspXMLWriterH);
     function CreateSheetRels(const Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
+    procedure AddSheetHyperlink(PageNum: integer);
+    function IsSheetHaveHyperlinks(PageNum: integer): boolean;
     procedure Clear();
     property HyperLinksCount: integer read FHyperLinksCount;
     property isHaveComments: boolean read FisHaveComments write FisHaveComments; //Is need create comments*.xml?
@@ -295,7 +299,8 @@ function ZEXLSXCreateWorkBook(var XMLSS: TZEXMLSS; Stream: TStream; const _pages
                               const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
 function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring; const WriteHelper: TZEXLSXWriteHelper): integer;
 function ZEXLSXCreateContentTypes(var XMLSS: TZEXMLSS; Stream: TStream; PageCount: integer; CommentCount: integer; const PagesComments: TIntegerDynArray;
-                                  TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
+                                  TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring;
+                                  const WriteHelper: TZEXLSXWriteHelper): integer;
 function ZEXLSXCreateRelsMain(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateDocPropsApp(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
@@ -1215,6 +1220,7 @@ end;
 constructor TZEXLSXWriteHelper.Create();
 begin
   FMaxHyperLinksCount := 10;
+  FSheetHyperlinksCount := 0;
   SetLength(FHyperLinks, FMaxHyperLinksCount);
   Clear();
 end;
@@ -1222,6 +1228,7 @@ end;
 destructor TZEXLSXWriteHelper.Destroy();
 begin
   SetLength(FHyperLinks, 0);
+  SetLength(FSheetHyperlinksArray, 0);
   inherited Destroy;
 end;
 
@@ -1337,6 +1344,26 @@ begin
       FreeAndNil(_xml);
   end;
 end; //CreateSheetRels
+
+procedure TZEXLSXWriteHelper.AddSheetHyperlink(PageNum: integer);
+begin
+  SetLength(FSheetHyperlinksArray, FSheetHyperlinksCount + 1);
+  FSheetHyperlinksArray[FSheetHyperlinksCount] := PageNum;
+end;
+
+function TZEXLSXWriteHelper.IsSheetHaveHyperlinks(PageNum: integer): boolean;
+var
+  i: integer;
+
+begin
+  result := false;
+  for i := 0 to FSheetHyperlinksCount - 1 do
+    if (FSheetHyperlinksArray[i] = PageNum) then
+    begin
+      result := true;
+      break;
+    end;
+end;
 
 procedure TZEXLSXWriteHelper.Clear();
 begin
@@ -5157,10 +5184,12 @@ end; //ReadXLSX
 //  const PagesComments: TIntegerDynArray- номера страниц с комментари€ми (нумер€ци€ с нул€)
 //    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
+//  const WriteHelper: TZEXLSXWriteHelper - additional data
 //RETURN
 //      integer
 function ZEXLSXCreateContentTypes(var XMLSS: TZEXMLSS; Stream: TStream; PageCount: integer; CommentCount: integer; const PagesComments: TIntegerDynArray;
-                                  TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
+                                  TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring;
+                                  const WriteHelper: TZEXLSXWriteHelper): integer;
 var
   _xml: TZsspXMLWriterH;    //писатель
   s: string;
@@ -5189,11 +5218,23 @@ var
     i: integer;
 
   begin
+    _xml.Attributes.Clear();
+    _xml.Attributes.Add('Extension', 'rels');
+    _xml.Attributes.Add('ContentType', 'application/vnd.openxmlformats-package.relationships+xml', false);
+    _xml.WriteEmptyTag('Default', true);
+    _xml.Attributes.Clear();
+    _xml.Attributes.Add('Extension', 'xml');
+    _xml.Attributes.Add('ContentType', 'application/xml', false);
+    _xml.WriteEmptyTag('Default', true);
     //—траницы
-    _WriteOverride('/_rels/.rels', 3);
-    _WriteOverride('/xl/_rels/workbook.xml.rels', 3);
+    //_WriteOverride('/_rels/.rels', 3);
+    //_WriteOverride('/xl/_rels/workbook.xml.rels', 3);
     for i := 0 to PageCount - 1 do
+    begin
       _WriteOverride('/xl/worksheets/sheet' + IntToStr(i + 1) + '.xml', 0);
+      if (WriteHelper.IsSheetHaveHyperlinks(i)) then
+        _WriteOverride('/xl/worksheets/_rels/sheet' + IntToStr(i + 1) + '.xml.rels', 3);
+    end;
     //комментарии
     for i := 0 to CommentCount - 1 do
     begin
@@ -5242,6 +5283,7 @@ end; //ZEXLSXCreateContentTypes
 //    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
 //  var isHaveComments: boolean         - возвращает true, если были комментарии (чтобы создать comments*.xml)
+//  const WriteHelper: TZEXLSXWriteHelper - additional data
 //RETURN
 //      integer
 function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter;
@@ -6900,6 +6942,7 @@ begin
 
       if (_WriteHelper.HyperLinksCount > 0) then
       begin
+        _WriteHelper.AddSheetHyperlink(i);
         Stream := azg.NewStream(path_sheets + '_rels' + PathDelim + 'sheet' + IntToStr(i + 1) + '.xml.rels');
         _WriteHelper.CreateSheetRels(Stream, TextConverter, CodePageName, BOM);
         azg.SealStream(Stream);
@@ -6919,7 +6962,7 @@ begin
 
     //[Content_Types].xml
     Stream := azg.NewStream({PathName +} '[Content_Types].xml');
-    ZEXLSXCreateContentTypes(XMLSS, Stream, kol, 0, nil, TextConverter, CodePageName, BOM);
+    ZEXLSXCreateContentTypes(XMLSS, Stream, kol, 0, nil, TextConverter, CodePageName, BOM, _WriteHelper);
     azg.SealStream(Stream);  Stream := nil;
 
     path_docprops := {PathName +} 'docProps' + PathDelim;
@@ -6970,6 +7013,7 @@ var
   _WriteHelper: TZEXLSXWriteHelper;
   path_xl, path_sheets, path_relsmain, path_relsw, path_docprops: string;
   _commentArray: TIntegerDynArray;
+  s: string;
 
 begin
   Result := 0;
@@ -7037,7 +7081,11 @@ begin
 
       if (_WriteHelper.HyperLinksCount > 0) then
       begin
-        Stream := TFileStream.Create(path_sheets + '_rels' + PathDelim + 'sheet' + IntToStr(i + 1) + '.xml.rels', fmCreate);
+        _WriteHelper.AddSheetHyperlink(i);
+        s := path_sheets + '_rels' + PathDelim;
+        if (not DirectoryExists(path_sheets)) then
+          ForceDirectories(s);
+        Stream := TFileStream.Create(s + 'sheet' + IntToStr(i + 1) + '.xml.rels', fmCreate);
         _WriteHelper.CreateSheetRels(Stream, TextConverter, CodePageName, BOM);
         FreeAndNil(Stream);
       end;
@@ -7056,7 +7104,7 @@ begin
 
     //[Content_Types].xml
     Stream := TFileStream.Create(PathName + '[Content_Types].xml', fmCreate);
-    ZEXLSXCreateContentTypes(XMLSS, Stream, kol, 0, nil, TextConverter, CodePageName, BOM);
+    ZEXLSXCreateContentTypes(XMLSS, Stream, kol, 0, nil, TextConverter, CodePageName, BOM, _WriteHelper);
     FreeAndNil(Stream);
 
     path_docprops := PathName + 'docProps' + PathDelim;
@@ -7216,6 +7264,7 @@ begin
 
       if (_WriteHelper.HyperLinksCount > 0) then
       begin
+        _WriteHelper.AddSheetHyperlink(i);
         _AddStream();
         _WriteHelper.CreateSheetRels(Stream[StreamCount - 1], TextConverter, CodePageName, BOM);
         _AddFile(path_sheets + '_rels/sheet' + IntToStr(i + 1) + '.xml.rels');
@@ -7235,7 +7284,7 @@ begin
 
     //[Content_Types].xml
     _AddStream();
-    ZEXLSXCreateContentTypes(XMLSS, Stream[StreamCount - 1], kol, 0, nil, TextConverter, CodePageName, BOM);
+    ZEXLSXCreateContentTypes(XMLSS, Stream[StreamCount - 1], kol, 0, nil, TextConverter, CodePageName, BOM, _WriteHelper);
     _AddFile('[Content_Types].xml');
 
     path_docprops :='docProps/';
