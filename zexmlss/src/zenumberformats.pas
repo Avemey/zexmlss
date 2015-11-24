@@ -1908,10 +1908,15 @@ var
       begin
         if (_isQuote) then
         begin
-          if (FEmbededTextCount + 1 >= FEmbededMaxCount) then
+          if (FEmbededTextCount >= FEmbededMaxCount) then
           begin
-            //inc();
+            inc(FEmbededMaxCount, 10);
+            SetLength(FEmbededTextArray, FEmbededMaxCount);
           end;
+          FEmbededTextArray[FEmbededTextCount].Txt := s;
+          FEmbededTextArray[FEmbededTextCount].NumberPosition := _CurrentPos;
+          s := '';
+          inc(FEmbededTextCount);
         end;
         _isQuote := not _isQuote;
       end;
