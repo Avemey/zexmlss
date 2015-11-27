@@ -22,7 +22,7 @@
     <Description Value="Работа с документами ODS, Excel XML SpreadSheet (excel xml) и XLSX
 (Write and read ODS, xlsx and excel xml spreadsheet formats). More info: http://avemey.com/zexmlss/index.php "/>
     <License Value="zlib"/>
-    <Version Release="9"/>
+    <Version Release="10"/>
     <Files Count="15">
       <Item1>
         <Filename Value="..\..\src\zexmlss.pas"/>
