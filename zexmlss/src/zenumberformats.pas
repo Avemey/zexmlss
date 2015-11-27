@@ -5,7 +5,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2015.11.21
+// Last update: 2015.11.27
 //----------------------------------------------------------------
 {
  Copyright (C) 2015 Ruslan Neborak
@@ -471,10 +471,12 @@ var
   s: string;
   ch, _prev: char;
   _isQuote: boolean;
+  _isBracket: boolean;
 
 begin
   Result := ZE_NUMFORMAT_IS_UNKNOWN;
 
+  _isBracket := false;
   _isQuote := false;
   _prev := #0;
 
@@ -484,10 +486,16 @@ begin
   begin
     ch := FormatStr[i];
 
-    if (ch = '"') then
+    if ((ch = '"') and (not _isBracket)) then
       _isQuote := not _isQuote;
 
-    if (not _isQuote) then
+    if ((ch = '[') and (not _isQuote)) then
+      _isBracket := true;
+
+    if ((ch = ']') and (not _isQuote) and _isBracket) then
+       _isBracket := false;
+
+    if ((not _isQuote) and (not _isBracket)) then
       case (ch) of
         '0', '#', '%', '?':
           begin

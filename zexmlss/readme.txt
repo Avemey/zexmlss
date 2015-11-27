@@ -1,4 +1,4 @@
-ZEXMLSSLIB 0.0.9 (alpha)
+ZEXMLSSLIB 0.0.10 (alpha)
 Äëÿ Lazarus, Delphi 7, C++Builder 6.
 Borland Developer Studio 2005, BDS 2006, CodeGear Delphi 2007, 
 CodeGear RAD Studio 2009, 2010, Delphi XE è Delphi XE2.
