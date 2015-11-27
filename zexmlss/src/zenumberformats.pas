@@ -842,7 +842,7 @@ begin
     if (ZE_MAP_CONDITIONAL_COLORS[i][1] = AColorName) then
     begin
       Result := true;
-      retColor := ZE_MAP_CONDITIONAL_COLORS[i][1];
+      retColor := ZE_MAP_CONDITIONAL_COLORS[i][0];
       break;
     end;
 end; //TryGetMapColorColor
@@ -1602,7 +1602,9 @@ var
 
   function _WriteNumberNumber(): boolean;
   var
-    b: boolean;
+    i: integer;
+    num: integer;
+    _item_name: string;
 
   begin
     Result := false;
@@ -1614,8 +1616,39 @@ var
 
     if (SeparateNFItems(ANumberFormat) > 0) then
     begin
-      //if (FNFItemsCount)
-    end;
+      if (FNFItemsCount = 1) then
+      begin
+        FNFItems[0].WriteNumberStyle(xml, _nfName);
+        Result := true;
+      end
+      else
+      begin
+        num := 0;
+        for i := 0 to FNFItemsCount - 2 do
+        begin
+          if (FNFItems[i].isCondition) then
+            s := FNFItems[i].Condition
+          else
+            case i of
+              0: s := '>0';
+              1: s := '< 0';
+              else
+                s := '';
+            end;
+
+          if (s <> '') then
+          begin
+            _item_name := _nfName + 'P' + IntToStr(num);
+            FNFItems[FNFItemsCount - 1].AddCondition(s, _item_name);
+            FNFItems[i].WriteNumberStyle(xml, _item_name, true);
+            inc(num);
+          end;
+        end; //for i
+
+        FNFItems[FNFItemsCount - 1].WriteNumberStyle(xml, _nfName);
+        Result := true;
+      end;
+    end; //if
   end; //_WriteNumberNumber
 
   function _WriteDateTime(): boolean;
@@ -1782,7 +1815,7 @@ var
       //    NatNumX / DBNumX transliteration
       //    currency
       
-      _isBracket := true;
+      _isBracket := false;
       s := '';
     end
     else
@@ -1868,7 +1901,13 @@ procedure TODSNumberFormatMapItem.WriteNumberStyle(const xml: TZsspXMLWriterH;
 var
   i: integer;
   _DecimalCount: integer;
+  _IntDigitsCount: integer;
+  _TotalDigitsCount: integer;
+  _MinIntDigitsCount: integer;
   _CurrentPos: integer;
+  _isFirstText: boolean;
+  _firstText: string;
+  s: string;
 
   // <style:map style:condition="" style:apply-style-name=""/>
   procedure _WriteStyleMap(num: integer);
@@ -1893,41 +1932,72 @@ var
   procedure _ParseFormat();
   var
     i: integer;
-    s: string;
     _isQuote: boolean;
     ch: char;
+    _isDecimal: boolean;
+
+    //Check digit
+    //INPUT
+    //     isExtrazero: boolean - true = 0, false = #
+    procedure _CheckDigit(isExtrazero: boolean);
+    begin
+      inc(_TotalDigitsCount);
+      inc(_CurrentPos);
+      if (_isDecimal) then
+      begin
+        inc(_DecimalCount);
+      end
+      else
+      begin
+        inc(_IntDigitsCount);
+        if (isExtrazero) then
+          inc(_MinIntDigitsCount);
+      end;
+    end; //_CheckDigit
 
   begin
     s := '';
     _isQuote := false;
+    _isDecimal := false;
     for i := 1 to Length(FNumberFormat) do
     begin
       ch := FNumberFormat[i];
 
       if (ch = '"') then
       begin
-        if (_isQuote) then
+        if (_isQuote and (not _isDecimal)) then
         begin
-          if (FEmbededTextCount >= FEmbededMaxCount) then
+          if ((_TotalDigitsCount > 0) or _isFirstText) then
           begin
-            inc(FEmbededMaxCount, 10);
-            SetLength(FEmbededTextArray, FEmbededMaxCount);
+            if (FEmbededTextCount >= FEmbededMaxCount) then
+            begin
+              inc(FEmbededMaxCount, 10);
+              SetLength(FEmbededTextArray, FEmbededMaxCount);
+            end;
+            FEmbededTextArray[FEmbededTextCount].Txt := s;
+            FEmbededTextArray[FEmbededTextCount].NumberPosition := _CurrentPos;
+            inc(FEmbededTextCount);
+          end
+          else
+          begin
+            _isFirstText := true;
+            _firstText := s;
           end;
-          FEmbededTextArray[FEmbededTextCount].Txt := s;
-          FEmbededTextArray[FEmbededTextCount].NumberPosition := _CurrentPos;
           s := '';
-          inc(FEmbededTextCount);
         end;
         _isQuote := not _isQuote;
       end;
 
       if (_isQuote) then
-        s := s + ch
+      begin
+        if (ch <> '"') then
+          s := s + ch
+      end
       else
         case (ch) of
-          '0':;
-          '#':;
-          '.':;
+          '0': _CheckDigit(true);
+          '#': _CheckDigit(false);
+          '.': _isDecimal := true;
           '?':;
           '/':;
           ' ':;
@@ -1937,9 +2007,52 @@ var
 
   //<number:number > </number:number>
   procedure _WriteNumberMain();
+  var
+    i: integer;
+
   begin
     FEmbededTextCount := 0;
+    _DecimalCount := 0;
+    _CurrentPos := 0;
+    _IntDigitsCount := 0;
+    _TotalDigitsCount := 0;
+    _MinIntDigitsCount := 0;
+    _isFirstText := false;
+    _firstText := '';
     _ParseFormat();
+
+    if (_isFirstText) then
+    begin
+      xml.Attributes.Clear();
+      xml.WriteTag(ZETag_number_text, _firstText, true, false, true);
+    end;
+
+    xml.Attributes.Clear();
+    if (_DecimalCount > 0) then
+      xml.Attributes.Add(ZETag_number_decimal_places, IntToStr(_DecimalCount));
+    xml.Attributes.Add(ZETag_number_min_integer_digits, IntToStr(_MinIntDigitsCount));
+
+    if (FEmbededTextCount > 0) then
+    begin
+      xml.WriteTagNode(ZETag_number_number, true, true, false);
+
+      for i := 0 to FEmbededTextCount - 1 do
+      begin
+        xml.Attributes.Clear();
+        xml.Attributes.Add(ZETag_number_position, IntToStr(_IntDigitsCount - FEmbededTextArray[i].NumberPosition));
+        xml.WriteTag(ZETag_number_embedded_text, FEmbededTextArray[i].Txt, true, false, true);
+      end;
+
+      xml.WriteEndTagNode(); //number:number
+    end
+    else
+      xml.WriteEmptyTag(ZETag_number_number, true, true);
+
+    if (s <> '') then
+    begin
+      xml.Attributes.Clear();
+      xml.WriteTag(ZETag_number_text, s, true, false, true);
+    end;
   end; //_WriteNumberMain
 
 begin
