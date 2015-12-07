@@ -48,7 +48,7 @@ type
       const ZEAnsiString = ZEString deprecated {$IFDEF USE_DEPRECATED_STRING}'use ZEString'{$ENDIF}; // backward compatibility
 type
   //Стиль начертания линий рамки ячейки
-  TZBorderType = (ZENone, ZEContinuous, ZEDot, ZEDash, ZEDashDot, ZEDashDotDot,ZESlantDashDot, ZEDouble);
+  TZBorderType = (ZENone, ZEContinuous, ZEHair, ZEDot, ZEDash, ZEDashDot, ZEDashDotDot,ZESlantDashDot, ZEDouble);
 
   //Горизонтальное выравнивание
   TZHorizontalAlignment = (ZHAutomatic, ZHLeft, ZHCenter, ZHRight, ZHFill, ZHJustify, ZHCenterAcrossSelection, ZHDistributed, ZHJustifyDistributed);
@@ -1295,6 +1295,7 @@ begin
   case ZB of
     ZENone:         result := 'None';
     ZEContinuous:   result := 'Continuous';
+    ZEHair:         result := 'Hair';
     ZEDot:          result := 'Dot';
     ZEDash:         result := 'Dash';
     ZEDashDot:      result := 'DashDot';
@@ -1389,6 +1390,8 @@ begin
   Value := UpperCase(Value);
   if Value = 'CONTINUOUS' then
     result := ZEContinuous
+  else if Value = 'HAIR' then
+    result := ZEHair
   else if Value = 'DOT' then
     result := ZEDot
   else if Value = 'DASH' then

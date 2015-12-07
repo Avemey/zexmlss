@@ -3511,7 +3511,7 @@ begin
     s := '';
     case (BStyle.LineStyle) of
       ZENone: s := ' ';
-      ZEContinuous: s := ' solid';
+      ZEContinuous, ZEHair: s := ' solid';
       ZEDot: s := ' dotted';
       ZEDash: s := ' dashed';
       ZEDashDot: s := ' ';
@@ -3665,7 +3665,8 @@ begin
   if (b) then
   begin
     n := 4;
-    if (not((ProcessedStyle.Border[0].LineStyle = ZEContinuous) and (ProcessedStyle.Border[0].Weight = 0))) then
+    if (not(((ProcessedStyle.Border[0].LineStyle = ZEContinuous) or (ProcessedStyle.Border[0].LineStyle = ZEHair)) and 
+            (ProcessedStyle.Border[0].Weight = 0))) then
     begin
       s := ZEODFBorderStyleTostr(ProcessedStyle.Border[0]);
       _xml.Attributes.Add('fo:border', s);
@@ -3686,7 +3687,8 @@ begin
       4: satt := 'style:diagonal-bl-tr';
       5: satt := 'style:diagonal-tl-br';
     end;
-    if (not((ProcessedStyle.Border[j].LineStyle = ZEContinuous) and (ProcessedStyle.Border[j].Weight = 0))) then
+    if (not(((ProcessedStyle.Border[j].LineStyle = ZEContinuous) or (ProcessedStyle.Border[j].LineStyle = ZEHair)) and 
+            (ProcessedStyle.Border[j].Weight = 0))) then
     begin
       s := ZEODFBorderStyleTostr(ProcessedStyle.Border[j]);
       _xml.Attributes.Add(satt, s, false);

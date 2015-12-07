@@ -2728,7 +2728,7 @@ var
       retStyle := ZEContinuous;
     end else
     if (st = 'hair') then
-      retStyle := ZEContinuous
+      retStyle := ZEHair
     else
     if (st = 'dashed') then
       retStyle := ZEDash
@@ -5650,15 +5650,18 @@ var
     case _border.LineStyle of
       ZEContinuous:
         begin
-          //thin ??
           if (_border.Weight = 1) then
-            s1 := 'hair'
+            s1 := 'thin'
           else
           if (_border.Weight = 2) then
             s1 := 'medium'
           else
             s1 := 'thick';
         end;
+      ZEHair:
+        begin
+          s1 := 'hair';
+        end; 
       ZEDash:
         begin
           if (_border.Weight = 1) then
