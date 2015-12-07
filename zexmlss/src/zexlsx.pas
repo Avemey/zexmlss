@@ -1125,7 +1125,8 @@ begin
           if (s = 'application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml') then
             t := 1
           else
-          if (s = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml') then
+          if (s = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml') or
+          	 (s = 'application/vnd.openxmlformats-officedocument.spreadsheetml.template.main+xml') then
             t := 2
           else
           if (s = 'application/vnd.openxmlformats-package.relationships+xml') then
