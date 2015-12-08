@@ -1508,6 +1508,12 @@ var
     end; //while
   end; //_ReadSheetData
 
+  //Чтение диапазона ячеек с автофильтром
+  procedure _ReadAutoFilter();
+  begin
+    _currSheet.AutoFilter:=xml.Attributes.ItemsByName['ref'];
+  end;
+
   //Чтение объединённых ячеек
   procedure _ReadMerge();
   var
@@ -2193,6 +2199,9 @@ begin
       xml.ReadTag();
       if ((xml.TagName = 'sheetData') and (xml.TagType = 4)) then
         _ReadSheetData()
+      else
+      if ((xml.TagName = 'autoFilter') and (xml.TagType = 5)) then
+        _ReadAutoFilter()
       else
       if ((xml.TagName = 'mergeCells') and (xml.TagType = 4)) then
         _ReadMerge()
@@ -5120,6 +5129,14 @@ var
     end; //for i
 
     _xml.WriteEndTagNode(); //sheetData
+
+    // autoFilter
+    if trim(_sheet.AutoFilter)<>'' then
+    begin
+      _xml.Attributes.Clear;
+      _xml.Attributes.Add('ref',_sheet.AutoFilter);
+      _xml.WriteEmptyTag('autoFilter', true, false);
+    end;
 
     //Merge Cells
     if (_sheet.MergeCells.Count > 0) then
