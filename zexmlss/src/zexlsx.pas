@@ -6882,6 +6882,7 @@ begin
            else raise EZxZipGen.Create('No zip generators registered, folder output disabled.');
            // result := 3 ????
     end;
+
     azg := ZipGenerator.Create(PathName);
 
     _WriteHelper := TZEXLSXWriteHelper.Create();
@@ -7019,7 +7020,7 @@ var
 begin
   Result := 0;
   Stream := nil;
-  _WriteHelper := nil;;
+  _WriteHelper := nil;
   kol := 0;
   try
     if (not ZE_CheckDirExist(PathName)) then

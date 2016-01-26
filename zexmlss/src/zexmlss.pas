@@ -5732,5 +5732,3 @@ GetDeviceCaps(hdc, VERTSIZE) / GetDeviceCaps(hdc, VERTRES); //вертикальный разме
 }
 
 end.
-
-
