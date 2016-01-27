@@ -3627,7 +3627,7 @@ begin
     s := '';
     case (BStyle.LineStyle) of
       ZENone: s := ' ';
-      ZEContinuous: s := ' solid';
+      ZEContinuous, ZEHair: s := ' solid';
       ZEDot: s := ' dotted';
       ZEDash: s := ' dashed';
       ZEDashDot: s := ' ';
@@ -3781,7 +3781,8 @@ begin
   if (b) then
   begin
     n := 4;
-    if (not((ProcessedStyle.Border[0].LineStyle = ZEContinuous) and (ProcessedStyle.Border[0].Weight = 0))) then
+    if (not(((ProcessedStyle.Border[0].LineStyle = ZEContinuous) or (ProcessedStyle.Border[0].LineStyle = ZEHair)) and 
+            (ProcessedStyle.Border[0].Weight = 0))) then
     begin
       s := ZEODFBorderStyleTostr(ProcessedStyle.Border[0]);
       _xml.Attributes.Add('fo:border', s);
@@ -3802,7 +3803,8 @@ begin
       4: satt := 'style:diagonal-bl-tr';
       5: satt := 'style:diagonal-tl-br';
     end;
-    if (not((ProcessedStyle.Border[j].LineStyle = ZEContinuous) and (ProcessedStyle.Border[j].Weight = 0))) then
+    if (not(((ProcessedStyle.Border[j].LineStyle = ZEContinuous) or (ProcessedStyle.Border[j].LineStyle = ZEHair)) and 
+            (ProcessedStyle.Border[j].Weight = 0))) then
     begin
       s := ZEODFBorderStyleTostr(ProcessedStyle.Border[j]);
       _xml.Attributes.Add(satt, s, false);
@@ -4849,6 +4851,21 @@ var
     {$ENDIF}
 
     _xml.WriteEndTagNode(); //table:table
+
+    //автофильтр
+    if Trim(ProcessedSheet.AutoFilter)<>'' then
+    begin
+      _xml.Attributes.Clear;
+      _xml.WriteTagNode('table:database-ranges', true, true, false);
+      _xml.Attributes.Add('table:display-filter-buttons','true');
+      ss:=ProcessedSheet.AutoFilter;
+      s:=#39+ProcessedSheet.Title+#39+'.'+Copy(ss,1,pos(':',ss))          
+        +#39+ProcessedSheet.Title+#39+'.'+Copy(ss,pos(':',ss)+1,Length(ss));
+      _xml.Attributes.Add('table:target-range-address',s);
+      _xml.WriteEmptyTag('table:database-range', true, true);
+      _xml.WriteEndTagNode();
+    end;
+    
   end; //WriteODFTable
 
   //Сами таблицы
@@ -6477,6 +6494,22 @@ var
       _Sheet.Columns[i].StyleID := -1;
   end; //_ReadTable
 
+  //считываем фильтр
+  procedure _ReadAutoFilter();
+  var st:string;
+  begin
+    //В ods область фильра задается через имя листа
+    //при этом есть два варианта:
+    // 1. "Лист1.A4:Лист1.C4" - если имя листа односложное
+    // 2. "'Лист №1'.A4:'Лист №1'.C4" - если имя листа сложное
+    // поэтому дважды вычищаем считанное значение
+    st:=xml.Attributes.ItemsByName['table:target-range-address'];
+    st:=ReplaceStr(st,#39+_Sheet.Title+#39+'.','');
+    st:=ReplaceStr(st,_Sheet.Title+'.','');
+
+    _Sheet.AutoFilter:=st;
+  end;
+
   procedure _ReadDocument();
   begin
     while (not xml.Eof()) do
@@ -6490,6 +6523,9 @@ var
 
       if (ifTag('table:table', 4)) then
         _ReadTable();
+
+      //считываем фильтр
+      if (IfTag('table:database-range', 5)) then _ReadAutoFilter();
     end;
   end; //_ReadDocument
 
