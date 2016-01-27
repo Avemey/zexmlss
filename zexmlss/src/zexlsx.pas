@@ -7085,7 +7085,7 @@ begin
       begin
         _WriteHelper.AddSheetHyperlink(i);
         s := path_sheets + '_rels' + PathDelim;
-        if (not DirectoryExists(path_sheets)) then
+        if (not DirectoryExists(s)) then
           ForceDirectories(s);
         Stream := TFileStream.Create(s + 'sheet' + IntToStr(i + 1) + '.xml.rels', fmCreate);
         _WriteHelper.CreateSheetRels(Stream, TextConverter, CodePageName, BOM);
