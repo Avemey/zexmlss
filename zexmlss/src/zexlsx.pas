@@ -1125,7 +1125,8 @@ begin
           if (s = 'application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml') then
             t := 1
           else
-          if (s = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml') then
+          if (s = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml') or
+          	 (s = 'application/vnd.openxmlformats-officedocument.spreadsheetml.template.main+xml') then
             t := 2
           else
           if (s = 'application/vnd.openxmlformats-package.relationships+xml') then
@@ -1506,6 +1507,12 @@ var
       end;
     end; //while
   end; //_ReadSheetData
+
+  //Чтение диапазона ячеек с автофильтром
+  procedure _ReadAutoFilter();
+  begin
+    _currSheet.AutoFilter:=xml.Attributes.ItemsByName['ref'];
+  end;
 
   //Чтение объединённых ячеек
   procedure _ReadMerge();
@@ -2193,6 +2200,9 @@ begin
       if ((xml.TagName = 'sheetData') and (xml.TagType = 4)) then
         _ReadSheetData()
       else
+      if ((xml.TagName = 'autoFilter') and (xml.TagType = 5)) then
+        _ReadAutoFilter()
+      else
       if ((xml.TagName = 'mergeCells') and (xml.TagType = 4)) then
         _ReadMerge()
       else
@@ -2727,7 +2737,7 @@ var
       retStyle := ZEContinuous;
     end else
     if (st = 'hair') then
-      retStyle := ZEContinuous
+      retStyle := ZEHair
     else
     if (st = 'dashed') then
       retStyle := ZEDash
@@ -5120,6 +5130,14 @@ var
 
     _xml.WriteEndTagNode(); //sheetData
 
+    // autoFilter
+    if trim(_sheet.AutoFilter)<>'' then
+    begin
+      _xml.Attributes.Clear;
+      _xml.Attributes.Add('ref',_sheet.AutoFilter);
+      _xml.WriteEmptyTag('autoFilter', true, false);
+    end;
+
     //Merge Cells
     if (_sheet.MergeCells.Count > 0) then
     begin
@@ -5649,15 +5667,18 @@ var
     case _border.LineStyle of
       ZEContinuous:
         begin
-          //thin ??
           if (_border.Weight = 1) then
-            s1 := 'hair'
+            s1 := 'thin'
           else
           if (_border.Weight = 2) then
             s1 := 'medium'
           else
             s1 := 'thick';
         end;
+      ZEHair:
+        begin
+          s1 := 'hair';
+        end; 
       ZEDash:
         begin
           if (_border.Weight = 1) then

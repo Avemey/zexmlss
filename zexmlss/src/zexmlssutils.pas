@@ -906,7 +906,7 @@ begin
       s := s + ' ' + IntToStr(Style.Border[i].Weight) + 'px'
     else inc(l);
     case Style.Border[i].LineStyle of
-      ZEContinuous: s := s + ' ' + 'solid';
+      ZEContinuous, ZEHair: s := s + ' ' + 'solid';
       ZEDot, ZEDashDotDot: s := s + ' ' + 'dotted';
       ZEDash, ZEDashDot, ZESlantDashDot: s := s + ' ' + 'dashed';
       ZEDouble: s := s + ' ' + 'double';
@@ -1270,7 +1270,8 @@ var
      for i := 0 to 5 do
      begin
        _xml.Attributes.Clear();
-       if not((_border[i].LineStyle = ZEContinuous) and (_border[i].Weight = 0)) then
+       if not(((_border[i].LineStyle = ZEContinuous) or (_border[i].LineStyle = ZEHair)) and 
+              (_border[i].Weight = 0)) then
        begin
          case i of
            0: _xml.Attributes.Add('ss:Position','Left', false);
