@@ -39,7 +39,7 @@ uses
  {$IFNDEF FPC}
  {$IF CompilerVersion > 22}zeZippyXE2, {$ELSE} zeZippyAB,{у кого чего стоит} {$IFEND} //<XE2 have not zip!
  {$Else} zeZippyLaz,{$EndIf}
-zeSave, zeSaveODS, zeSaveXLSX, zeSaveEXML;
+  zeSave, zeSaveODS, zeSaveXLSX, zeSaveEXML, zexlsx, zeodfs;
 {$IFNDEF FPC}
   {$R *.dfm}
 {$ENDIF}
@@ -261,10 +261,15 @@ begin
      end;
 
       //сохраняем 0-ую и 1-ую страницу в файл
-      //кодировка - utf8, имя кодировки='utf8' (для utf8 можно ''), BOM=''
-//      SaveXmlssToEXML(tz, sd.FileName, [0, 1], [], @TextConverter, 'utf8');
+      //кодировка - utf8, имя кодировки='utf-8' (для utf-8 можно ''), BOM=''
+//      SaveXmlssToEXML(tz, sd.FileName, [0, 1], [], @TextConverter, 'utf-8');
 
-      TZXMLSSave.From(tz).Charset('utf-8', TextConverter).Save(sd.FileName);
+      if AnsiEndsText('.xlsx', sd.FileName) then
+       SaveXmlssToXLSX(tz, sd.FileName, [0], [], @TextConverter, 'utf-8')
+      else if AnsiEndsText('.ods', sd.FileName) then
+       SaveXmlssToODFS(tz, sd.FileName, [0], [], @TextConverter, 'utf-8')
+      else
+       TZXMLSSave.From(tz).Charset('utf-8', TextConverter).Save(sd.FileName);
       // Page 1 - formulae - only XML SS format
 
       // formulae would fail in XLSX format and Excel would complain on "corrupt worksheet"
