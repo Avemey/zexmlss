@@ -5,7 +5,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2015.11.27
+// Last update: 2016.06.05
 //----------------------------------------------------------------
 {
  Copyright (C) 2015 Ruslan Neborak
@@ -87,6 +87,11 @@ const
   ZETag_number_currency_style       = 'number:currency-style';
   ZETag_number_percentage_style     = 'number:percentage-style';
 
+  //for currency
+  ZETag_number_currency_symbol      = 'number:currency-symbol';
+  ZETag_number_language             = 'number:language';
+  ZETag_number_country              = 'number:country';
+
   ZETag_number_fraction             = 'number:fraction';
   ZETag_number_scientific_number    = 'number:scientific-number';
   ZETag_number_embedded_text        = 'number:embedded-text';
@@ -154,8 +159,9 @@ type
     //INPUT
     //     const xml: TZsspXMLWriterH - xml
     //     const AStyleName: string   - style name
+    //     const NumProperties: integer - additional number properties (currency/percentage etc)
     //           isVolatile: boolean  - is volatile?
-    procedure WriteNumberStyle(const xml: TZsspXMLWriterH; const AStyleName: string; isVolatile: boolean = false);
+    procedure WriteNumberStyle(const xml: TZsspXMLWriterH; const AStyleName: string; const NumProperties: integer; isVolatile: boolean = false);
 
     property Condition: string read FCondition write FCondition;
     property isCondition: boolean read FisCondition write FisCondition;
@@ -189,6 +195,7 @@ type
     procedure ReadDateFormat(const xml: TZsspXMLReaderH);
     procedure ReadNumberFormat(const xml: TZsspXMLReaderH);
     procedure ReadCurrencyFormat(const xml: TZsspXMLReaderH);
+    procedure ReadPercentageFormat(const xml: TZsspXMLReaderH);
     function TryGetFormatStrByNum(const DataStyleName: string; out retFormatStr: string): boolean;
     property Count: integer read FCount;
   end;
@@ -196,7 +203,7 @@ type
   TZEODSNumberFormatWriterItem = record
     StyleIndex: integer;
     NumberFormatName: string;
-    NUmberFormat: string;
+    NumberFormat: string;
   end;
 
   //Writes to ODS number formats and stores number formats names
@@ -209,6 +216,8 @@ type
 
     FNFItems: array of TODSNumberFormatMapItem;
     FNFItemsCount: integer;
+                                               //Additional properties for number formats (currency, percentage etc)
+    FNumberAdditionalProps: array of integer;
 
   protected
     function TryAddNFItem(const NFStr: string): boolean;
@@ -217,6 +226,20 @@ type
     constructor Create(const AMaxCount: integer);
     destructor Destroy(); override;
     function TryGetNumberFormatName(StyleID: integer; out NumberFormatName: string): boolean;
+    //Try to find additional properties for number format
+    //INPUT
+    //      StyleID: integer          - style ID
+    //  out NumberFormatProp: integer - finded number additional properties
+    //RETURN
+    //      boolean - true - additional properties is found
+    function TryGetNumberFormatAddProp(StyleID: integer; out NumberFormatProp: integer): boolean;
+    //Try to write number format to xml
+    //INPUT
+    //  const xml: TZsspXMLWriterH  - xml
+    //      StyleID: integer        - Style ID
+    //      ANumberFormat: string   - number format
+    //RETURN
+    //      boolean - true - NumberFormat was written ok
     function TryWriteNumberFormat(const xml: TZsspXMLWriterH; StyleID: integer; ANumberFormat: string): boolean;
     property Count: integer read FCount;
   end;
@@ -352,40 +375,81 @@ AM/PM, am/pm, A/P, a/p  Displays the hour using a 12-hour clock. Excel displays 
 }
 
 //Return true if in string AStr after position AStartPos have one of symbols SymbolsArr
+//This function checks quotas and brackets. If desired symbol between the quotas - function return FALSE.
 //INPUT
 //      AStartPos: integer              - start position
 //      ALen: integer                   - string length
+//  out retPos: integer                 - returned position of symbol
 //  const AStr: string                  - string
 //  const SymbolsArr: array of string   - searching symbols
 //RETURN
-//      boolean - true - one of symbols was found in string after AStartPos
-function IsHaveSymbolsAfterPos(AStartPos: integer; ALen: integer; const AStr: string; const SymbolsArr: array of string): boolean;
+//      boolean - true - one of symbols was found in string after AStartPos (and not between quotas)
+function IsHaveSymbolsAfterPosQuotas(AStartPos: integer; ALen: integer; out retPos: integer; const AStr: string; const SymbolsArr: array of string): boolean; overload;
 var
   i, j: integer;
   _IsQuote: boolean;
+  _IsBracket: boolean;
   ch: char;
   _max, _min: integer;
 
 begin
   Result := false;
   _IsQuote := false;
+  _IsBracket := false;
+  retPos := -1;
   _min := Low(SymbolsArr);
   _max := High(SymbolsArr);
-  for i := AStartPos + 1 to Alen do
+  i := AStartPos + 1;
+  while (i <= ALen) do
   begin
     ch := AStr[i];
-    if (ch = '"') then
-      _IsQuote := not _IsQuote;
 
     if (not _IsQuote) then
+    begin
+      case (ch) of
+        '[': _IsBracket := true;
+        ']': _IsBracket := false;
+        '\':
+            begin
+              inc(i, 2);
+              if (i > ALen) then
+                break;
+              ch := AStr[i];
+            end;
+      end;
+    end;
+
+    if ((not _IsBracket) and (ch = '"')) then
+      _IsQuote := not _IsQuote;
+
+    if ((not _IsQuote) and (not _IsBracket)) then
       for j := _min to _max do
         if (ch = SymbolsArr[j]) then
         begin
+          retPos := i;
           Result := true;
           exit;
         end;
-  end; //for i
-end; //IsHaveSymbolsAfterPos
+    inc(i);
+  end; //while i
+end; //IsHaveSymbolsAfterPosQuotas
+
+//Return true if in string AStr after position AStartPos have one of symbols SymbolsArr
+//This function checks quotas and brackets. If desired symbol between the quotas - function return FALSE.
+//INPUT
+//      AStartPos: integer              - start position
+//      ALen: integer                   - string length
+//  const AStr: string                  - string
+//  const SymbolsArr: array of string   - searching symbols
+//RETURN
+//      boolean - true - one of symbols was found in string after AStartPos (and not between quotas)
+function IsHaveSymbolsAfterPosQuotas(AStartPos: integer; ALen: integer; const AStr: string; const SymbolsArr: array of string): boolean; overload;
+var
+  _retPos: integer;
+
+begin
+  Result := IsHaveSymbolsAfterPosQuotas(AStartPos, ALen, _retPos, AStr, SymbolsArr);
+end; //IsHaveSymbolsAfterPosQuotas
 
 // Try to get xlsx number format type by string (very simplistic)
 //INPUT
@@ -398,9 +462,9 @@ end; //IsHaveSymbolsAfterPos
 function GetXlsxNumberFormatType(const FormatStr: string): integer;
 var
   i, l: integer;
-  s: string;
   ch: char;
   _isQuote: boolean;
+  _isBracket: boolean;
   _isFraction: boolean;
 
 begin
@@ -415,29 +479,40 @@ begin
   end;
 
   _isQuote := false;
+  _isBracket := false;
 
-  s := '';
   l := length(FormatStr);
   for i := 1 to l do
   begin
     ch := FormatStr[i];
 
-    if (ch = '"') then
+    if ((ch = '"') and (not _isBracket)) then
       _isQuote := not _isQuote;
 
-    if (not _isQuote) then
+    if ((ch = '[') and (not _isQuote)) then
+      _isBracket := true;
+
+    if ((ch = ']') and (not _isQuote) and _isBracket) then
+       _isBracket := false;
+
+    //[$RUB] / [$UAH] etc
+    //TODO: need check for valid country code
+    if (_isBracket and (ch = '$')) then
+       Result := Result or ZE_NUMFORMAT_NUM_IS_CURRENCY;
+
+    if ((not _isQuote) and (not _isBracket)) then
       case (ch) of
         '0', '#', 'E', 'e', '%', '?':
           begin
             Result := ZE_NUMFORMAT_IS_NUMBER;
 
-            if (IsHaveSymbolsAfterPos(i - 1, l, FormatStr, ['e', 'E'])) then
+            if (IsHaveSymbolsAfterPosQuotas(i - 1, l, FormatStr, ['e', 'E'])) then
               Result := Result or ZE_NUMFORMAT_NUM_IS_SCIENTIFIC
             else
-            if (IsHaveSymbolsAfterPos(i - 1, l, FormatStr, ['%'])) then
+            if (IsHaveSymbolsAfterPosQuotas(i - 1, l, FormatStr, ['%'])) then
               Result := Result or ZE_NUMFORMAT_NUM_IS_PERCENTAGE
             else
-            if (IsHaveSymbolsAfterPos(i - 1, l, FormatStr, ['/']) or _isFraction) then
+            if (IsHaveSymbolsAfterPosQuotas(i - 1, l, FormatStr, ['/']) or _isFraction) then
               Result := Result or ZE_NUMFORMAT_NUM_IS_FRACTION;
 
             exit;
@@ -468,21 +543,34 @@ end; //GetXlsxNumberFormatType
 function GetNativeNumberFormatType(const FormatStr: string): integer;
 var
   i, l: integer;
-  s: string;
   ch, _prev: char;
   _isQuote: boolean;
   _isBracket: boolean;
+  _isSemicolon: boolean;
+  t: integer;
+
+  function _CheckSemicolon(): boolean;
+  begin
+    if (not _isSemicolon) then
+    begin
+      t := i - 1;
+      _isSemicolon := IsHaveSymbolsAfterPosQuotas(t, l, i, FormatStr, [';']);
+    end;
+
+    Result := not _isSemicolon;
+  end;
 
 begin
   Result := ZE_NUMFORMAT_IS_UNKNOWN;
 
+  _isSemicolon := false;
   _isBracket := false;
   _isQuote := false;
   _prev := #0;
 
-  s := '';
   l := length(FormatStr);
-  for i := 1 to l do
+  i := 1;
+  while (i <= l) do
   begin
     ch := FormatStr[i];
 
@@ -495,22 +583,50 @@ begin
     if ((ch = ']') and (not _isQuote) and _isBracket) then
        _isBracket := false;
 
+    //[$RUB] / [$UAH] etc
+    //TODO: need check for valid country code
+    if (_isBracket and (ch = '$')) then
+       Result := Result or ZE_NUMFORMAT_NUM_IS_CURRENCY;
+
     if ((not _isQuote) and (not _isBracket)) then
       case (ch) of
-        '0', '#', '%', '?':
+        '0', '#', '?':
           begin
-            Result := ZE_NUMFORMAT_IS_NUMBER;
+            if (_isSemicolon) then
+              Result := Result or ZE_NUMFORMAT_IS_NUMBER
+            else
+              Result := ZE_NUMFORMAT_IS_NUMBER;
 
-            if (IsHaveSymbolsAfterPos(i - 1, l, FormatStr, ['e', 'E'])) then
-              Result := Result or ZE_NUMFORMAT_NUM_IS_SCIENTIFIC
+            if (IsHaveSymbolsAfterPosQuotas(i - 1, l, t, FormatStr, ['e', 'E'])) then
+            begin
+              Result := Result or ZE_NUMFORMAT_NUM_IS_SCIENTIFIC;
+              i := t;
+            end
             else
-            if (IsHaveSymbolsAfterPos(i - 1, l, FormatStr, ['%'])) then
-              Result := Result or ZE_NUMFORMAT_NUM_IS_PERCENTAGE
+            if (IsHaveSymbolsAfterPosQuotas(i - 1, l, t, FormatStr, ['%'])) then
+            begin
+              Result := Result or ZE_NUMFORMAT_NUM_IS_PERCENTAGE;
+              i := t;
+            end
             else
-            if (IsHaveSymbolsAfterPos(i - 1, l, FormatStr, ['/'])) then
+            if (IsHaveSymbolsAfterPosQuotas(i - 1, l, t, FormatStr, ['/'])) then
+            begin
               Result := Result or ZE_NUMFORMAT_NUM_IS_FRACTION;
+              i := t;
+            end;
 
-            exit;
+            if (_CheckSemicolon()) then
+              exit;
+          end;
+        '%':
+          begin
+            if (_isSemicolon) then
+              Result := Result or ZE_NUMFORMAT_IS_NUMBER or ZE_NUMFORMAT_NUM_IS_PERCENTAGE
+            else
+              Result := ZE_NUMFORMAT_IS_NUMBER or ZE_NUMFORMAT_NUM_IS_PERCENTAGE;
+
+            if (_CheckSemicolon()) then
+              exit;
           end;
         'E', 'e':
           begin
@@ -530,9 +646,11 @@ begin
             Result := ZE_NUMFORMAT_IS_DATETIME;
             exit;
           end;
+        ';': _isSemicolon := True;
       end;
     _prev := ch;
-  end; //for i
+    inc(i);
+  end; //while i
 end; //GetNativeNumberFormatType
 
 function ConvertFormatNativeToXlsx(const FormatNative: string): string;
@@ -818,9 +936,16 @@ begin
       retDateTime := IncMonth(retDateTime, 12 * 4);
 
     if (s2 <> '') then
+    {$IFDEF DELPHI_UNICODE}
       if (TryStrToFloat('0' + FormatSettings.DecimalSeparator + s2, t)) then
+    {$ELSE}
+      {$IFDEF Z_FPC_USE_FORMATSETTINGS}
+      if (TryStrToFloat('0' + FormatSettings.DecimalSeparator + s2, t)) then
+      {$ELSE}
+      if (TryStrToFloat('0' + DecimalSeparator + s2, t)) then
+      {$ENDIF}
+    {$ENDIF}
         retDateTime := retDateTime + t;
-
     Result := true;
   end;
 end; //TryXlsxTimeToDateTime
@@ -1145,7 +1270,10 @@ begin
     ReadDateFormat(xml)
   else
   if (xml.TagName = ZETag_number_currency_style) then
-    ReadCurrencyFormat(xml);
+    ReadCurrencyFormat(xml)
+  else
+  if (xml.TagName = ZETag_number_percentage_style) then
+    ReadPercentageFormat(xml);
 end;
 
 procedure TZEODSNumberFormatReader.ReadCurrencyFormat(const xml: TZsspXMLReaderH);
@@ -1157,6 +1285,12 @@ end;
 procedure TZEODSNumberFormatReader.ReadNumberFormat(const xml: TZsspXMLReaderH);
 begin
   ReadNumberFormatCommon(xml, ZETag_number_number_style, 0);
+end;
+
+//Read number style: <number:percentage-style> .. </number:percentage-style>
+procedure TZEODSNumberFormatReader.ReadPercentageFormat(const xml: TZsspXMLReaderH);
+begin
+  ReadNumberFormatCommon(xml, ZETag_number_percentage_style, ZE_NUMFORMAT_NUM_IS_PERCENTAGE);
 end;
 
 //Read Number/currency/percentage number format style
@@ -1270,6 +1404,12 @@ var
         if (FEmbededTextArray[i].NumberPosition >= 0) then
         begin
           _currentpos := FEmbededTextArray[i].NumberPosition;
+          //TODO: need test. For example: if symbol "%" not one? (%0%0.00% or "%"0.0)
+          (*
+          if (FEmbededTextArray[i].Txt = '%') then
+            _txt := '%'
+          else
+          *)
           _txt := '"' + ZEReplaceEntity(FEmbededTextArray[i].Txt) + '"';
 
           if (_currentpos <= _min_int_digits) then
@@ -1359,6 +1499,27 @@ var
     end;
   end; //_ReadNumber_Scientific
 
+  //<number:currency-symbol> .. </<number:currency-symbol>
+  procedure _ReadCurrecny_Symbol();
+  begin
+    //TODO: need get currency symbol by attributes:
+    //      ZETag_number_language = 'number:language'
+    //      ZETag_number_country  = 'number:country'
+    if (xml.TagType = 4) then
+      while ((xml.TagType <> 6) or (xml.TagName <> ZETag_number_currency_symbol)) do
+      begin
+        xml.ReadTag();
+
+        (* //if need currency name in future
+        if (xml.TagName = ZETag_number_currency_symbol) then
+           s := xml.TextBeforeTag;
+        *)
+
+        if (xml.Eof()) then
+          break;
+      end; //while
+  end; //_ReadCurrecny_Symbol
+
   // <style:map />
   procedure _ReadStyleMap();
   var
@@ -1424,8 +1585,20 @@ begin
     if (xml.TagName = ZETag_number_scientific_number) then
       _ReadNumber_Scientific()
     else
+    if (xml.TagName = ZETag_number_currency_symbol) then
+      _ReadCurrecny_Symbol()
+    else
     if ((xml.TagName = ZETag_number_text) and (xml.TagType = 6)) then
-      _result := _result + '"' + ZEReplaceEntity(xml.TextBeforeTag) + '"'
+    begin
+      s := ZEReplaceEntity(xml.TextBeforeTag);
+      if (s = '"') then
+        _result := _result + '\' + s
+      else
+      if (s = '%') then
+        _result := _result + s
+      else
+        _result := _result + '"' + s + '"';
+    end
     else
     if (xml.TagName = ZETag_style_map) then
       _ReadStyleMap()
@@ -1470,6 +1643,11 @@ begin
   if (FCountMax < 10) then
     FCountMax := 10;
   SetLength(FItems, FCountMax);
+
+  SetLength(FNumberAdditionalProps, FCountMax);
+  for i := 0 to FCountMax - 1 do
+    FNumberAdditionalProps[i] := 0;
+
   FCurrentNFIndex := 100;
 
   FNFItemsCount := 0;
@@ -1487,6 +1665,8 @@ begin
   for i := 0 to ZE_MAX_NF_ITEMS_COUNT - 1 do
     FreeAndNil(FNFItems[i]);
   SetLength(FNFItems, 0);
+
+  SetLength(FNumberAdditionalProps, 0);
 
   inherited;
 end;
@@ -1513,6 +1693,23 @@ begin
     end;
 end; //TryGetNumberFormatName
 
+//Try to find additional properties for number format
+//INPUT
+//      StyleID: integer          - style ID
+//  out NumberFormatProp: integer - finded number additional properties
+//RETURN
+//      boolean - true - additional properties is found
+function TZEODSNumberFormatWriter.TryGetNumberFormatAddProp(StyleID: integer;
+                                                            out NumberFormatProp: integer): boolean;
+begin
+  Result := (StyleID >= 0) and (StyleID < FCount);
+
+  if (Result) then
+    NumberFormatProp := FNumberAdditionalProps[StyleID]
+  else
+    NumberFormatProp := 0;
+end; //TryGetNumberFormatAddProp
+
 //Separate number format string  by ";".
 //INPUT
 //  const NFStr: string - Number format string (like "nf1;nf2;nf3")
@@ -1523,14 +1720,11 @@ var
   i, l: integer;
   b: boolean;
   s: string;
-  _tmp: string;
   ch: char;
 
 begin
   b := true;
   s := '';
-
-  _tmp := NFStr;
 
   l := length(NFStr);
 
@@ -1593,22 +1787,10 @@ function TZEODSNumberFormatWriter.TryWriteNumberFormat(const xml: TZsspXMLWriter
                                                        ANumberFormat: string): boolean;
 var
   s: string;
-  _tmp: string;
   _nfType: integer;
   _nfName: string;
-  l: integer;
 
-  function _WriteCurrency(): boolean;
-  begin
-    Result := false;
-  end;
-
-  function _WritePercentage(): boolean;
-  begin
-    Result := false;
-  end;
-
-  function _WriteNumberNumber(): boolean;
+  function _WriteNumberNumber(NumProperties: integer = 0): boolean;
   var
     i: integer;
     num: integer;
@@ -1626,7 +1808,7 @@ var
     begin
       if (FNFItemsCount = 1) then
       begin
-        FNFItems[0].WriteNumberStyle(xml, _nfName);
+        FNFItems[0].WriteNumberStyle(xml, _nfName, NumProperties);
         Result := true;
       end
       else
@@ -1648,16 +1830,26 @@ var
           begin
             _item_name := _nfName + 'P' + IntToStr(num);
             FNFItems[FNFItemsCount - 1].AddCondition(s, _item_name);
-            FNFItems[i].WriteNumberStyle(xml, _item_name, true);
+            FNFItems[i].WriteNumberStyle(xml, _item_name, NumProperties, true);
             inc(num);
           end;
         end; //for i
 
-        FNFItems[FNFItemsCount - 1].WriteNumberStyle(xml, _nfName);
+        FNFItems[FNFItemsCount - 1].WriteNumberStyle(xml, _nfName, NumProperties);
         Result := true;
       end;
     end; //if
   end; //_WriteNumberNumber
+
+  function _WriteCurrency(): boolean;
+  begin
+    Result := _WriteNumberNumber(ZE_NUMFORMAT_NUM_IS_CURRENCY);
+  end;
+
+  function _WritePercentage(): boolean;
+  begin
+    Result := _WriteNumberNumber(ZE_NUMFORMAT_NUM_IS_PERCENTAGE);
+  end;
 
   function _WriteDateTime(): boolean;
   begin
@@ -1698,7 +1890,9 @@ var
 
     FItems[FCount].StyleIndex := StyleID;
     FItems[FCount].NumberFormatName := NFName;
-    FItems[FCount].NUmberFormat := ANumberFormat;
+    FItems[FCount].NumberFormat := ANumberFormat;
+
+    FNumberAdditionalProps[StyleID] := _nfType;
 
     inc(FCount);
   end;
@@ -1710,7 +1904,7 @@ var
   begin
     Result := false;
     for i := 0 to FCount - 1 do
-      if (FItems[i].NUmberFormat = ANumberFormat) then
+      if (FItems[i].NumberFormat = ANumberFormat) then
       begin
         _AddItem(FItems[i].NumberFormatName);
         Result := true;
@@ -1905,6 +2099,7 @@ end; //AddCondition
 
 procedure TODSNumberFormatMapItem.WriteNumberStyle(const xml: TZsspXMLWriterH;
                                                    const AStyleName: string;
+                                                   const NumProperties: integer;
                                                    isVolatile: boolean = false);
 var
   i: integer;
@@ -1915,6 +2110,12 @@ var
   _CurrentPos: integer;
   _isFirstText: boolean;
   _firstText: string;
+  _txt_len: integer;
+  _numeratorDigitsCount: integer;
+  _denomenatorDigitsCount: integer;
+  _isFraction: boolean;
+  _isSci: boolean;
+  _exponentDigitsCount: integer;
   s: string;
 
   // <style:map style:condition="" style:apply-style-name=""/>
@@ -1949,8 +2150,15 @@ var
     //     isExtrazero: boolean - true = 0, false = #
     procedure _CheckDigit(isExtrazero: boolean);
     begin
+      if (_isSci) then
+      begin
+        inc(_exponentDigitsCount);
+        Exit;
+      end;
+
       inc(_TotalDigitsCount);
       inc(_CurrentPos);
+
       if (_isDecimal) then
       begin
         inc(_DecimalCount);
@@ -1963,36 +2171,78 @@ var
       end;
     end; //_CheckDigit
 
+    //Calc symbols "?" for fraction numerator and denominator
+    //TODO: is it possible to use 0 or # in fraction as numerator or/and denominator?
+    procedure _CheckFractionDigit();
+    begin
+      if (_isFraction) then
+        inc(_denomenatorDigitsCount)
+      else
+        inc(_numeratorDigitsCount);
+    end; //_CheckFractionDigit
+
+    procedure _AddEmbebedText(isAdd: boolean);
+    begin
+      if (isAdd) then
+      begin
+        if ((_TotalDigitsCount > 0) or _isFirstText) then
+        begin
+          if (FEmbededTextCount >= FEmbededMaxCount) then
+          begin
+            inc(FEmbededMaxCount, 10);
+            SetLength(FEmbededTextArray, FEmbededMaxCount);
+          end;
+          FEmbededTextArray[FEmbededTextCount].Txt := s;
+          FEmbededTextArray[FEmbededTextCount].NumberPosition := _CurrentPos;
+          inc(FEmbededTextCount);
+        end
+        else
+        begin
+          _isFirstText := true;
+          _firstText := s;
+        end;
+        s := '';
+      end;
+    end; //_AddEmbebedText
+
+    procedure _ProgressPercent();
+    begin
+      s := s + ch;
+      if ((not _isFirstText) and (_TotalDigitsCount = 0) and (FEmbededTextCount = 0)) then
+      begin
+        _isFirstText := true;
+        _firstText := s;
+        s := '';
+      end
+      else
+        if (i <> _txt_len) then
+          _AddEmbebedText(true);
+    end; //_ProgressPercent
+
   begin
     s := '';
     _isQuote := false;
     _isDecimal := false;
-    for i := 1 to Length(FNumberFormat) do
+    i := 1;
+    _txt_len := Length(FNumberFormat);
+    while (i <= _txt_len) do
     begin
       ch := FNumberFormat[i];
 
+      if ((ch = '\') and (not _isQuote)) then
+      begin
+        inc(i);
+        if (i > _txt_len) then
+          break;
+
+        s := FNumberFormat[i];
+        _AddEmbebedText(true);
+        ch := #0;
+      end;
+
       if (ch = '"') then
       begin
-        if (_isQuote and (not _isDecimal)) then
-        begin
-          if ((_TotalDigitsCount > 0) or _isFirstText) then
-          begin
-            if (FEmbededTextCount >= FEmbededMaxCount) then
-            begin
-              inc(FEmbededMaxCount, 10);
-              SetLength(FEmbededTextArray, FEmbededMaxCount);
-            end;
-            FEmbededTextArray[FEmbededTextCount].Txt := s;
-            FEmbededTextArray[FEmbededTextCount].NumberPosition := _CurrentPos;
-            inc(FEmbededTextCount);
-          end
-          else
-          begin
-            _isFirstText := true;
-            _firstText := s;
-          end;
-          s := '';
-        end;
+        _AddEmbebedText(_isQuote and (not _isDecimal));
         _isQuote := not _isQuote;
       end;
 
@@ -2006,17 +2256,87 @@ var
           '0': _CheckDigit(true);
           '#': _CheckDigit(false);
           '.': _isDecimal := true;
-          '?':;
-          '/':;
+          '?': _CheckFractionDigit();
+          '/': _isFraction := true;
+          'E', 'e': _isSci := true;
+          '+':; //??
+          '-':; //??
           ' ':;
+          '%': _ProgressPercent();
         end;
-    end; //for i
+      inc(i);
+    end; //while i
   end; //_ParseFormat
 
   //<number:number > </number:number>
   procedure _WriteNumberMain();
   var
     i: integer;
+
+    procedure _FillMainAttrib();
+    begin
+      xml.Attributes.Clear();
+
+      if (_isFraction) then
+        if ((_numeratorDigitsCount <= 0) or (_denomenatorDigitsCount <= 0)) then
+          _isFraction := False;
+
+      //TODO: it is trouble. For now ignore fraction and sci.
+      if (_isFraction and _isSci) then
+      begin
+        _isFraction := false;
+        _isSci := false;
+      end;
+
+      if (_isFraction) then
+      begin
+        xml.Attributes.Add(ZETag_number_min_numerator_digits, IntToStr(_numeratorDigitsCount));
+        xml.Attributes.Add(ZETag_number_min_denominator_digits, IntToStr(_denomenatorDigitsCount));
+      end
+      else
+      begin
+        if (_DecimalCount > 0) then
+          xml.Attributes.Add(ZETag_number_decimal_places, IntToStr(_DecimalCount));
+        if (_isSci) then
+          xml.Attributes.Add(ZETag_number_min_exponent_digits, IntToStr(_exponentDigitsCount));
+      end;
+      xml.Attributes.Add(ZETag_number_min_integer_digits, IntToStr(_MinIntDigitsCount));
+    end; //_FillMainAttrib
+
+    procedure _StartEmbededTextTag();
+    begin
+      //Empty tag for:
+      //      number:fraction
+      //      number:scientific-number
+
+      if (_isFraction) then
+        xml.WriteEmptyTag(ZETag_number_fraction, true, true)
+      else
+      if (_isSci) then
+        xml.WriteEmptyTag(ZETag_number_scientific_number, true, true)
+      else
+        xml.WriteTagNode(ZETag_number_number, true, true, false);
+    end; //_StartEmbededTextTag
+
+    procedure _EndEmbededTextTag();
+    begin
+      if ((not _isFraction) and (not _isSci)) then
+        xml.WriteEndTagNode(); //number:number
+    end; //_EndEmbededTextTag
+
+    //<number:number/> or
+    //<number:fraction/> or
+    //<number:scientific-number/>
+    procedure _WriteEmptyNumberTag();
+    begin
+      if (_isFraction) then
+        xml.WriteEmptyTag(ZETag_number_fraction, true, true)
+      else
+      if (_isSci) then
+        xml.WriteEmptyTag(ZETag_number_scientific_number, true, true)
+      else
+        xml.WriteEmptyTag(ZETag_number_number, true, true);
+    end; //_WriteEmptyNumberTag
 
   begin
     FEmbededTextCount := 0;
@@ -2027,6 +2347,12 @@ var
     _MinIntDigitsCount := 0;
     _isFirstText := false;
     _firstText := '';
+    _numeratorDigitsCount := 0 ;
+    _denomenatorDigitsCount := 0;
+    _isFraction := False;
+    _isSci := False;
+    _exponentDigitsCount := 0;
+
     _ParseFormat();
 
     if (_isFirstText) then
@@ -2035,26 +2361,25 @@ var
       xml.WriteTag(ZETag_number_text, _firstText, true, false, true);
     end;
 
-    xml.Attributes.Clear();
-    if (_DecimalCount > 0) then
-      xml.Attributes.Add(ZETag_number_decimal_places, IntToStr(_DecimalCount));
-    xml.Attributes.Add(ZETag_number_min_integer_digits, IntToStr(_MinIntDigitsCount));
+    _FillMainAttrib();
 
     if (FEmbededTextCount > 0) then
     begin
-      xml.WriteTagNode(ZETag_number_number, true, true, false);
+      _StartEmbededTextTag();
 
-      for i := 0 to FEmbededTextCount - 1 do
-      begin
-        xml.Attributes.Clear();
-        xml.Attributes.Add(ZETag_number_position, IntToStr(_IntDigitsCount - FEmbededTextArray[i].NumberPosition));
-        xml.WriteTag(ZETag_number_embedded_text, FEmbededTextArray[i].Txt, true, false, true);
-      end;
+      //TODO: Is it possible to use embeded text for fraction and scientific formats?
+      if (not _isFraction) then
+        for i := 0 to FEmbededTextCount - 1 do
+        begin
+          xml.Attributes.Clear();
+          xml.Attributes.Add(ZETag_number_position, IntToStr(_IntDigitsCount - FEmbededTextArray[i].NumberPosition));
+          xml.WriteTag(ZETag_number_embedded_text, FEmbededTextArray[i].Txt, true, false, true);
+        end;
 
-      xml.WriteEndTagNode(); //number:number
+      _EndEmbededTextTag();
     end
     else
-      xml.WriteEmptyTag(ZETag_number_number, true, true);
+      _WriteEmptyNumberTag();
 
     if (s <> '') then
     begin
@@ -2067,9 +2392,15 @@ begin
   xml.Attributes.Clear();
   xml.Attributes.Add(ZETag_Attr_StyleName, AStyleName);
   if (isVolatile) then
-     xml.Attributes.Add(ZETag_style_volatile, 'true');
+    xml.Attributes.Add(ZETag_style_volatile, 'true');
 
-  xml.WriteTagNode(ZETag_number_number_style, true, true, false);
+  if (NumProperties = ZE_NUMFORMAT_NUM_IS_PERCENTAGE) then
+    xml.WriteTagNode(ZETag_number_percentage_style, true, true, false)
+  else
+  if (NumProperties = ZE_NUMFORMAT_NUM_IS_CURRENCY) then
+    xml.WriteTagNode(ZETag_number_currency_style, true, true, false)
+  else
+    xml.WriteTagNode(ZETag_number_number_style, true, true, false);
 
   _WriteTextProperties();
 

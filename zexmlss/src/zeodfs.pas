@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2015.04.25
+// Last update: 2016.06.05
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - added uniform save API
 //     to create ODS in Delphi/Windows
@@ -407,6 +407,9 @@ const
 
   ZETag_style_data_style_name = 'style:data-style-name';
 
+  ZETag_style_use_optimal_column_width = 'style:use-optimal-column-width';
+  ZETag_style_use_optimal_row_height = 'style:use-optimal-row-height';
+
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   const_ConditionalStylePrefix      = 'ConditionalStyle_f';
   const_calcext_conditional_formats = 'calcext:conditional-formats';
@@ -503,6 +506,7 @@ type
     name: string;     //им€ стил€ строки
     width: real;      //ширина
     breaked: boolean; //разрыв
+    AutoWidth: boolean; //Optimal width
   end;
 
   TZODFColumnStyleArray = array of TZODFColumnStyle;
@@ -512,6 +516,7 @@ type
     height: real;
     breaked: boolean;
     color: TColor;
+    AutoHeight: boolean; //Optimal Height
   end;
 
   TZODFRowStyleArray = array of TZODFRowStyle;
@@ -4304,6 +4309,8 @@ var
   ColumnStyle, RowStyle: array of array of integer;  //стили столбцов/строк
   i: integer;
   _dt: TDateTime;
+  _currColumn: TZColOptions;
+  _currRow: TZRowOptions;
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   _cfwriter: TZODFConditionalWriteHelper;
   {$ENDIF}
@@ -4327,6 +4334,9 @@ var
     begin
       if (ColumnStyle[now_i][now_j] > -1) then
         exit;
+
+      _currColumn := XMLSS.Sheets[_pages[now_i]].Columns[now_j];
+
       _xml.Attributes.Clear();
       _xml.Attributes.Add(ZETag_Attr_StyleName, 'co' + IntToStr(now_StyleNumber));
       _xml.Attributes.Add(ZETag_style_family, 'table-column', false);
@@ -4335,11 +4345,15 @@ var
       _xml.Attributes.Clear();
       //разрыв страницы (fo:break-before = auto | column | page)
       s := 'auto';
-      if (XMLSS.Sheets[_pages[now_i]].Columns[now_j].Breaked) then
+      if (_currColumn.Breaked) then
         s := 'column';
       _xml.Attributes.Add('fo:break-before', s);
       //Ўирина колонки style:column-width
-      _xml.Attributes.Add('style:column-width', ODFGetSizeToStr(XMLSS.Sheets[_pages[now_i]].Columns[now_j].WidthMM * 0.1), false);
+      _xml.Attributes.Add('style:column-width', ODFGetSizeToStr(_currColumn.WidthMM * 0.1), false);
+
+      if (_currColumn.AutoFitWidth) then
+        _xml.Attributes.Add(ZETag_style_use_optimal_column_width, ODFBoolToStr(true), false);
+
       _xml.WriteEmptyTag('style:table-column-properties', true, false);
 
       _xml.WriteEndTagNode(); //style:style
@@ -4352,11 +4366,14 @@ var
           begin
             b := true;
             //style:column-width
-            if (XMLSS.Sheets[_pages[i]].Columns[j].WidthPix <> XMLSS.Sheets[_pages[now_i]].Columns[now_j].WidthPix) then
+            if (XMLSS.Sheets[_pages[i]].Columns[j].WidthPix <> _currColumn.WidthPix) then
               b := false;
             //fo:break-before
-            if (XMLSS.Sheets[_pages[i]].Columns[j].Breaked <> XMLSS.Sheets[_pages[now_i]].Columns[now_j].Breaked) then
+            if (XMLSS.Sheets[_pages[i]].Columns[j].Breaked <> _currColumn.Breaked) then
               b := false;
+            //style:use-optimal-column-width
+            if (XMLSS.Sheets[_pages[i]].Columns[j].AutoFitWidth <> _currColumn.AutoFitWidth) then
+               b := false;
 
             if (b) then
               ColumnStyle[i][j] := now_StyleNumber;
@@ -4381,18 +4398,22 @@ var
       _xml.Attributes.Add(ZETag_style_family, 'table-row', false);
       _xml.WriteTagNode(ZETag_StyleStyle, true, true, false);
 
+      _currRow := XMLSS.Sheets[_pages[now_i]].Rows[now_j];
+
       _xml.Attributes.Clear();
       //разрыв страницы (fo:break-before = auto | column | page)
       s := 'auto';
-      if (XMLSS.Sheets[_pages[now_i]].Rows[now_j].Breaked) then
+      if (_currRow.Breaked) then
         s := 'page';
       _xml.Attributes.Add('fo:break-before', s);
       //высота строки style:row-height
-      _xml.Attributes.Add('style:row-height', ODFGetSizeToStr(XMLSS.Sheets[_pages[now_i]].Rows[now_j].HeightMM * 0.1), false);
+      _xml.Attributes.Add('style:row-height', ODFGetSizeToStr(_currRow.HeightMM * 0.1), false);
        //?? style:min-row-height
+
       //style:use-optimal-row-height - пересчитывать ли высоту, если содержимое €чеек изменилось
-      if (abs(XMLSS.Sheets[_pages[now_i]].Rows[now_j].Height - XMLSS.Sheets[_pages[now_i]].DefaultRowHeight) < 0.001) then
-        _xml.Attributes.Add('style:use-optimal-row-height', ODFBoolToStr(true), false);
+      //if (abs(_currRow.Height - XMLSS.Sheets[_pages[now_i]].DefaultRowHeight) < 0.001) then
+      if (_currRow.AutoFitHeight) then
+        _xml.Attributes.Add(ZETag_style_use_optimal_row_height, ODFBoolToStr(true), false);
       //fo:background-color - цвет фона
       k := XMLSS.Sheets[_pages[now_i]].Rows[now_j].StyleID;
       if (k > -1) then
@@ -4413,10 +4434,13 @@ var
           begin
             b := true;
             //style:row-height
-            if (XMLSS.Sheets[_pages[i]].Rows[j].HeightPix <> XMLSS.Sheets[_pages[now_i]].Rows[now_j].HeightPix) then
+            if (XMLSS.Sheets[_pages[i]].Rows[j].HeightPix <> _currRow.HeightPix) then
               b := false;
             //fo:break-before
-            if (XMLSS.Sheets[_pages[i]].Rows[j].Breaked <> XMLSS.Sheets[_pages[now_i]].Rows[now_j].Breaked) then
+            if (XMLSS.Sheets[_pages[i]].Rows[j].Breaked <> _currRow.Breaked) then
+              b := false;
+            //style:use-optimal-row-height
+            if (XMLSS.Sheets[_pages[i]].Rows[j].AutoFitHeight <> _currRow.AutoFitHeight) then
               b := false;
 
             if (b) then
@@ -4748,7 +4772,20 @@ var
         case (ProcessedSheet.Cell[j, i].CellType) of
           ZENumber:
             begin
-              ss := 'float';
+              WriteHelper.NumberFormatWriter.TryGetNumberFormatAddProp(ProcessedSheet.Cell[j, i].CellStyle, t);
+
+              if (t and ZE_NUMFORMAT_NUM_IS_PERCENTAGE = ZE_NUMFORMAT_NUM_IS_PERCENTAGE) then
+                ss := 'percentage'
+              else
+              if (t and ZE_NUMFORMAT_NUM_IS_CURRENCY = ZE_NUMFORMAT_NUM_IS_CURRENCY) then
+              begin
+                //TODO: add attribute office:currency
+                //_xml.Attributes.Add('office:currency', 'BYR', false);
+                ss := 'currency';
+              end
+              else
+                ss := 'float';
+
               _xml.Attributes.Add('office:value', ZEFloatSeparator(FormatFloat('0.#######', ZETryStrToFloat(_CellData))), false);
             end;
           ZEBoolean:
@@ -4832,7 +4869,7 @@ var
           _xml.WriteEndTagNode() //€чейка  table:table-cell | table:covered-table-cell
         else
           _xml.WriteEmptyTag(s, true, true);
-      end;
+      end; //for j
       {/€чейки}
 
       if DivedIntoHeader and (i = ProcessedSheet.RowsToRepeat.Till) then begin
@@ -5376,7 +5413,7 @@ end; //ExportXmlssToODFS
 //¬озвращает размер измерени€ в ћћ
 //INPUT
 //  const value: string     - строка со значением
-//  var RetSize: real       - возвращаемое значение
+//  out RetSize: real       - возвращаемое значение
 //      isMultiply: boolean - флаг необходимости умножать значение с учЄтом единицы измерени€
 //RETURN
 //      boolean - true - размер определЄн успешно
@@ -5927,6 +5964,8 @@ var
             s := xml.Attributes.ItemsByName['style:column-width'];
             if (s > '') then
               ODFGetValueSizeMM(s, ODFColumnStyles[ColStyleCount].width);
+            s := xml.Attributes.ItemsByName[ZETag_style_use_optimal_column_width];
+            ODFColumnStyles[ColStyleCount].AutoWidth := ZETryStrToBoolean(s);
           end;
         end; //while
       inc(ColStyleCount);
@@ -5961,8 +6000,11 @@ var
             if (s > '') then
               ODFGetValueSizeMM(s, ODFRowStyles[RowStyleCount].height);
             s := xml.Attributes.ItemsByName[ZETag_fo_background_color];
-           if (s > '') then
-             ODFRowStyles[RowStyleCount].color := HTMLHexToColor(s);
+            if (s > '') then
+              ODFRowStyles[RowStyleCount].color := HTMLHexToColor(s);
+
+            s := xml.Attributes.ItemsByName[ZETag_style_use_optimal_row_height];
+            ODFRowStyles[RowStyleCount].AutoHeight := ZETryStrToBoolean(s);
           end;
         end; //while
       inc(RowStyleCount);
@@ -6387,6 +6429,7 @@ var
               _Sheet.Rows[_CurrentRow].Breaked := ODFRowStyles[i].breaked;
               if (ODFRowStyles[i].height >= 0) then
                 _Sheet.Rows[_CurrentRow].HeightMM := ODFRowStyles[i].height;
+              _Sheet.Rows[_CurrentRow].AutoFitHeight := ODFRowStyles[i].AutoHeight;
             end;
 
         //стиль €чейки по умолчанию
@@ -6433,6 +6476,7 @@ var
           if (ODFColumnStyles[i].name = s) then
           begin
             _Sheet.Columns[_MaxCol].Breaked := ODFColumnStyles[i].breaked;
+            _Sheet.Columns[_MaxCol].AutoFitWidth := ODFColumnStyles[i].AutoWidth;
             if (ODFColumnStyles[i].width >= 0) then
               _Sheet.Columns[_MaxCol].WidthMM := ODFColumnStyles[i].width;
             break;
