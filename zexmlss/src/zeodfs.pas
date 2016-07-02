@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2016.06.05
+// Last update: 2016.07.03
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - added uniform save API
 //     to create ODS in Delphi/Windows
@@ -6158,10 +6158,14 @@ var
       _numX, _numY: integer;
       _isHaveTextCell: boolean;
       _kol: integer;
+      _isStringValue: boolean;
+      _stringValue: string;
 
     begin
       if (((xml.TagName = 'table:table-cell') or (xml.TagName = 'table:covered-table-cell')) and (xml.TagType in [4, 5])) then
       begin
+        _stringValue := '';
+        _isStringValue := false;
         CheckCol(_CurrentPage, _CurrentCol + 1);
         _CurrCell := _Sheet.Cell[_CurrentCol, _CurrentRow];
         s := xml.Attributes.ItemsByName['table:number-columns-repeated'];
@@ -6244,6 +6248,11 @@ var
             _CurrCell.Data := xml.Attributes.ItemsByName['office:value'];
           ZEDateTime:
             _CurrCell.Data := xml.Attributes.ItemsByName['office:date-value'];
+          ZEString:
+            begin
+              _stringValue := xml.Attributes.ItemsByName['office:string-value'];
+              _isStringValue := _stringValue <> '';
+            end;
         end; //case
 
         //защищЄнность €чейки
@@ -6359,6 +6368,12 @@ var
 
         if (not (_CurrCell.CellType in [ZENumber, ZEDateTime])) then
           _CurrCell.Data := ZEReplaceEntity(_celltext);
+
+        if ((_CurrCell.CellType = ZEString) and _isStringValue) then
+        begin
+          _CurrCell.Data := ZEReplaceEntity(_stringValue);
+          _isHaveTextCell := true;
+        end;
 
         //≈сли €чейку нужно повторить
         if (isRepeatCell) then

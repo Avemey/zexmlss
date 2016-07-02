@@ -5,9 +5,9 @@
 // Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
 // e-mail: avemey(мяу)tut(точка)by
 // URL:    http://avemey.com
-// Ver:    0.0.9
+// Ver:    0.0.11
 // Лицензия: zlib
-// Last update: 2015.11.08
+// Last update: 2016.07.03
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -1119,6 +1119,9 @@ var
   _names: TStringDynArray;    //названия страниц
   kol: integer;               //количество страниц
   i: integer;
+  _FmtParser: TNumFormatParser;
+  _DateParser: TZDateTimeODSFormatParser;
+
 
   //заголовок xml-ины
   procedure WriteHeader();
@@ -1417,7 +1420,7 @@ var
       if (_style.NumberFormat <> '') then
       begin
         Attributes.Clear();
-        AddAttribute('ss:Format', _style.NumberFormat, 'General', ConvertFormatNativeToXlsx(XMLSS.Styles.DefaultStyle.NumberFormat), _def);
+        AddAttribute('ss:Format', ConvertFormatNativeToXlsx(_style.NumberFormat, _FmtParser, _DateParser), 'General', ConvertFormatNativeToXlsx(XMLSS.Styles.DefaultStyle.NumberFormat, _FmtParser, _DateParser), _def);
         if Attributes.Count > 0 then
           WriteEmptyTag('NumberFormat', true, true);
       end;
@@ -1442,8 +1445,18 @@ var
     _xml.Attributes.Clear();
     _xml.WriteTagNode('Styles', true, true);
     WriteStyle('Default', 'Normal', XMLSS.Styles.DefaultStyle, true);
-    for i := 0 to XMLSS.Styles.Count - 1 do
-      WriteStyle('s'+inttostr(i+20), '', XMLSS.Styles[i], false);
+
+    _FmtParser := TNumFormatParser.Create();
+    _DateParser := TZDateTimeODSFormatParser.Create();
+
+    try
+      for i := 0 to XMLSS.Styles.Count - 1 do
+        WriteStyle('s'+inttostr(i+20), '', XMLSS.Styles[i], false);
+    finally
+      FreeAndNil(_FmtParser);
+      FreeAndNil(_DateParser);
+    end;
+
     _xml.WriteEndTagNode();
   end;
 

@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2015.11.08
+// Last update: 2016.07.03
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - uniform save API for creating
 //     XLSX files in Delphi/Windows
@@ -5855,6 +5855,8 @@ var
   _BorderIndex: TIntegerDynArray;//границы
   _StylesCount: integer;
   _NumFmtIndexes: array of integer;
+  _FmtParser: TNumFormatParser;
+  _DateParser: TZDateTimeODSFormatParser;
 
   // <numFmts> .. </numFmts>
   procedure WritenumFmts();
@@ -5933,7 +5935,7 @@ var
       end //if
       else
       begin
-        s := ConvertFormatNativeToXlsx(_style.NumberFormat);
+        s := ConvertFormatNativeToXlsx(_style.NumberFormat, _FmtParser, _DateParser);
         i := _nfmt.FindFormatID(s);
         if (i < 0) then
         begin
@@ -6546,6 +6548,8 @@ var
 begin
   result := 0;
   _xml := nil;
+  _FmtParser := nil;
+  _DateParser := nil;
   try
     _xml := TZsspXMLWriterH.Create();
     _xml.TabLength := 1;
@@ -6556,6 +6560,9 @@ begin
       result := 2;
       exit;
     end;
+
+    _FmtParser := TNumFormatParser.Create();
+    _DateParser := TZDateTimeODSFormatParser.Create();
 
     ZEWriteHeaderCommon(_xml, CodePageName, BOM);
     _StylesCount := XMLSS.Styles.Count;
@@ -6586,6 +6593,10 @@ begin
   finally
     if (Assigned(_xml)) then
       FreeAndNil(_xml);
+    if (Assigned(_FmtParser)) then
+      FreeAndNil(_FmtParser);
+    if (Assigned(_DateParser)) then
+      FreeAndNil(_DateParser);
     SetLength(_FontIndex, 0);
     SetLength(_FillIndex, 0);
     SetLength(_BorderIndex, 0);

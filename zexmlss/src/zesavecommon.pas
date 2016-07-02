@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2015.01.24
+// Last update: 2016.07.03
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -78,7 +78,7 @@ function ZELibraryName: string;
 //Trying to convert string like "n%" to integer
 function TryStrToIntPercent(s: string; out Value: integer): boolean;
 
-const ZELibraryVersion = '0.0.9';
+const ZELibraryVersion = '0.0.11';
       ZELibraryFork = '';//'Arioch';  // or empty str   // URL ?
 
 implementation

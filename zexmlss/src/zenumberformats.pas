@@ -5,7 +5,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2016.06.05
+// Last update: 2016.07.03
 //----------------------------------------------------------------
 {
  Copyright (C) 2015 Ruslan Neborak
@@ -62,6 +62,8 @@ const
 
   //DateStyles
   ZETag_number_date_style     = 'number:date-style';
+  ZETag_number_time_style     = 'number:time-style';
+
   ZETag_number_day            = 'number:day';
   ZETag_number_text           = 'number:text';
   ZETag_number_style          = 'number:style';
@@ -108,6 +110,9 @@ const
   ZETag_number_min_denominator_digits = 'number:min-denominator-digits';
   ZETag_number_denominator_value    = 'number:denominator-value';
 
+  ZETag_number_text_style           = 'number:text-style';
+  ZETag_number_text_content         = 'number:text-content';
+
   ZETag_style_text_properties = 'style:text-properties';
   ZETag_style_map             = 'style:map';
   ZETag_fo_color              = 'fo:color';
@@ -116,6 +121,7 @@ const
   ZETag_style_condition       = 'style:condition';
   ZETag_style_apply_style_name = 'style:apply-style-name';
   ZETag_long                  = 'long';
+  ZETag_short                 = 'short';
   ZETag_style_volatile        = 'style:volatile';
 
 type
@@ -128,6 +134,74 @@ type
   TODSEmbeded_text_props = record
     Txt: string;
     NumberPosition: integer;
+  end;
+
+  //Date/Time item for processing date number style
+  TZDateTimeProcessItem = record
+    //Item type:
+    //    -1 - error item (ignore)
+    //     0 - text
+    //     1 - year (Y/YY/YYYY)
+    //     2 - month (M/MM/MMM/MMMM/MMMMM)
+    //     3 - day (D/DD/DDD/DDDD/NN/NNN/NNNN)
+    //     4 - hour (h/hh)
+    //     5 - minute (m/mm)
+    //     6 - second (s/ss)
+    //     7 - week (WW)
+    //     8 - quarterly (Q/QQ)
+    //     9 - era jap (G/GG/GGG/RR/GGGEE)
+    //    10 - number of the year in era (E/EE/R)
+    //    11 - AM/PM (a/p AM/PM)
+    ItemType: integer;
+    //Text value (for ItemType = 0)
+    TextValue: string;
+    //Length for item
+    Len: integer;
+    //Additional settings for item
+    Settings: integer;
+  end;
+
+  //Simple parser for number format
+  TNumFormatParser = class
+  private
+    FStr: string;
+    FLen: integer;
+    FPos: integer;
+    FReadedSymbol: string;
+    FReadedSymbolType: integer;
+    FIsError: integer;
+    FFirstSymbol: char;
+  protected
+    procedure Clear();
+  public
+    constructor Create();
+    procedure BeginRead(const AStr: string);
+    function ReadSymbol(): boolean;
+    procedure IncPos(ADelta: integer);
+    property FirstSymbol: char read FFirstSymbol;
+    property ReadedSymbol: string read FReadedSymbol;
+    property ReadedSymbolType: integer read FReadedSymbolType;
+    property StrLength: integer read FLen;
+    property CurrentPos: integer read FPos;
+    property IsError: integer read FIsError;
+  end;
+
+  //Parser for ODS datetime format
+  TZDateTimeODSFormatParser = class
+  private
+    FCount: integer;
+    FMaxCount: integer;
+  protected
+    procedure IncCount(ADelta: integer = 1);
+    procedure CheckMonthMinute();
+  public
+    FItems: array of TZDateTimeProcessItem;
+    constructor Create();
+    destructor Destroy(); override;
+    procedure DeleteRepeatedItems();
+    function GetValidCount(): integer;
+    function TryToParseDateFormat(const AFmtStr: string; const AFmtParser: TNumFormatParser = nil): integer;
+    property Count: integer read FCount;
   end;
 
   //Number format item for write
@@ -143,7 +217,10 @@ type
     FEmbededTextCount: integer;
     FEmbededMaxCount: integer;
     FEmbededTextArray: array of TODSEmbeded_text_props;
+    FNumberFormatParser: TNumFormatParser;
+    FDateTimeODSFormatParser: TZDateTimeODSFormatParser;
   protected
+    procedure PrepareCommonStyleAttributes(const xml: TZsspXMLWriterH; const AStyleName: string; isVolatile: boolean = false);
   public
     constructor Create();
     destructor Destroy(); override;
@@ -162,6 +239,24 @@ type
     //     const NumProperties: integer - additional number properties (currency/percentage etc)
     //           isVolatile: boolean  - is volatile?
     procedure WriteNumberStyle(const xml: TZsspXMLWriterH; const AStyleName: string; const NumProperties: integer; isVolatile: boolean = false);
+
+    //Write number text style item (<number:text-style> </number:text-style>)
+    //INPUT
+    //     const xml: TZsspXMLWriterH - xml
+    //     const AStyleName: string   - style name
+    //           isVolatile: boolean  - is volatile? (for now - ignore)
+    procedure WriteTextStyle(const xml: TZsspXMLWriterH; const AStyleName: string; isVolatile: boolean = false);
+
+    //Write datetime style item (<number:date-style> </number:date-style>)
+    //INPUT
+    //     const xml: TZsspXMLWriterH - xml
+    //     const AStyleName: string   - style name
+    //     const ATagName: string     - tag name (date or time) (???)
+    //           isVolatile: boolean  - is volatile? (for now - ignore)
+    procedure WriteDateTimeStyle(const xml: TZsspXMLWriterH;
+                                 const AStyleName: string;
+                                 const ATagName: string;
+                                 isVolatile: boolean = false);
 
     property Condition: string read FCondition write FCondition;
     property isCondition: boolean read FisCondition write FisCondition;
@@ -188,14 +283,16 @@ type
     procedure ReadNumberFormatCommon(const xml: TZsspXMLReaderH;
                                      const NumberFormatTag: string;
                                      sub_number_type: integer);
+    function BeginReadFormat(const xml: TZsspXMLReaderH; out retStartString: string; const NumFormat: integer): integer;
   public
     constructor Create();
     destructor Destroy(); override;
     procedure ReadKnownNumberFormat(const xml: TZsspXMLReaderH);
-    procedure ReadDateFormat(const xml: TZsspXMLReaderH);
+    procedure ReadDateFormat(const xml: TZsspXMLReaderH; const ATagName: string);
     procedure ReadNumberFormat(const xml: TZsspXMLReaderH);
     procedure ReadCurrencyFormat(const xml: TZsspXMLReaderH);
     procedure ReadPercentageFormat(const xml: TZsspXMLReaderH);
+    procedure ReadStringFormat(const xml: TZsspXMLReaderH);
     function TryGetFormatStrByNum(const DataStyleName: string; out retFormatStr: string): boolean;
     property Count: integer read FCount;
   end;
@@ -263,7 +360,24 @@ function GetXlsxNumberFormatType(const FormatStr: string): integer;
 //                2 and 2 = 2 - datetime
 //                4 and 4 = 4 - string
 function GetNativeNumberFormatType(const FormatStr: string): integer;
-function ConvertFormatNativeToXlsx(const FormatNative: string): string;
+
+//Convert native number format to xlsx
+//INPUT
+//     const FormatNative: string                   - number format
+//     const AFmtParser: TNumFormatParser           - format parser (not NIL!)
+//     const ADateParser: TZDateTimeODSFormatParser - date parser (not NIL!)
+//RETURN
+//      string - number format fox xlsx and excel 2003 xml
+function ConvertFormatNativeToXlsx(const FormatNative: string;
+                                   const AFmtParser: TNumFormatParser;
+                                   const ADateParser: TZDateTimeODSFormatParser): string; overload;
+
+//Convert native number format to xlsx
+//INPUT
+//     const FormatNative: string                   - number format
+//RETURN
+//      string - number format fox xlsx and excel 2003 xml
+function ConvertFormatNativeToXlsx(const FormatNative: string): string; overload;
 function ConvertFormatXlsxToNative(const FormatXlsx: string): string;
 function TryXlsxTimeToDateTime(const XlsxDateTime: string; out retDateTime: TDateTime; is1904: boolean = false): boolean;
 
@@ -301,6 +415,46 @@ const
                           '<=',
                           '='
                         );
+
+  ZE_VALID_NAMED_FORMATS_COUNT = 15;
+
+  ZE_VALID_NAMED_FORMATS: array[0..ZE_VALID_NAMED_FORMATS_COUNT - 1] of
+                        array [0..1] of string =
+                        (('GENERAL',      ''),
+                         ('FIXED',        '0.00'),
+                         ('CURRENCY',     '0.00'),
+                         ('STANDARD',     ''),
+                         ('PERCENT',      '0.00%'),
+                         ('SCIENTIFIC',   '0,00E+00'),
+                         ('GENERAL DATE', 'DD.MM.YYYY'),
+                         ('DATE',         'DD.MM.YYYY'),
+                         ('LONG DATE',    'DD.MM.YYYY'),
+                         ('MEDIUM DATE',  'DD-MMM-YY'),
+                         ('SHORT DATE',   'DD.MM.YY'),
+                         ('LONG TIME',    'HH:MM:SS'),
+                         ('MEDIUM TIME',  'HH:MM AM/PM'),
+                         ('SHORT TIME',   'HH:MM'),
+                         ('TIME',         'HH:MM')
+                        );
+
+  ZE_DATETIME_ITEM_ERROR    = -1;
+  ZE_DATETIME_ITEM_TEXT     = 0;
+  ZE_DATETIME_ITEM_YEAR     = 1;
+  ZE_DATETIME_ITEM_MONTH    = 2;
+  ZE_DATETIME_ITEM_DAY      = 3;
+  ZE_DATETIME_ITEM_HOUR     = 4;
+  ZE_DATETIME_ITEM_MINUTE   = 5;
+  ZE_DATETIME_ITEM_SECOND   = 6;
+  ZE_DATETIME_ITEM_WEEK     = 7;
+  ZE_DATETIME_ITEM_QUARTER  = 8;
+  ZE_DATETIME_ITEM_ERA_JAP  = 9;
+  ZE_DATETIME_ITEM_ERA_YEAR = 10;
+  ZE_DATETIME_ITEM_AMPM     = 11;
+
+  ZE_DATETIME_AMPM_SHORT_LOW  = 0;
+  ZE_DATETIME_AMPM_SHORT_UP   = 1;
+  ZE_DATETIME_AMPM_LONG_LOW   = 2;
+  ZE_DATETIME_AMPM_LONG_UP    = 3;
 
 {
 
@@ -653,10 +807,176 @@ begin
   end; //while i
 end; //GetNativeNumberFormatType
 
-function ConvertFormatNativeToXlsx(const FormatNative: string): string;
+//Convert native number format to xlsx
+//INPUT
+//     const FormatNative: string                   - number format
+//     const AFmtParser: TNumFormatParser           - format parser (not NIL!)
+//     const ADateParser: TZDateTimeODSFormatParser - date parser (not NIL!)
+//RETURN
+//      string - number format fox xlsx and excel 2003 xml
+function ConvertFormatNativeToXlsx(const FormatNative: string;
+                                   const AFmtParser: TNumFormatParser;
+                                   const ADateParser: TZDateTimeODSFormatParser): string; overload;
+var
+  _FmtParser: TNumFormatParser;
+  _DateParser: TZDateTimeODSFormatParser;
+  _delP: boolean;
+  _delD: boolean;
+  _fmt: integer;
+  _len: integer;
+
+  function _AddText(const AStr: string): string;
+  begin
+    Result := '';
+    _len := Length(AStr);
+    if (_len = 1) then
+      case (AStr[1]) of
+        ' ', '.', ',', ':', '-', '+', '/':
+          Result := AStr;
+        else
+          Result := '\' + AStr;
+      end //case
+    else
+      Result := '"' + AStr + '"';
+  end; //_AddText
+
+  function _RepeatSymbol(const ASymbol: string; ALen: integer; AMin, AMax: integer): string;
+  var
+    i: integer;
+
+  begin
+    Result := '';
+    if (ALen < AMin) then
+      ALen := AMin;
+    if (ALen > AMax) then
+      ALen := AMax;
+    for i := 1 to ALen do
+      Result := Result + ASymbol;
+  end; //_RepeatSymbol
+
+  function _AddMonth(var item: TZDateTimeProcessItem): string;
+  begin
+    Result := _RepeatSymbol('M', item.Len, 1, 5);
+  end; //_AddMonth
+
+  function _AddYear(var item: TZDateTimeProcessItem): string;
+  begin
+    if (item.Len <= 2) then
+      Result := 'YY'
+    else
+      Result := 'YYYY';
+  end; //_AddYear
+
+  function _AddDay(var item: TZDateTimeProcessItem): string;
+  begin
+    Result := _RepeatSymbol('D', item.Len, 1, 4);
+  end; //_AddDay
+
+  function _AddHour(var item: TZDateTimeProcessItem): string;
+  begin
+    Result := _RepeatSymbol('H', item.Len, 1, 2);
+  end; //_AddHour
+
+  function _AddMinute(var item: TZDateTimeProcessItem): string;
+  begin
+    Result := _RepeatSymbol('M', item.Len, 1, 2);
+  end; //_AddMinute
+
+  function _AddSecond(var item: TZDateTimeProcessItem): string;
+  begin
+    Result := _RepeatSymbol('S', item.Len, 1, 2);
+
+    if (item.Settings > 0) then
+      Result := Result + '.' + _RepeatSymbol('0', item.Settings, 1, item.Settings);
+  end; //_AddSecond
+
+  function _AddAMPM(var item: TZDateTimeProcessItem): string;
+  begin
+    case (item.Settings) of
+      ZE_DATETIME_AMPM_SHORT_LOW:
+        Result := 'a/p';
+      ZE_DATETIME_AMPM_SHORT_UP:
+        Result := 'A/P';
+      ZE_DATETIME_AMPM_LONG_LOW:
+        Result := 'am/pm';
+      else
+        Result := 'AM/MP';
+    end;
+  end; //_AddAMPM
+
+  function _GetXlsxDateFormat(): string;
+  var
+    i: integer;
+
+  begin
+    Result := '';
+    for i := 0 to _DateParser.Count - 1 do
+      case (_DateParser.FItems[i].ItemType) of
+        ZE_DATETIME_ITEM_TEXT:
+                              Result := Result + _AddText(_DateParser.FItems[i].TextValue);
+
+        ZE_DATETIME_ITEM_YEAR:
+                              Result := Result + _AddYear(_DateParser.FItems[i]);
+
+        ZE_DATETIME_ITEM_MONTH:
+                              Result := Result + _AddMonth(_DateParser.FItems[i]);
+
+        ZE_DATETIME_ITEM_DAY:
+                              Result := Result + _AddDay(_DateParser.FItems[i]);
+
+        ZE_DATETIME_ITEM_HOUR:
+                              Result := Result + _AddHour(_DateParser.FItems[i]);
+
+        ZE_DATETIME_ITEM_MINUTE:
+                              Result := Result + _AddMinute(_DateParser.FItems[i]);
+
+        ZE_DATETIME_ITEM_SECOND:
+                              Result := Result + _AddSecond(_DateParser.FItems[i]);
+
+        ZE_DATETIME_ITEM_WEEK:;     //??
+        ZE_DATETIME_ITEM_QUARTER:;  //??
+        ZE_DATETIME_ITEM_ERA_JAP:;  //??
+        ZE_DATETIME_ITEM_ERA_YEAR:; //??
+        ZE_DATETIME_ITEM_AMPM:
+                              Result := Result + _AddAMPM(_DateParser.FItems[i]);
+      end; //case
+
+  end; //_GetXlsxDateFormat
+
 begin
-  //TODO:
-  Result := FormatNative;
+  _fmt := GetNativeNumberFormatType(FormatNative);
+
+  //For now difference only for datetime
+  if (_fmt and ZE_NUMFORMAT_IS_DATETIME = ZE_NUMFORMAT_IS_DATETIME) then
+  begin
+    Result := '';
+    _FmtParser := AFmtParser;
+    _DateParser := ADateParser;
+    _delP := AFmtParser = Nil;
+    _delD := ADateParser = Nil;
+    try
+      if (_delD) then
+        _DateParser := TZDateTimeODSFormatParser.Create();
+      if (_delP) then
+        _FmtParser := TNumFormatParser.Create();
+
+      if (_DateParser.TryToParseDateFormat(FormatNative, _FmtParser) > 0) then
+        Result := _GetXlsxDateFormat();
+
+    finally
+      if (_delP) then
+        FreeAndNil(_FmtParser);
+      if (_delD) then
+        FreeAndNil(_DateParser);
+    end;
+  end
+  else
+    Result := FormatNative;
+end; //ConvertFormatNativeToXlsx
+
+function ConvertFormatNativeToXlsx(const FormatNative: string): string; overload;
+begin
+  Result := ConvertFormatNativeToXlsx(FormatNative, nil, nil);
 end; //ConvertFormatNativeToXlsx
 
 function ConvertFormatXlsxToNative(const FormatXlsx: string): string;
@@ -1065,6 +1385,523 @@ begin
     Result := _CheckCondition();
 end; //TryGetMapCondition
 
+
+////::::::::::::: TZDateTimeODSFormatParser :::::::::::::::::////
+
+constructor TZDateTimeODSFormatParser.Create();
+begin
+  FCount := 0;
+  FMaxCount := 16;
+  SetLength(FItems, FMaxCount);
+end;
+
+destructor TZDateTimeODSFormatParser.Destroy();
+begin
+  SetLength(FItems, 0);
+  inherited Destroy;
+end;
+
+procedure TZDateTimeODSFormatParser.IncCount(ADelta: integer = 1);
+begin
+  if (ADelta > 0) then
+  begin
+    inc(FCount, ADelta);
+    if (FCount >= FMaxCount) then
+    begin
+      FMaxCount := FCount + 10;
+      SetLength(FItems, FMaxCount);
+    end;
+  end;
+end; //IncCount
+
+procedure TZDateTimeODSFormatParser.CheckMonthMinute();
+var
+  i: integer;
+  _left: boolean;
+  _right: boolean;
+
+  //Return FALSE if date and TRUE if time
+  function _CheckNeighbors(ADateType: integer): boolean;
+  begin
+    Result := false;
+    case (ADateType) of
+      (*
+      ZE_DATETIME_ITEM_DAY,
+      ZE_DATETIME_ITEM_YEAR,
+      ZE_DATETIME_ITEM_WEEK,
+      ZE_DATETIME_ITEM_MONTH,
+      ZE_DATETIME_ITEM_QUARTER:
+        Result := false;
+      *)
+      ZE_DATETIME_ITEM_AMPM,
+      ZE_DATETIME_ITEM_HOUR,
+      ZE_DATETIME_ITEM_SECOND:
+        Result := true;
+    end;
+  end; //_CheckNeighbors
+
+  procedure _TryToCheckMonth(AIndex: integer);
+  var
+    i: integer;
+
+  begin
+    _right := false;
+    _left := false;
+    FItems[AIndex].Settings := 0;
+
+    for i := AIndex - 1 downto 0 do
+      if (FItems[i].ItemType > 0) then
+      begin
+        _left := _CheckNeighbors(FItems[i].ItemType);
+        break;
+      end;
+
+    for i := AIndex + 1 to FCount - 1 do
+      if (FItems[i].ItemType > 0) then
+      begin
+        _right := _CheckNeighbors(FItems[i].ItemType);
+        break;
+      end;
+
+    if (_left or _right) then
+      FItems[AIndex].ItemType := ZE_DATETIME_ITEM_MINUTE;
+  end; //_TryToCheckMonth
+
+begin
+  for i := 0 to FCount - 1 do
+    if ((FItems[i].ItemType = ZE_DATETIME_ITEM_MONTH) and (FItems[i].Settings = 1)) then
+      _TryToCheckMonth(i);
+end; //CheckMonthMinute
+
+function TZDateTimeODSFormatParser.TryToParseDateFormat(const AFmtStr: string;
+                                                        const AFmtParser: TNumFormatParser): integer;
+var
+  _parser: TNumFormatParser;
+  _isFree: boolean;
+  s: string;
+  _ch, _prevCh: char;
+  _tmp: string;
+  _len: integer;
+  t: integer;
+  _pos: integer;
+
+  procedure _ProcessDateTimeItem();
+  begin
+    if (s <> '') then
+    begin
+      _tmp := UpperCase(s);
+      _len := Length(_tmp);
+
+      FItems[FCount].Settings := 0;
+      FItems[FCount].Len := _len;
+      FItems[FCount].TextValue := s;
+
+      case (_tmp[1]) of
+        'Y', 'J', 'V':
+            FItems[FCount].ItemType := ZE_DATETIME_ITEM_YEAR;
+        'M':
+          begin
+            FItems[FCount].ItemType := ZE_DATETIME_ITEM_MONTH;
+            //If can't recognize month / minute
+            if (_len <= 2) then
+              FItems[FCount].Settings := 1;
+          end;
+        'D':
+            FItems[FCount].ItemType := ZE_DATETIME_ITEM_DAY;
+        'N':
+          begin
+            FItems[FCount].ItemType := ZE_DATETIME_ITEM_DAY;
+            inc(FItems[FCount].Len);
+          end;
+        'H':
+            FItems[FCount].ItemType := ZE_DATETIME_ITEM_HOUR;
+        'W':
+            FItems[FCount].ItemType := ZE_DATETIME_ITEM_WEEK;
+        'Q':
+            FItems[FCount].ItemType := ZE_DATETIME_ITEM_QUARTER;
+        'R':
+            if (_len = 1) then
+            begin
+              FItems[FCount].ItemType := ZE_DATETIME_ITEM_ERA_YEAR;
+              FItems[FCount].Len := 2;
+            end
+            else
+            begin
+              FItems[FCount].ItemType := ZE_DATETIME_ITEM_ERA_JAP;
+              FItems[FCount].Len := 4;
+            end;
+        'E':
+            FItems[FCount].ItemType := ZE_DATETIME_ITEM_ERA_YEAR;
+        else
+            FItems[FCount].ItemType := ZE_DATETIME_ITEM_TEXT;
+      end; //case
+
+      IncCount();
+
+      s := '';
+    end;
+  end; //_ProcessDateTimeItem()
+
+  procedure _AddItemCommon(const AStr: string; ALen: integer; AItemType: integer; ASettings: integer = 0);
+  begin
+    FItems[FCount].ItemType := AItemType;
+    FItems[FCount].Len := ALen;
+    FItems[FCount].TextValue := AStr;
+    FItems[FCount].Settings := ASettings;
+    IncCount();
+  end;
+
+  procedure _ProcessAMPM();
+  begin
+    //check for a/p A/P
+    if (_parser.CurrentPos + 1 <= _parser.StrLength) then
+    begin
+      _tmp := Copy(AFmtStr, _parser.CurrentPos - 1, 3);
+
+      if (UpperCase(_tmp) = 'A/P') then
+      begin
+        if (_parser.FirstSymbol = 'a') then
+          t := ZE_DATETIME_AMPM_SHORT_LOW
+        else
+          t := ZE_DATETIME_AMPM_SHORT_UP;
+        _AddItemCommon(_tmp, 3, ZE_DATETIME_ITEM_AMPM, t);
+        _parser.IncPos(2);
+
+        exit;
+      end;
+    end;
+
+    //check for am/pm AM/PM
+    if (_parser.CurrentPos + 3 <= _parser.StrLength) then
+    begin
+      _tmp := Copy(AFmtStr, _parser.CurrentPos - 1, 5);
+
+      if (UpperCase(_tmp) = 'AM/PM') then
+      begin
+        if (_parser.FirstSymbol = 'a') then
+          t := ZE_DATETIME_AMPM_LONG_LOW
+        else
+          t := ZE_DATETIME_AMPM_LONG_UP;
+        _AddItemCommon(_tmp, 5, ZE_DATETIME_ITEM_AMPM, t);
+        _parser.IncPos(4);
+
+        exit;
+      end;
+    end;
+
+    //It is not AM/PM. May be a year?
+    s := s + 'Y';
+  end; //_ProcessAMPM
+
+  procedure _ProcessSeconds();
+  begin
+    s := _ch;
+    _len := 1;
+
+    t := 0;
+    while (_parser.CurrentPos <= _parser.StrLength) do
+    begin
+      _ch := AFmtStr[_parser.CurrentPos];
+      case (_ch) of
+        's', 'S':
+          begin
+            s := s + _ch;
+            inc(_len);
+          end
+        else
+          begin
+            if ((_ch = '.') or (_ch = ',')) then
+            begin
+              s := s + '.';
+              while (_parser.CurrentPos <= _parser.StrLength) do
+              begin
+                _parser.IncPos(1);
+                if (AFmtStr[_parser.CurrentPos] = '0') then
+                begin
+                  s := s + '0';
+                  inc(t);
+                end
+                else
+                  break;
+              end; //while
+            end; //if
+
+            break;
+          end;
+      end;
+      _parser.IncPos(1);
+    end; //while
+    _AddItemCommon(s, _len, ZE_DATETIME_ITEM_SECOND, t);
+    s := '';
+  end; //_ProcessSeconds
+
+  procedure _ProcessEraJap();
+  begin
+    s := _ch;
+    _pos := _parser.CurrentPos + 1;
+    _parser.IncPos(1);
+    while (_pos <= _parser.StrLength) do
+    begin
+      _ch := AFmtStr[_pos];
+      case (_ch) of
+        'g', 'G', 'e', 'E':
+          s := s + _ch;
+        else
+          begin
+            _tmp := UpperCase(s);
+
+            t := -1;
+            if (_tmp = 'G') then
+              t := 1
+            else
+            if (_tmp = 'GG') then
+              t := 2
+            else
+            if (_tmp = 'GGG') then
+              t := 3
+            else
+            if (_tmp = 'GGGEE') then
+              t := 4;
+
+            if (t > 0) then
+              _AddItemCommon(s, t, ZE_DATETIME_ITEM_ERA_JAP, t);
+
+            s := '';
+            exit;
+          end;
+      end;
+      inc(_pos);
+      _parser.IncPos(1);
+    end; //while
+  end; //_ProcessEraJap
+
+  procedure _ProcessSymbol();
+  begin
+    _ch := _parser.FirstSymbol;
+
+    if (UpperCase(_prevCh) = UpperCase(_ch)) then
+      s := s + _ch
+    else
+    begin
+      _ProcessDateTimeItem();
+
+      //TODO:
+      //     Need check all symbols for other locales (A/J/V - as year etc)
+      case (_ch) of
+        'a', 'A':
+                  _ProcessAMPM();
+        'y', 'Y',
+        'j', 'J', //German year  ??
+        'v', 'V', //Finnish year ??
+        'm', 'M',
+        'd', 'D',
+        'n', 'N',
+        'h', 'H',
+        'w', 'W',
+        'r', 'R',
+        'q', 'Q',
+        'e', 'E':
+                  s := s + _ch;
+        's', 'S':
+                  _ProcessSeconds();
+        'g', 'G':
+                  _ProcessEraJap();
+        else
+          s := s + _ch;
+      end; //case
+    end;
+
+    _prevCh := _ch;
+  end; //_ProcessSymbol
+
+  procedure _ProcessText();
+  begin
+    _ProcessDateTimeItem();
+    FItems[FCount].ItemType := ZE_DATETIME_ITEM_TEXT;
+    FItems[FCount].TextValue := _parser.ReadedSymbol;
+    IncCount();
+  end; //_ProcessText
+
+begin
+  FCount := 0;
+  _parser := AFmtParser;
+  _isFree := AFmtParser = nil;
+  if (_isFree) then
+    _parser := TNumFormatParser.Create();
+
+  s := '';
+  _prevCh := #0;
+
+  try
+    _parser.BeginRead(AFmtStr);
+
+    while (_parser.ReadSymbol()) do
+    begin
+      case (_parser.ReadedSymbolType) of
+        0:
+          _ProcessSymbol();
+        1:; //brackets - modiefier: color, calendar or conditions ??
+        2, 3:
+          _ProcessText();
+      end;
+    end; //while
+
+    _ProcessDateTimeItem();
+
+    CheckMonthMinute();
+
+  finally
+    if (_isFree) then
+      FreeAndNil(_parser);
+  end;
+
+  Result := FCount;
+end; //TryToParseDateFormat
+
+procedure TZDateTimeODSFormatParser.DeleteRepeatedItems();
+var
+  i, j: integer;
+
+begin
+  for i := 1 to FCount - 2 do
+    if (FItems[i].ItemType > 0) then
+      for j := FCount - 1 downto i + 1 do
+        if (FItems[i].ItemType = FItems[j].ItemType) then
+        begin
+          if (FItems[i].ItemType = ZE_DATETIME_ITEM_DAY) then
+          begin
+            if (FItems[i].Len = FItems[j].Len) then
+              FItems[j].ItemType := ZE_DATETIME_ITEM_ERROR;
+          end
+          else
+            FItems[j].ItemType := ZE_DATETIME_ITEM_ERROR;
+        end;
+end; //DeleteRepeatedItems
+
+function TZDateTimeODSFormatParser.GetValidCount(): integer;
+var
+  i: integer;
+
+begin
+  Result := 0;
+  for i := 1 to FCount - 1 do
+    if (FItems[i].ItemType >= 0) then
+      inc(Result);
+end; //GetValidCount
+
+////::::::::::::: TNumFormatParser :::::::::::::::::////
+
+procedure TNumFormatParser.Clear();
+begin
+  FLen := -1;
+  FPos := 1;
+  FStr := '';
+  FIsError := 0;
+  FReadedSymbolType := 0;
+  FReadedSymbol := '';
+  FFirstSymbol := #0;
+end;
+
+constructor TNumFormatParser.Create();
+begin
+  Clear();
+end;
+
+procedure TNumFormatParser.BeginRead(const AStr: string);
+begin
+  Clear();
+  FStr := AStr;
+  FLen := Length(AStr);
+end;
+
+function TNumFormatParser.ReadSymbol(): boolean;
+var
+  ch: char;
+
+  procedure _ReadBeforeSymbol(Symbol: char);
+  begin
+    if (FPos <= FLen) then
+      FFirstSymbol := FStr[FPos];
+
+    while (FPos <= FLen) do
+    begin
+      ch := FStr[FPos];
+      inc(FPos);
+
+      if (ch = Symbol) then
+        exit;
+
+      FReadedSymbol := FReadedSymbol + ch;
+    end; //while
+
+    FIsError := FIsError or 2;
+  end; //_ReadBeforeSymbol
+
+begin
+  FFirstSymbol := #0;
+  if (FPos > FLen) then
+  begin
+    Result := false;
+    exit;
+  end;
+
+  FReadedSymbol := '';
+
+  Result := true;
+  while (FPos <= FLen) do
+  begin
+    ch := FStr[FPos];
+    inc(FPos);
+
+    case ch of
+      '[':
+        begin
+          FReadedSymbolType := 1;
+          _ReadBeforeSymbol(']');
+          exit;
+        end;
+      '"':
+        begin
+          FReadedSymbolType := 2;
+          _ReadBeforeSymbol('"');
+          exit;
+        end;
+      '\':
+        begin
+          if (FPos <= FLen) then
+          begin
+            FFirstSymbol := FStr[FPos];
+            FReadedSymbol := FFirstSymbol;
+          end
+          else
+          begin
+            FIsError := FIsError or 4;
+            FReadedSymbol := '';
+          end;
+          inc(FPos);
+          FReadedSymbolType := 3;
+          exit;
+        end;
+      else
+        begin
+          FReadedSymbol := ch;
+          FFirstSymbol := ch;
+          FReadedSymbolType := 0;
+          exit;
+        end;
+    end; //case
+  end; //while
+
+  FIsError := FIsError or 1;
+end; //ReadSymbol
+
+procedure TNumFormatParser.IncPos(ADelta: integer);
+begin
+  inc(FPos, ADelta);
+  if (FPos < 1) then
+    FPos := 1;
+end; //IncPos
+
 ////::::::::::::: TZEODSNumberFormatReader :::::::::::::::::////
 
 procedure TZEODSNumberFormatReader.AddEmbededText(const AText: string;
@@ -1149,8 +1986,17 @@ begin
   inherited;
 end;
 
+function TZEODSNumberFormatReader.BeginReadFormat(const xml: TZsspXMLReaderH; out retStartString: string; const NumFormat: integer): integer;
+begin
+  Result := FCount;
+  AddItem();
+  FItems[Result][0] := xml.Attributes[ZETag_Attr_StyleName];
+  FItemsOptions[Result].StyleType := NumFormat;
+  retStartString := '';
+end; //BeginReadFormat
+
 //Read date format: <number:date-style>.. </number:date-style>
-procedure TZEODSNumberFormatReader.ReadDateFormat(const xml: TZsspXMLReaderH);
+procedure TZEODSNumberFormatReader.ReadDateFormat(const xml: TZsspXMLReaderH; const ATagName: string);
 var
   num: integer;
   s, _result: string;
@@ -1167,22 +2013,34 @@ var
   end;
 
 begin
-  num := FCount;
-  AddItem();
-  FItems[num][0] := xml.Attributes[ZETag_Attr_StyleName];
-  FItemsOptions[num].StyleType := ZE_NUMFORMAT_IS_DATETIME;
-  _result := '';
-  while ((xml.TagType <> 6) or (xml.TagName <> ZETag_number_date_style)) do
+  num := BeginReadFormat(xml, _result, ZE_NUMFORMAT_IS_DATETIME);
+
+  while ((xml.TagType <> 6) or (xml.TagName <> ATagName)) do
   begin
     xml.ReadTag();
 
     //Day
     if ((xml.TagName = ZETag_number_day) and (xml.TagType and 4 = 4)) then
-      _result := _result + CheckIsLong('NN', 'DD')
+      _result := _result + CheckIsLong('DD', 'D')
     else
     //Text
     if ((xml.TagName = ZETag_number_text) and (xml.TagType = 6)) then
-      _result := _result + xml.TextBeforeTag
+    begin
+      s := xml.TextBeforeTag;
+      t := length(s);
+      if (t = 1) then
+      begin
+        case (s[1]) of
+          ' ', '.', ':', '-', '/', '*':;
+          else
+            s := '\' + s;
+        end; //case
+      end
+      else
+        s := '"' + s + '"';
+
+      _result := _result + s;
+    end
     else
     //Month
     if (xml.TagName = ZETag_number_month) then
@@ -1225,6 +2083,7 @@ begin
     //AM/PM
     if (xml.TagName = ZETag_number_am_pm) then
     begin
+      _result := _result + 'AM/PM';
     end
     else
     //Era
@@ -1239,6 +2098,7 @@ begin
     begin
       //Attr: number:calendar
       //      number:style
+      _result := _result + CheckIsLong('QQ', 'Q')
     end
     else
     //Day of week
@@ -1246,12 +2106,14 @@ begin
     begin
       //Attr: number:calendar
       //      number:style
+      _result := _result + CheckIsLong('NNN', 'NN')
     end
     else
     //Week of year
     if (xml.TagName = ZETag_number_week_of_year) then
     begin
       //Attr: number:calendar
+      _result := _result + 'WW';
     end;
 
     if (xml.Eof()) then
@@ -1260,20 +2122,72 @@ begin
   FItems[num][1] := _result;
 end; //ReadDateFormat
 
+//Read string format <number:text-style> .. </number:text-style>
+procedure TZEODSNumberFormatReader.ReadStringFormat(const xml: TZsspXMLReaderH);
+var
+  num: integer;
+  _result: string;
+
+begin
+  num := BeginReadFormat(xml, _result, ZE_NUMFORMAT_IS_STRING);
+
+  //Possible attributes for tag "number:text-style":
+  //         number:country
+  //         number:language
+  //         number:rfc-language-tag
+  //         number:script
+  //         number:title
+  //         number:transliteration-country
+  //         number:transliteration-format
+  //         number:transliteration-language
+  //         number:transliteration-style
+  //         style:display-name
+  //         style:name
+  //         style:volatile
+
+  //Possible child elements:
+  //         number:text           *
+  //         number:text-content   *
+  //         style:map
+  //         style:textproperties
+  while ((xml.TagType <> 6) or (xml.TagName <> ZETag_number_text_style)) do
+  begin
+    xml.ReadTag();
+
+    //number:text-content
+    if ((xml.TagName = ZETag_number_text_content)) then
+      _result := _result + '@'
+    else
+    //Text
+    if ((xml.TagName = ZETag_number_text) and (xml.TagType = 6)) then
+      _result := _result + '"' + xml.TextBeforeTag + '"';
+
+    if (xml.Eof()) then
+      break;
+  end; //while
+  FItems[num][1] := _result;
+end; //ReadStringFormat
+
 //Read known numbers formats (date/number/percentage etc)
 procedure TZEODSNumberFormatReader.ReadKnownNumberFormat(const xml: TZsspXMLReaderH);
 begin
   if (xml.TagName = ZETag_number_number_style) then
     ReadNumberFormat(xml)
   else
-  if (xml.TagName = ZETag_number_date_style) then
-    ReadDateFormat(xml)
-  else
   if (xml.TagName = ZETag_number_currency_style) then
     ReadCurrencyFormat(xml)
   else
   if (xml.TagName = ZETag_number_percentage_style) then
-    ReadPercentageFormat(xml);
+    ReadPercentageFormat(xml)
+  else
+  if (xml.TagName = ZETag_number_date_style) then
+    ReadDateFormat(xml, ZETag_number_date_style)
+  else
+  if (xml.TagName = ZETag_number_time_style) then
+    ReadDateFormat(xml, ZETag_number_time_style)
+  else
+  if (xml.TagName = ZETag_number_text_style) then
+    ReadStringFormat(xml);
 end;
 
 procedure TZEODSNumberFormatReader.ReadCurrencyFormat(const xml: TZsspXMLReaderH);
@@ -1565,11 +2479,7 @@ var
   end; //_ReadStyleTextProperties
 
 begin
-  num := FCount;
-  AddItem();
-  FItems[num][0] := xml.Attributes[ZETag_Attr_StyleName];
-  FItemsOptions[num].StyleType := ZE_NUMFORMAT_IS_NUMBER or sub_number_type;
-  _result := '';
+  num := BeginReadFormat(xml, _result, ZE_NUMFORMAT_IS_NUMBER or sub_number_type);
   _cond_text := '';
 
   while ((xml.TagType <> 6) or (xml.TagName <> NumberFormatTag)) do
@@ -1854,7 +2764,29 @@ var
   function _WriteDateTime(): boolean;
   begin
     Result := false;
-  end;
+
+    if (SeparateNFItems(ANumberFormat) > 0) then
+    begin
+      //For now use only first NF item
+      //TODO:
+      //     Are conditions implements for date styles?
+      FNFItems[0].WriteDateTimeStyle(xml, _nfName, ZETag_number_date_style);
+      Result := true;
+    end; //if
+  end; //_WriteDateTime
+
+  function _WriteStringFormat(): boolean;
+  begin
+    Result := false;
+    if (SeparateNFItems(ANumberFormat) > 0) then
+    begin
+      //For now use only first NF item
+      //TODO:
+      //     Are conditions implements for text styles?
+      FNFItems[0].WriteTextStyle(xml, _nfName);
+      Result := true;
+    end; //if
+  end; //_WriteStringFormat
 
   function _WriteNumberStyle(): boolean;
   begin
@@ -1877,6 +2809,8 @@ var
         end;
       ZE_NUMFORMAT_IS_DATETIME:
         Result := _WriteDateTime();
+      ZE_NUMFORMAT_IS_STRING:
+        Result := _WriteStringFormat();
     end;
   end; //_WriteNumberStyle
 
@@ -1906,6 +2840,7 @@ var
     for i := 0 to FCount - 1 do
       if (FItems[i].NumberFormat = ANumberFormat) then
       begin
+        _nfType := FNumberAdditionalProps[StyleID];
         _AddItem(FItems[i].NumberFormatName);
         Result := true;
         break;
@@ -1946,11 +2881,15 @@ constructor TODSNumberFormatMapItem.Create();
 begin
   FEmbededMaxCount := 10;
   SetLength(FEmbededTextArray, FEmbededMaxCount);
+  FNumberFormatParser := TNumFormatParser.Create();
+  FDateTimeODSFormatParser := TZDateTimeODSFormatParser.Create();
 end;
 
 destructor TODSNumberFormatMapItem.Destroy();
 begin
   SetLength(FEmbededTextArray, 0);
+  FreeAndNil(FNumberFormatParser);
+  FreeAndNil(FDateTimeODSFormatParser);
   inherited Destroy;
 end;
 
@@ -2096,6 +3035,14 @@ begin
     inc(FConditionsCount);
   end;
 end; //AddCondition
+
+procedure TODSNumberFormatMapItem.PrepareCommonStyleAttributes(const xml: TZsspXMLWriterH; const AStyleName: string; isVolatile: boolean = false);
+begin
+  xml.Attributes.Clear();
+  xml.Attributes.Add(ZETag_Attr_StyleName, AStyleName);
+  if (isVolatile) then
+    xml.Attributes.Add(ZETag_style_volatile, 'true');
+end; //PrepareCommonStyleAttributes
 
 procedure TODSNumberFormatMapItem.WriteNumberStyle(const xml: TZsspXMLWriterH;
                                                    const AStyleName: string;
@@ -2389,10 +3336,7 @@ var
   end; //_WriteNumberMain
 
 begin
-  xml.Attributes.Clear();
-  xml.Attributes.Add(ZETag_Attr_StyleName, AStyleName);
-  if (isVolatile) then
-    xml.Attributes.Add(ZETag_style_volatile, 'true');
+  PrepareCommonStyleAttributes(xml, AStyleName, isVolatile);
 
   if (NumProperties = ZE_NUMFORMAT_NUM_IS_PERCENTAGE) then
     xml.WriteTagNode(ZETag_number_percentage_style, true, true, false)
@@ -2411,5 +3355,187 @@ begin
 
   xml.WriteEndTagNode(); //number:number-style
 end; //WriteNumberStyle
+
+//Write number text style item (<number:text-style> </number:text-style>)
+//INPUT
+//     const xml: TZsspXMLWriterH - xml
+//     const AStyleName: string   - style name
+//           isVolatile: boolean  - is volatile? (for now - ignore)
+procedure TODSNumberFormatMapItem.WriteTextStyle(const xml: TZsspXMLWriterH; const AStyleName: string; isVolatile: boolean = false);
+var
+  _isText: boolean;
+
+begin
+  _isText := false;
+  PrepareCommonStyleAttributes(xml, AStyleName, isVolatile);
+
+  xml.WriteTagNode(ZETag_number_text_style, true, true, false);
+
+  xml.Attributes.Clear();
+  FNumberFormatParser.BeginRead(FNumberFormat);
+
+  while (FNumberFormatParser.ReadSymbol()) do
+  begin
+    case (FNumberFormatParser.ReadedSymbolType) of
+      0:
+        begin
+          if (FNumberFormatParser.ReadedSymbol = '@') then
+          begin
+            _isText := true;
+            xml.WriteEmptyTag(ZETag_number_text_content, true, false);
+          end;
+        end;
+      2, 3:
+        begin
+          xml.WriteTag(ZETag_number_text, FNumberFormatParser.ReadedSymbol, true, false, true);
+        end;
+    end; //case
+  end; //while
+
+  if (not _isText) then
+    xml.WriteEmptyTag(ZETag_number_text_content, true, false);
+
+  xml.WriteEndTagNode(); //number:text-style
+end; //WriteTextStyle
+
+procedure TODSNumberFormatMapItem.WriteDateTimeStyle(const xml: TZsspXMLWriterH;
+                                                     const AStyleName: string;
+                                                     const ATagName: string;
+                                                     isVolatile: boolean = false);
+
+var
+  s: string;
+
+  procedure _WriteYear(var item: TZDateTimeProcessItem);
+  begin
+    if (item.Len > 2) then
+      xml.Attributes.Add(ZETag_number_style, ZETag_long);
+
+    xml.WriteEmptyTag(ZETag_number_year, true, false);
+  end; //_WriteYear
+
+  procedure _WriteMonth(var item: TZDateTimeProcessItem);
+  begin
+    if ((item.Len >= 4) or (item.Len = 2)) then
+      xml.Attributes.Add(ZETag_number_style, ZETag_long);
+
+    if (item.Len >= 3) then
+       xml.Attributes.Add(ZETag_number_textual, 'true');
+
+    xml.WriteEmptyTag(ZETag_number_month, true, false);
+  end; //_WriteMonth
+
+  procedure _WriteDay(var item: TZDateTimeProcessItem);
+  begin
+    if (item.Len > 2) then
+      s := ZETag_number_day_of_week
+    else
+      s := ZETag_number_day;
+
+    if ((item.Len >= 4) or (item.Len = 2)) then
+      xml.Attributes.Add(ZETag_number_style, ZETag_long);
+
+    xml.WriteEmptyTag(s, true, false);
+  end; //_WriteDay
+
+  procedure _WriteHour(var item: TZDateTimeProcessItem);
+  begin
+    if (item.Len >= 2) then
+      xml.Attributes.Add(ZETag_number_style, ZETag_long);
+
+    xml.WriteEmptyTag(ZETag_number_hours, true, false);
+  end; //_WriteHour
+
+  procedure _WriteMinute(var item: TZDateTimeProcessItem);
+  begin
+    if (item.Len >= 2) then
+      xml.Attributes.Add(ZETag_number_style, ZETag_long);
+
+    xml.WriteEmptyTag(ZETag_number_minutes, true, false);
+  end; //_WriteMinute
+
+  procedure _WriteSecond(var item: TZDateTimeProcessItem);
+  begin
+    if (item.Len >= 2) then
+      xml.Attributes.Add(ZETag_number_style, ZETag_long);
+
+    if (item.Settings > 0) then
+      xml.Attributes.Add(ZETag_number_decimal_places, IntToStr(item.Settings));
+
+    xml.WriteEmptyTag(ZETag_number_seconds, true, false);
+  end; //_WriteSecond
+
+  procedure _WriteWeek(var item: TZDateTimeProcessItem);
+  begin
+    xml.WriteEmptyTag(ZETag_number_week_of_year, true, false);
+  end; //_WriteWeek
+
+  procedure _WriteQuarter(var item: TZDateTimeProcessItem);
+  begin
+    if (item.Len >= 2) then
+      xml.Attributes.Add(ZETag_number_style, ZETag_long);
+
+    xml.WriteEmptyTag(ZETag_number_quarter, true, false);
+  end; //_WriteQuarter
+
+  procedure _WriteItems();
+  var
+    i: integer;
+
+  begin
+    for i := 0 to FDateTimeODSFormatParser.FCount - 1 do
+    begin
+      xml.Attributes.Clear();
+      case (FDateTimeODSFormatParser.FItems[i].ItemType) of
+        ZE_DATETIME_ITEM_TEXT:
+                              xml.WriteTag(ZETag_number_text, FDateTimeODSFormatParser.FItems[i].TextValue, true, false, true);
+
+        ZE_DATETIME_ITEM_YEAR:
+                              _WriteYear(FDateTimeODSFormatParser.FItems[i]);
+
+        ZE_DATETIME_ITEM_MONTH:
+                              _WriteMonth(FDateTimeODSFormatParser.FItems[i]);
+
+        ZE_DATETIME_ITEM_DAY:
+                              _WriteDay(FDateTimeODSFormatParser.FItems[i]);
+
+        ZE_DATETIME_ITEM_HOUR:
+                              _WriteHour(FDateTimeODSFormatParser.FItems[i]);
+
+        ZE_DATETIME_ITEM_MINUTE:
+                              _WriteMinute(FDateTimeODSFormatParser.FItems[i]);
+
+        ZE_DATETIME_ITEM_SECOND:
+                              _WriteSecond(FDateTimeODSFormatParser.FItems[i]);
+
+        ZE_DATETIME_ITEM_WEEK:
+                              _WriteWeek(FDateTimeODSFormatParser.FItems[i]);
+
+        ZE_DATETIME_ITEM_QUARTER:
+                              _WriteQuarter(FDateTimeODSFormatParser.FItems[i]);
+
+        ZE_DATETIME_ITEM_ERA_JAP:;  //TODO
+        ZE_DATETIME_ITEM_ERA_YEAR:; //TODO
+
+        ZE_DATETIME_ITEM_AMPM:
+                              xml.WriteEmptyTag(ZETag_number_am_pm, true, false);
+      end; //case
+    end; //for i
+  end; //_WriteItems
+
+begin
+  FDateTimeODSFormatParser.TryToParseDateFormat(FNumberFormat, FNumberFormatParser);
+  FDateTimeODSFormatParser.DeleteRepeatedItems();
+
+  if (FDateTimeODSFormatParser.GetValidCount() > 0) then
+  begin
+    PrepareCommonStyleAttributes(xml, AStyleName, isVolatile);
+    xml.WriteTagNode(ATagName, true, true, false);
+
+    _WriteItems();
+
+    xml.WriteEndTagNode(); //number:date-style / number:time-style
+  end;
+end; //WriteDateTimeStyle
 
 end.
