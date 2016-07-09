@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2016.07.03
+// Last update: 2016.07.10
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - added uniform save API
 //     to create ODS in Delphi/Windows
@@ -4801,18 +4801,28 @@ var
                 begin
                   b := true;
                   _CellData := ZEDateTimeToStr(_t);
+                  _dt := _t;
                 end;
 
               if (b) then
               begin
-                ss := 'date';
-                _xml.Attributes.Add('office:date-value', _CellData, false);
-              end;
-            end;
+                WriteHelper.NumberFormatWriter.TryGetNumberFormatAddProp(ProcessedSheet.Cell[j, i].CellStyle, t);
+                if (t and ZE_NUMFORMAT_DATE_IS_ONLY_TIME = ZE_NUMFORMAT_DATE_IS_ONLY_TIME) then
+                begin
+                  ss := 'time';
+                  _xml.Attributes.Add('office:time-value', ZEDateTimeToPTDurationStr(_dt), false);
+                end
+                else
+                begin
+                  ss := 'date';
+                  _xml.Attributes.Add('office:date-value', _CellData, false);
+                end;
+              end; //if
+            end; //ZEDateTime
           else
             // всё остальное считаем строкой (потом подправить, возможно, добавить новые типы)
             {ZEansistring ZEError ZEDateTime}
-        end;
+        end; //case
 
         if (ss > '') then
           _xml.Attributes.Add('office:value-type', ss, false);
@@ -6247,7 +6257,12 @@ var
           ZENumber:
             _CurrCell.Data := xml.Attributes.ItemsByName['office:value'];
           ZEDateTime:
-            _CurrCell.Data := xml.Attributes.ItemsByName['office:date-value'];
+            begin
+              if (UpperCase(s) = 'TIME') then
+                _CurrCell.AsDateTime := ZEPTDateDurationToDateTime(xml.Attributes.ItemsByName['office:time-value'])
+              else
+                _CurrCell.Data := xml.Attributes.ItemsByName['office:date-value'];
+            end;
           ZEString:
             begin
               _stringValue := xml.Attributes.ItemsByName['office:string-value'];

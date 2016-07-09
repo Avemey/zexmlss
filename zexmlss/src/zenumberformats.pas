@@ -60,6 +60,8 @@ const
   ZE_NUMFORMAT_NUM_IS_CURRENCY    = 1 shl 12;
   ZE_NUMFORMAT_NUM_IS_FRACTION    = 1 shl 13;
 
+  ZE_NUMFORMAT_DATE_IS_ONLY_TIME  = 1 shl 14;
+
   //DateStyles
   ZETag_number_date_style     = 'number:date-style';
   ZETag_number_time_style     = 'number:time-style';
@@ -251,12 +253,12 @@ type
     //INPUT
     //     const xml: TZsspXMLWriterH - xml
     //     const AStyleName: string   - style name
-    //     const ATagName: string     - tag name (date or time) (???)
     //           isVolatile: boolean  - is volatile? (for now - ignore)
-    procedure WriteDateTimeStyle(const xml: TZsspXMLWriterH;
+    //RETURN
+    //      integer - additional properties for datetime style
+    function WriteDateTimeStyle(const xml: TZsspXMLWriterH;
                                  const AStyleName: string;
-                                 const ATagName: string;
-                                 isVolatile: boolean = false);
+                                 isVolatile: boolean = false): integer;
 
     property Condition: string read FCondition write FCondition;
     property isCondition: boolean read FisCondition write FisCondition;
@@ -1270,6 +1272,22 @@ begin
   end;
 end; //TryXlsxTimeToDateTime
 
+function TryGetNumFormatByName(ANamedFormat: string; out retNumFormat: string): boolean;
+var
+  i: integer;
+
+begin
+  Result := False;
+  ANamedFormat := UpperCase(ANamedFormat);
+  for i := 0 to ZE_VALID_NAMED_FORMATS_COUNT - 1 do
+    if (ZE_VALID_NAMED_FORMATS[i][0] = ANamedFormat) then
+    begin
+      Result := True;
+      retNumFormat := ZE_VALID_NAMED_FORMATS[i][1];
+      break;
+    end;
+end;
+
 function TryGetMapColorName(AColor: string; out retColorName: string): boolean;
 var
   i: integer;
@@ -1635,11 +1653,33 @@ var
     s := '';
   end; //_ProcessSeconds
 
+  procedure _TryToAddEraJap();
+  begin
+    _tmp := UpperCase(s);
+
+    t := -1;
+    if (_tmp = 'G') then
+      t := 1
+    else
+    if (_tmp = 'GG') then
+      t := 2
+    else
+    if (_tmp = 'GGG') then
+      t := 3
+    else
+    if (_tmp = 'GGGEE') then
+      t := 4;
+
+    if (t > 0) then
+      _AddItemCommon(s, t, ZE_DATETIME_ITEM_ERA_JAP, t);
+
+    s := '';
+  end;
+
   procedure _ProcessEraJap();
   begin
     s := _ch;
-    _pos := _parser.CurrentPos + 1;
-    _parser.IncPos(1);
+    _pos := _parser.CurrentPos;
     while (_pos <= _parser.StrLength) do
     begin
       _ch := AFmtStr[_pos];
@@ -1648,31 +1688,16 @@ var
           s := s + _ch;
         else
           begin
-            _tmp := UpperCase(s);
-
-            t := -1;
-            if (_tmp = 'G') then
-              t := 1
-            else
-            if (_tmp = 'GG') then
-              t := 2
-            else
-            if (_tmp = 'GGG') then
-              t := 3
-            else
-            if (_tmp = 'GGGEE') then
-              t := 4;
-
-            if (t > 0) then
-              _AddItemCommon(s, t, ZE_DATETIME_ITEM_ERA_JAP, t);
-
-            s := '';
+            _TryToAddEraJap();
             exit;
           end;
       end;
       inc(_pos);
       _parser.IncPos(1);
     end; //while
+
+    if (s <> '') then
+      _TryToAddEraJap();
   end; //_ProcessEraJap
 
   procedure _ProcessSymbol();
@@ -2091,6 +2116,7 @@ begin
     begin
       //Attr: number:calendar
       //      number:style
+      _result := _result + IfThen(_isLong, 'GG', 'G')
     end
     else
     //Quarter
@@ -2612,7 +2638,7 @@ end; //TryGetNumberFormatName
 function TZEODSNumberFormatWriter.TryGetNumberFormatAddProp(StyleID: integer;
                                                             out NumberFormatProp: integer): boolean;
 begin
-  Result := (StyleID >= 0) and (StyleID < FCount);
+  Result := (StyleID >= 0) and (StyleID < FCountMax);
 
   if (Result) then
     NumberFormatProp := FNumberAdditionalProps[StyleID]
@@ -2762,6 +2788,9 @@ var
   end;
 
   function _WriteDateTime(): boolean;
+  var
+    _addProp: integer;
+
   begin
     Result := false;
 
@@ -2770,7 +2799,8 @@ var
       //For now use only first NF item
       //TODO:
       //     Are conditions implements for date styles?
-      FNFItems[0].WriteDateTimeStyle(xml, _nfName, ZETag_number_date_style);
+      _addProp := FNFItems[0].WriteDateTimeStyle(xml, _nfName);
+      _nfType := _nfType or _addProp;
       Result := true;
     end; //if
   end; //_WriteDateTime
@@ -2820,6 +2850,7 @@ var
     begin
       inc(FCountMax, 10);
       SetLength(FItems, FCountMax);
+      SetLength(FNumberAdditionalProps, FCountMax);
     end;
 
     FItems[FCount].StyleIndex := StyleID;
@@ -2859,6 +2890,12 @@ begin
 
   if ((s = 'GENERAL') or (s = 'STANDART')) then
     exit;
+
+  if (TryGetNumFormatByName(ANumberFormat, s)) then
+    if (s = '') then
+      exit
+    else
+      ANumberFormat := s;
 
   if (_CheckIsDuplicate()) then
     Result := true
@@ -3398,13 +3435,13 @@ begin
   xml.WriteEndTagNode(); //number:text-style
 end; //WriteTextStyle
 
-procedure TODSNumberFormatMapItem.WriteDateTimeStyle(const xml: TZsspXMLWriterH;
-                                                     const AStyleName: string;
-                                                     const ATagName: string;
-                                                     isVolatile: boolean = false);
+function TODSNumberFormatMapItem.WriteDateTimeStyle(const xml: TZsspXMLWriterH;
+                                                    const AStyleName: string;
+                                                    isVolatile: boolean = false): integer;
 
 var
   s: string;
+  _tagName: string;
 
   procedure _WriteYear(var item: TZDateTimeProcessItem);
   begin
@@ -3478,6 +3515,25 @@ var
     xml.WriteEmptyTag(ZETag_number_quarter, true, false);
   end; //_WriteQuarter
 
+  procedure _WriteEraYear(var item: TZDateTimeProcessItem);
+  begin
+    //TODO
+    (*
+    if (item.Len >= 2) then
+      xml.Attributes.Add(ZETag_number_style, ZETag_long);
+
+    xml.WriteEmptyTag(ZETag_number_quarter, true, false);
+    *)
+  end; //_WriteEraYear
+
+  procedure _WriteEraJap(var item: TZDateTimeProcessItem);
+  begin
+    if (item.Len >= 2) then
+      xml.Attributes.Add(ZETag_number_style, ZETag_long);
+
+    xml.WriteEmptyTag(ZETag_number_era, true, false);
+  end; //_WriteEraJap
+
   procedure _WriteItems();
   var
     i: integer;
@@ -3514,8 +3570,11 @@ var
         ZE_DATETIME_ITEM_QUARTER:
                               _WriteQuarter(FDateTimeODSFormatParser.FItems[i]);
 
-        ZE_DATETIME_ITEM_ERA_JAP:;  //TODO
-        ZE_DATETIME_ITEM_ERA_YEAR:; //TODO
+        ZE_DATETIME_ITEM_ERA_JAP:
+                              _WriteEraJap(FDateTimeODSFormatParser.FItems[i]);
+
+        ZE_DATETIME_ITEM_ERA_YEAR:
+                              _WriteEraYear(FDateTimeODSFormatParser.FItems[i]);
 
         ZE_DATETIME_ITEM_AMPM:
                               xml.WriteEmptyTag(ZETag_number_am_pm, true, false);
@@ -3523,14 +3582,44 @@ var
     end; //for i
   end; //_WriteItems
 
+  function _GetAdditionalProperties(): integer;
+  var
+    i: integer;
+
+  begin
+    for i := 0 to FDateTimeODSFormatParser.FCount - 1 do
+      case (FDateTimeODSFormatParser.FItems[i].ItemType) of
+        ZE_DATETIME_ITEM_YEAR,
+        ZE_DATETIME_ITEM_MONTH,
+        ZE_DATETIME_ITEM_DAY,
+        ZE_DATETIME_ITEM_WEEK,
+        ZE_DATETIME_ITEM_QUARTER,
+        ZE_DATETIME_ITEM_ERA_JAP,
+        ZE_DATETIME_ITEM_ERA_YEAR:
+          begin
+            Result := 0;
+            exit;
+          end;
+      end; //case
+    Result := ZE_NUMFORMAT_DATE_IS_ONLY_TIME;
+  end; //_GetAdditionalProperties
+
 begin
+  Result := 0;
   FDateTimeODSFormatParser.TryToParseDateFormat(FNumberFormat, FNumberFormatParser);
   FDateTimeODSFormatParser.DeleteRepeatedItems();
 
   if (FDateTimeODSFormatParser.GetValidCount() > 0) then
   begin
+    Result := _GetAdditionalProperties();
+
+    if (Result = 0) then
+      _tagName := ZETag_number_date_style
+    else
+      _tagName := ZETag_number_time_style;
+
     PrepareCommonStyleAttributes(xml, AStyleName, isVolatile);
-    xml.WriteTagNode(ATagName, true, true, false);
+    xml.WriteTagNode(_tagName, true, true, false);
 
     _WriteItems();
 

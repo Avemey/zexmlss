@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2016.07.03
+// Last update: 2016.07.10
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -78,10 +78,32 @@ function ZELibraryName: string;
 //Trying to convert string like "n%" to integer
 function TryStrToIntPercent(s: string; out Value: integer): boolean;
 
-const ZELibraryVersion = '0.0.11';
+//Get DateTime from XML scheme 2 duration string
+//see https://www.w3.org/TR/xmlschema-2/#duration
+//  example: PT537199H55M05.123000219S = 1961.04.12 7:55:05.123
+//INPUT
+//     const APTTime: string - string in PT format
+//RETURN
+//      TDateTime - calculated datetime
+function ZEPTDateDurationToDateTime(const APTTime: string): TDateTime;
+
+//Get XML schema 2 duration string from TDateTime
+//see https://www.w3.org/TR/xmlschema-2/#duration
+//  example: PT537199H55M05.123000219S = 1961.04.12 7:55:05.123
+//INPUT
+//     const ADateTime: TDateTime - datetime
+//RETURN
+//      string
+function ZEDateTimeToPTDurationStr(const ADateTime: TDateTime): string;
+
+const ZELibraryVersion = '0.0.12';
       ZELibraryFork = '';//'Arioch';  // or empty str   // URL ?
 
 implementation
+
+uses
+  dateutils //IncHour etc
+  ;
 
 function ZELibraryName: string;
 begin   // todo: compiler version and date ?
@@ -596,5 +618,133 @@ begin
       Delete(s, l, 1);
   result := TryStrToInt(s, Value);
 end; //TryStrToIntPercent
+
+//Get XML schema 2 duration string from TDateTime
+//see https://www.w3.org/TR/xmlschema-2/#duration
+//  example: PT537199H55M05.123000219S = 1961.04.12 7:55:05.123
+//INPUT
+//     const ADateTime: TDateTime - datetime
+//RETURN
+//      string
+function ZEDateTimeToPTDurationStr(const ADateTime: TDateTime): string;
+var
+  _t: TDateTime;
+  _h: integer;
+  _min: integer;
+  _sec: integer;
+  _msec: integer;
+
+begin
+  _h := HoursBetween(ADateTime, 0);
+  _t := IncHour(0, _h);
+
+  _min := MinutesBetween(ADateTime, _t);
+  _t := IncMinute(_t, _min);
+
+  _sec := SecondsBetween(ADateTime, _t);
+  _t := IncSecond(_t, _sec);
+
+  _msec := MilliSecondsBetween(ADateTime, _t);
+
+  Result := 'PT' + IntToStr(_h) + 'H' +
+            IntToStr(_min) + 'M' +
+            ZEFloatSeparator(FloatToStr(_sec + _msec / 1000)) + 'S'
+            ;
+end; //ZEDateTimeToPTDurationStr
+
+//Get DateTime from XML schema 2 duration string
+//see https://www.w3.org/TR/xmlschema-2/#duration
+//  example: PT537199H55M05.123000219S = 1961.04.12 7:55:05.123
+//INPUT
+//     const APTTime: string - string in PT format
+//RETURN
+//      TDateTime - calculated datetime
+function ZEPTDateDurationToDateTime(const APTTime: string): TDateTime;
+var
+  i: integer;
+  l: integer;
+  s: string;
+  _y: integer;
+  _m: integer;
+  _d: integer;
+  _h: integer;
+  _min: integer;
+  _sec: integer;
+  _msec: integer;
+  _t: double;
+  _ch: char;
+  _isTime: boolean;
+
+  procedure _CheckSeconds();
+  begin
+    _t := ZETryStrToFloat(s, 0);
+    _sec := Round(trunc(_t));
+    _msec := Round(frac(_t) * 1000);
+    s := '';
+  end; //_CheckSeconds
+
+  function _GetIntPart(): integer;
+  begin
+    if (not TryStrToInt(s, Result)) then
+      Result := 0;
+    s := '';
+  end; //_GetIntPart
+
+begin
+  Result := 0;
+  _y := 0;
+  _m := 0;
+  _d := 0;
+  _h := 0;
+  _min := 0;
+  _sec := 0;
+  _msec := 0;
+  s := '';
+  _isTime := false;
+
+  l := length(APTTime);
+  for i := 1 to l do
+  begin
+    _ch := APTTime[i];
+    case (_ch) of
+      'P', 'p': s := '';
+      'Y', 'y':
+           _y := _GetIntPart();
+      'D', 'd':
+           _d := _GetIntPart();
+      'T', 't':
+          begin
+            _isTime := true;
+            s := '';
+          end;
+      'H', 'h':
+           _h := _GetIntPart();
+      'M', 'm':
+          if (_isTime) then
+            _min := _GetIntPart()
+          else
+            _m := _GetIntPart();
+      'S', 's':
+          _checkSeconds();
+      else
+        s := s + _ch;
+    end; //case
+  end; // for i
+
+  if (_y <> 0) then
+    Result := IncYear(Result, _y);
+  if (_m <> 0) then
+    Result := IncMonth(Result, _m);
+  if (_d <> 0) then
+    Result := IncDay(Result, _d);
+  if (_h <> 0) then
+    Result := IncHour(Result, _h);
+  if (_min <> 0) then
+    Result := IncMinute(Result, _min);
+  if (_sec <> 0) then
+    Result := IncSecond(Result, _sec);
+  if (_msec <> 0) then
+    Result := IncMilliSecond(Result, _msec);
+end; //ZEPTDateDurationToDateTime
 
 end.
