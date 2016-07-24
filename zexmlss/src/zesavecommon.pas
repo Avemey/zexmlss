@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2016.07.10
+// Last update: 2016.07.25
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -96,7 +96,7 @@ function ZEPTDateDurationToDateTime(const APTTime: string): TDateTime;
 //      string
 function ZEDateTimeToPTDurationStr(const ADateTime: TDateTime): string;
 
-const ZELibraryVersion = '0.0.12';
+const ZELibraryVersion = '0.0.13';
       ZELibraryFork = '';//'Arioch';  // or empty str   // URL ?
 
 implementation
@@ -678,7 +678,7 @@ var
   procedure _CheckSeconds();
   begin
     _t := ZETryStrToFloat(s, 0);
-    _sec := Round(trunc(_t));
+    _sec := trunc(_t);
     _msec := Round(frac(_t) * 1000);
     s := '';
   end; //_CheckSeconds
