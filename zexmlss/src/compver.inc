@@ -5,6 +5,7 @@
   //Directive deprecated with string msg (deprecated 'Use "some else"';)
   //  works in FPC and D>=2009.
   {$DEFINE USE_DEPRECATED_STRING}
+  {$DEFINE FPC_OR_DELPHI_UNICODE}
   {$I fpccompver.inc}
 {$ENDIF}
 
@@ -101,6 +102,7 @@
 
 {$IFDEF DELPHI_UNICODE}
   {$DEFINE USE_DEPRECATED_STRING}
+  {$DEFINE FPC_OR_DELPHI_UNICODE}
 {$ENDIF}
 
 { $DEFINE DELPHI_UNICODE}

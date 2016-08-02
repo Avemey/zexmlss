@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2016.07.10
+// Last update: 2016.08.02
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - added uniform save API
 //     to create ODS in Delphi/Windows
@@ -6577,9 +6577,14 @@ var
     // 1. "Лист1.A4:Лист1.C4" - если имя листа односложное
     // 2. "'Лист №1'.A4:'Лист №1'.C4" - если имя листа сложное
     // поэтому дважды вычищаем считанное значение
-    st:=xml.Attributes.ItemsByName['table:target-range-address'];
-    st:=ReplaceStr(st,#39+_Sheet.Title+#39+'.','');
-    st:=ReplaceStr(st,_Sheet.Title+'.','');
+    st := xml.Attributes.ItemsByName['table:target-range-address'];
+    {$IFDEF FPC_OR_DELPHI_UNICODE}
+    st := ReplaceStr(st, #39 + _Sheet.Title + #39 + '.', '');
+    st := ReplaceStr(st, _Sheet.Title + '.', '');
+    {$ELSE}
+    st := AnsiReplaceStr(st, #39 + _Sheet.Title + #39 + '.', '');
+    st := AnsiReplaceStr(st, _Sheet.Title + '.', '');
+    {$ENDIF}
 
     _Sheet.AutoFilter:=st;
   end;
