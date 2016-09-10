@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2016.07.25
+// Last update: 2016.09.10
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -96,7 +96,7 @@ function ZEPTDateDurationToDateTime(const APTTime: string): TDateTime;
 //      string
 function ZEDateTimeToPTDurationStr(const ADateTime: TDateTime): string;
 
-const ZELibraryVersion = '0.0.13';
+const ZELibraryVersion = '0.0.14';
       ZELibraryFork = '';//'Arioch';  // or empty str   // URL ?
 
 implementation
@@ -319,14 +319,10 @@ begin
       {$ELSE}
       if (st[i] in ['.', ',']) then
       {$ENDIF}
-        {$IFDEF DELPHI_UNICODE}
+        {$IFDEF Z_USE_FORMAT_SETTINGS}
         s := s + FormatSettings.DecimalSeparator
         {$ELSE}
-          {$IFDEF Z_FPC_USE_FORMATSETTINGS}
-        s := s + FormatSettings.DecimalSeparator
-          {$ELSE}
         s := s + DecimalSeparator
-          {$ENDIF}
         {$ENDIF}
       else if (st[i] <> ' ') then
         s := s + st[i];
@@ -357,14 +353,10 @@ begin
       {$ELSE}
       if (st[i] in ['.', ',']) then
       {$ENDIF}
-        {$IFDEF DELPHI_UNICODE}
+        {$IFDEF Z_USE_FORMAT_SETTINGS}
         s := s + FormatSettings.DecimalSeparator
         {$ELSE}
-          {$IFDEF Z_FPC_USE_FORMATSETTINGS}
-        s := s + FormatSettings.DecimalSeparator
-          {$ELSE}
         s := s + DecimalSeparator
-          {$ENDIF}
         {$ENDIF}
       else if (st[i] <> ' ') then
         s := s + st[i];

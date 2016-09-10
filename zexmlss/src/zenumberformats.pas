@@ -5,7 +5,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2016.07.03
+// Last update: 2016.09.10
 //----------------------------------------------------------------
 {
  Copyright (C) 2015 Ruslan Neborak
@@ -1258,14 +1258,10 @@ begin
       retDateTime := IncMonth(retDateTime, 12 * 4);
 
     if (s2 <> '') then
-    {$IFDEF DELPHI_UNICODE}
+    {$IFDEF Z_USE_FORMAT_SETTINGS}
       if (TryStrToFloat('0' + FormatSettings.DecimalSeparator + s2, t)) then
     {$ELSE}
-      {$IFDEF Z_FPC_USE_FORMATSETTINGS}
-      if (TryStrToFloat('0' + FormatSettings.DecimalSeparator + s2, t)) then
-      {$ELSE}
       if (TryStrToFloat('0' + DecimalSeparator + s2, t)) then
-      {$ENDIF}
     {$ENDIF}
         retDateTime := retDateTime + t;
     Result := true;

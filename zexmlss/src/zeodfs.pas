@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2016.08.02
+// Last update: 2016.09.10
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - added uniform save API
 //     to create ODS in Delphi/Windows
@@ -5456,14 +5456,10 @@ begin
           if (_isU) then
             su := su + ch
           else
-            {$IFDEF DELPHI_UNICODE}
+            {$IFDEF Z_USE_FORMAT_SETTINGS}
             sv := sv + FormatSettings.DecimalSeparator
             {$ELSE}
-              {$IFDEF Z_FPC_USE_FORMATSETTINGS}
-            sv := sv + FormatSettings.DecimalSeparator
-              {$ELSE}
             sv := sv + DecimalSeparator
-              {$ENDIF}
             {$ENDIF}
         end;
       else

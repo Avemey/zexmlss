@@ -7,7 +7,7 @@
 // URL:    http://avemey.com
 // Ver:    0.0.11
 // Лицензия: zlib
-// Last update: 2016.07.03
+// Last update: 2016.09.10
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -118,8 +118,16 @@ uses
 {$EndIf}
   ;
 
+{$IFDEF DELPHI_UNICODE}
+  {$DEFINE USE_STRUTILS_SPLIT_STRING}
+{$ENDIF}
+
+{$IFDEF VER200} // RAD Studio 2009
+  {$UNDEF USE_STRUTILS_SPLIT_STRING} //There are no StrUtils.SplitString in D2009!!!!
+{$ENDIF VER200}
+
 function SplitString(const buffer: string; const delimeter: char): TStringDynArray;
-{$IfDef DELPHI_UNICODE}
+{$IfDef USE_STRUTILS_SPLIT_STRING}
 begin
    Result := StrUtils.SplitString(buffer, delimeter); // implicit typecast
 end;
