@@ -6264,6 +6264,13 @@ var
               _stringValue := xml.Attributes.ItemsByName['office:string-value'];
               _isStringValue := _stringValue <> '';
             end;
+          ZEBoolean:
+            begin
+              s := '0';
+              if (ZETryStrToBoolean(xml.Attributes.ItemsByName['office:boolean-value'])) then
+                s := '1';
+              _CurrCell.Data := s;
+            end;
         end; //case
 
         //защищЄнность €чейки
@@ -6377,7 +6384,7 @@ var
           end; //while *table-cell
         end; //if
 
-        if (not (_CurrCell.CellType in [ZENumber, ZEDateTime])) then
+        if (not (_CurrCell.CellType in [ZENumber, ZEDateTime, ZEBoolean])) then
           _CurrCell.Data := ZEReplaceEntity(_celltext);
 
         if ((_CurrCell.CellType = ZEString) and _isStringValue) then

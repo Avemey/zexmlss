@@ -1753,7 +1753,16 @@ var
               if (ProcessedCell.Data > '') or
                  (isFormula) then
               begin
-                CorrectStrForXML(ProcessedCell.Data, s, b);
+                if (ProcessedCell.CellType = ZEBoolean) then
+                begin
+                  if (ZETryStrToBoolean(ProcessedCell.Data)) then
+                    s := '1'
+                  else
+                    s := '0';
+                end
+                else
+                  CorrectStrForXML(ProcessedCell.Data, s, b);
+
                 if b then
                   AttrData.Add('xmlns','http://www.w3.org/TR/REC-html40', false);
                 WriteTag('ss:Data', s, AttrData, true, false, false);
