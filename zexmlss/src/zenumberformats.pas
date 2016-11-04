@@ -902,7 +902,7 @@ var
       ZE_DATETIME_AMPM_LONG_LOW:
         Result := 'am/pm';
       else
-        Result := 'AM/MP';
+        Result := 'AM/PM';
     end;
   end; //_AddAMPM
 
