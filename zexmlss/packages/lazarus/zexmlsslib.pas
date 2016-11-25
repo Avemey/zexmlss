@@ -9,7 +9,7 @@ interface
 uses
   zexmlss, zexmlssutils, zsspxml, zeformula, zeodfs, zesavecommon, zeSave, 
   zeSaveEXML, zeSaveODS, zeSaveXLSX, zeZippy, zeZippyLazip, zexlsx, 
-  zearchhelper, LazarusPackageIntf;
+  zearchhelper, zenumberformats, LazarusPackageIntf;
 
 implementation
 

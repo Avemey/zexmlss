@@ -48,7 +48,7 @@ type
       const ZEAnsiString = ZEString deprecated {$IFDEF USE_DEPRECATED_STRING}'use ZEString'{$ENDIF}; // backward compatibility
 type
   //Стиль начертания линий рамки ячейки
-  TZBorderType = (ZENone, ZEContinuous, ZEHair, ZEDot, ZEDash, ZEDashDot, ZEDashDotDot,ZESlantDashDot, ZEDouble);
+  TZBorderType = (ZENone, ZEContinuous, ZEHair, ZEDot, ZEDash, ZEDashDot, ZEDashDotDot, ZESlantDashDot, ZEDouble);
 
   //Горизонтальное выравнивание
   TZHorizontalAlignment = (ZHAutomatic, ZHLeft, ZHCenter, ZHRight, ZHFill, ZHJustify, ZHCenterAcrossSelection, ZHDistributed, ZHJustifyDistributed);
@@ -81,6 +81,9 @@ type
     procedure SetDataAsDouble(const Value: double);
     procedure SetDataAsInteger(const Value: integer);
     function GetDataAsInteger: integer;
+
+    function GetDataAsDateTime(): TDateTime;
+    procedure SetDataAsDateTime(const Value: TDateTime);
   public
     constructor Create();virtual;
     procedure Assign(Source: TPersistent); override;
@@ -98,6 +101,7 @@ type
 
     property AsDouble: double read GetDataAsDouble write SetDataAsDouble;
     property AsInteger: integer read GetDataAsInteger write SetDataAsInteger;
+    property AsDateTime: TDateTime read GetDataAsDateTime write SetDataAsDateTime;
   end;
 
   //стиль линии границы
@@ -683,6 +687,362 @@ type
 
   {$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
 
+  //Transformations that can applied to a chart/image.
+  TZETransform = class (TPersistent)
+  private
+    FRotate: double;
+    FScaleX: double;
+    FScaleY: double;
+    FSkewX: double;
+    FSkewY: double;
+    FTranslateX: double;
+    FTranslateY: double;
+  protected
+  public
+    constructor Create();
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean;
+    procedure Clear();
+  published
+    property Rotate: double read FRotate write FRotate;
+    property ScaleX: double read FScaleX write FScaleX;
+    property ScaleY: double read FScaleY write FScaleY;
+    property SkewX: double read FSkewX write FSkewX;
+    property SkewY: double read FSkewY write FSkewY;
+    property TranslateX: double read FTranslateX write FTranslateX;
+    property TranslateY: double read FTranslateY write FTranslateY;
+  end;
+
+  //Common frame ancestor for Charts and Images
+  TZECommonFrameAncestor = class (TPersistent)
+  private
+    FX: integer;
+    FY: integer;
+    FWidth: integer;
+    FHeight: integer;
+    FTransform: TZETransform;
+  protected
+    procedure SetX(value: integer); virtual;
+    procedure SetY(value: integer); virtual;
+    procedure SetWidth(value: integer); virtual;
+    procedure SetHeight(value: integer); virtual;
+    procedure SetTransform(const value: TZETransform); virtual;
+  public
+    constructor Create(); overload; virtual;
+    constructor Create(AX, AY, AWidth, AHeight: integer); overload; virtual;
+    destructor Destroy(); override;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; virtual;
+  published
+    property X: integer read FX write SetX default 0;
+    property Y: integer read FY write SetY default 0;
+    property Width: integer read FWidth write SetWidth default 10;
+    property Height: integer read FHeight write SetHeight default 10;
+    property Transform: TZETransform read FTransform write SetTransform;
+  end;
+
+  {$IFDEF ZUSE_CHARTS}
+
+  //Possible chart types
+  TZEChartType = (
+                    ZEChartTypeArea,
+                    ZEChartTypeBar,
+                    ZEChartTypeBubble,
+                    ZEChartTypeCircle,
+                    ZEChartTypeGantt,
+                    ZEChartTypeLine,
+                    ZEChartTypeRadar,
+                    ZEChartTypeRing,
+                    ZEChartTypeScatter,
+                    ZEChartTypeStock,
+                    ZEChartTypeSurface
+                 );
+
+  //Specifies the rendering of bars for 3D bar charts
+  TZEChartSolidType = (
+                      ZEChartSolidTypeCone,
+                      ZEChartSolidTypeCuboid,
+                      ZEChartSolidTypeCylinder,
+                      ZEChartSolidTypePyramid
+                      );
+
+  //Type of symbols for a data point in a chart
+  TZEChartSymbolType = (
+                        ZEChartSymbolTypeNone,            //No symbol should be used
+                        ZEChartSymbolTypeAutomatic,       //Auto select from TZEChartSymbol
+                        ZEChartSymbolTypeNamedSymbol      //Use selected from TZEChartSymbol
+                        //ZEChartSymbolTypeImage          //not for now
+                       );
+
+  //Symbol to be used for a data point in a chart, used only for chart type = ZEChartSymbolTypeNamedSymbol
+  TZEChartSymbol = (
+                     ZEChartSymbolArrowDown,
+                     ZEChartSymbolArrowUp,
+                     ZEChartSymbolArrowRight,
+                     ZEChartSymbolArrowLeft,
+                     ZEChartSymbolAsterisk,
+                     ZEChartSymbolCircle,
+                     ZEChartSymbolBowTie,
+                     ZEChartSymbolDiamond,
+                     ZEChartSymbolHorizontalBar,
+                     ZEChartSymbolHourglass,
+                     ZEChartSymbolPlus,
+                     ZEChartSymbolStar,
+                     ZEChartSymbolSquare,
+                     ZEChartSymbolX,
+                     ZEChartSymbolVerticalBar
+                   );
+
+  //Position of Legend in chart
+  TZEChartLegendPosition = (
+                            ZELegendBottom,     //Legend below the plot area
+                            ZELegendEnd,        //Legend on the right side of the plot area
+                            ZELegendStart,      //Legend on the left side of the plot area
+                            ZELegendTop,        //Legend above the plot area
+                            ZELegendBottomEnd,  //Legend in the bottom right corner of the plot area
+                            ZELegendBottomStart,//Legend in the bottom left corner
+                            ZELegendTopEnd,     //Legend in the top right corner
+                            ZELegendTopStart    //Legend in the top left corner
+                           );
+
+  //Alignment of a legend
+  TZELegendAlign = (
+                     ZELegengAlignStart,  //Legend aligned at the beginning of a plot area (left or top)
+                     ZELegendAlignCenter, //Legend aligned at the center of a plot area
+                     ZELegendAlignEnd     //Legend aligned at the end of a plot area (right or bottom)
+                   );
+
+  //Range item
+  TZEChartRangeItem = class (TPersistent)
+  private
+    FSheetNum: integer;
+    FCol: integer;
+    FRow: integer;
+    FWidth: integer;
+    FHeight: integer;
+  protected
+  public
+    constructor Create(); overload;
+    constructor Create(ASheetNum: integer; ACol, ARow, AWidth, AHeight: integer); overload;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; virtual;
+  published
+    property SheetNum: integer read FSheetNum write FSheetNum;
+    property Col: integer read FCol write FCol;
+    property Row: integer read FRow write FRow;
+    property Width: integer read FWidth write FWidth;
+    property Height: integer read FHeight write FHeight;
+  end;
+
+  //Store for Range items
+  TZEChartRange = class (TPersistent)
+  private
+    FItems: array of TZEChartRangeItem;
+    FCount: integer;
+  protected
+    function GetItem(num: integer): TZEChartRangeItem;
+    procedure SetItem(num: integer; const Value: TZEChartRangeItem);
+  public
+    constructor Create();
+    destructor Destroy(); override;
+    function Add(): TZEChartRangeItem; overload;
+    function Add(const ItemForClone: TZEChartRangeItem): TZEChartRangeItem; overload;
+    function Delete(num: integer): boolean;
+    procedure Clear();
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; virtual;
+    property Items[num: integer]: TZEChartRangeItem read GetItem write SetItem; default;
+    property Count: integer read FCount;
+  end;
+
+  //Title or Subtitle for chart, axis etc
+  TZEChartTitleItem = class (TPersistent)
+  private
+    FText: string;
+    FFont: TFont;
+    FRotationAngle: integer;
+    FIsDisplay: boolean;
+  protected
+    procedure SetFont(const value: TFont);
+  public
+    constructor Create(); virtual;
+    destructor Destroy(); override;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; virtual;
+  published
+    property Text: string read FText write FText;
+    property Font: TFont read FFont write SetFont;
+    property RotationAngle: integer read FRotationAngle write FRotationAngle default 0;
+    property IsDisplay: boolean read FIsDisplay write FIsDisplay default true;
+  end;
+
+  //Chart legend
+  TZEChartLegend = class (TZEChartTitleItem)
+  private
+    FPosition: TZEChartLegendPosition;
+    FAlign: TZELegendAlign;
+  protected
+  public
+    constructor Create(); override;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; override;
+  published
+    property Position: TZEChartLegendPosition read FPosition write FPosition;
+    property Align: TZELegendAlign read FAlign write FAlign;
+  end;
+
+  //Chart axis
+  TZEChartAxis = class (TZEChartTitleItem)
+  private
+    FLogarithmic: boolean;
+    FReverseDirection: boolean;
+    FScaleMin: double;
+    FScaleMax: double;
+    FAutoScaleMin: boolean;
+    FAutoScaleMax: boolean;
+  protected
+  public
+    constructor Create(); override;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; override;
+  published
+    property Logarithmic: boolean read FLogarithmic write FLogarithmic default false;
+    property ReverseDirection: boolean read FReverseDirection write FReverseDirection default false;
+    property ScaleMin: double read FScaleMin write FScaleMin;
+    property ScaleMax: double read FScaleMax write FScaleMax;
+    property AutoScaleMin: boolean read FAutoScaleMin write FAutoScaleMin;
+    property AutoScaleMax: boolean read FAutoScaleMax write FAutoScaleMax;
+  end;
+
+  //Chart/series settings
+  TZEChartSettings = class (TPersistent)
+  private
+    FJapanCandle: boolean;
+  protected
+  public
+    constructor Create();
+    destructor Destroy(); override;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; virtual;
+  published
+    property JapanCandle: boolean read FJapanCandle write FJapanCandle; // True - japanese candle. Used only for ZEChartTypeStock chart type.
+  end;
+
+  //Chart series
+  TZEChartSeries = class (TPersistent)
+  private
+    FChartType: TZEChartType;
+    FSeriesName: string;
+    FSeriesNameSheet: integer;
+    FSeriesNameRow: integer;
+    FSeriesNameCol: integer;
+    FRanges: TZEChartRange;
+
+    {
+    TZEChartSymbolType
+    TZEChartSymbol
+    }
+
+  protected
+  public
+    constructor Create();
+    destructor Destroy(); override;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; virtual;
+  published
+                                    //For each series it's own ChartType
+    property ChartType: TZEChartType read FChartType write FChartType;
+
+                                    //If (SeriesNameRow >= 0) and (SeriesNameCol >= 0) then
+                                    // text for Series label will be from cell[SeriesNameCol, SeriesNameRow] and
+                                    // from property SeriesName otherwise.
+    property SeriesName: string read FSeriesName write FSeriesName;
+
+                                    //If SeriesNameSheet < 0 then uses current sheet for Series label
+    property SeriesNameSheet: integer read FSeriesNameSheet write FSeriesNameSheet;
+    property SeriesNameRow: integer read FSeriesNameRow write FSeriesNameRow;
+    property SeriesNameCol: integer read FSeriesNameCol write FSeriesNameCol;
+    property Ranges: TZEChartRange read FRanges;
+  end;
+
+  //Chart item
+  TZEChart = class (TZECommonFrameAncestor)
+  private
+    FTitle: TZEChartTitleItem;
+    FSubtitle: TZEChartTitleItem;
+    FFooter: TZEChartTitleItem;
+    FLegend: TZEChartLegend;
+    FAxisX: TZEChartAxis;
+    FAxisY: TZEChartAxis;
+    FAxisZ: TZEChartAxis;
+    FSecondaryAxisX: TZEChartAxis;
+    FSecondaryAxisY: TZEChartAxis;
+    FSecondaryAxisZ: TZEChartAxis;
+    FDefaultChartType: TZEChartType;
+    FView3D: boolean;
+    FViewDeep: boolean;
+  protected
+    procedure SetTitle(const value: TZEChartTitleItem);
+    procedure SetSubtitle(const value: TZEChartTitleItem);
+    procedure SetFooter(const value: TZEChartTitleItem);
+    procedure SetLegend(const value: TZEChartLegend);
+    procedure CommonInit();
+    procedure SetAxisX(const value: TZEChartAxis);
+    procedure SetAxisY(const value: TZEChartAxis);
+    procedure SetAxisZ(const value: TZEChartAxis);
+    procedure SetSecondaryAxisX(const value: TZEChartAxis);
+    procedure SetSecondaryAxisY(const value: TZEChartAxis);
+    procedure SetSecondaryAxisZ(const value: TZEChartAxis);
+  public
+    constructor Create(); overload; override;
+    constructor Create(AX, AY, AWidth, AHeight: integer); overload; override;
+    destructor Destroy(); override;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; override;
+  published
+    property AxisX: TZEChartAxis read FAxisX write SetAxisX;
+    property AxisY: TZEChartAxis read FAxisY write SetAxisY;
+    property AxisZ: TZEChartAxis read FAxisZ write SetAxisZ;
+
+    property SecondaryAxisX: TZEChartAxis read FSecondaryAxisX write SetSecondaryAxisX;
+    property SecondaryAxisY: TZEChartAxis read FSecondaryAxisY write SetSecondaryAxisY;
+    property SecondaryAxisZ: TZEChartAxis read FSecondaryAxisZ write SetSecondaryAxisZ;
+
+    property DefaultChartType: TZEChartType read FDefaultChartType write FDefaultChartType;
+
+    property Title: TZEChartTitleItem read FTitle write SetTitle;
+    property Subtitle: TZEChartTitleItem read FSubtitle write SetSubtitle;
+    property Footer: TZEChartTitleItem read FFooter write SetFooter;
+    property Legend: TZEChartLegend read FLegend write SetLegend;
+
+    property View3D: boolean read FView3D write FView3D;
+    property ViewDeep: boolean read FViewDeep write FViewDeep;
+  end;
+
+  //Store for charts on a sheet
+  TZEChartStore = class (TPersistent)
+  private
+    FCount: integer;
+    FItems: array of TZEChart;
+  protected
+    function GetItem(num: integer): TZEChart;
+    procedure SetItem(num: integer; const Value: TZEChart);
+  public
+    constructor Create();
+    destructor Destroy(); override;
+    function Add(): TZEChart; overload;
+    function Add(const ItemForClone: TZEChart): TZEChart; overload;
+    function Delete(num: integer): boolean;
+    procedure Clear();
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; virtual;
+    property Items[num: integer]: TZEChart read GetItem write SetItem; default;
+  published
+    property Count: integer read FCount;
+  end;
+
+  {$ENDIF} //ZUSE_CHARTS
+
   //лист документа
   TZSheet = class (TPersistent)
   private
@@ -704,9 +1064,17 @@ type
     FSelected: boolean;
     FPrintRows, FPrintCols: TZSheetPrintTitles;
 
+    {$IFDEF ZUSE_CHARTS}
+    FCharts: TZEChartStore;
+    {$ENDIF}
+
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     FConditionalFormatting: TZConditionalFormatting;
     procedure SetConditionalFormatting(Value: TZConditionalFormatting);
+    {$ENDIF}
+
+    {$IFDEF ZUSE_CHARTS}
+    procedure SetCharts(const Value: TZEChartStore);
     {$ENDIF}
 
     procedure SetColumn(num: integer; const Value:TZColOptions);
@@ -758,6 +1126,10 @@ type
 
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     property ConditionalFormatting: TZConditionalFormatting read FConditionalFormatting write SetConditionalFormatting;
+    {$ENDIF}
+
+    {$IFDEF ZUSE_CHARTS}
+    property Charts: TZEChartStore read FCharts write SetCharts;
     {$ENDIF}
   end;
 
@@ -894,7 +1266,367 @@ function StrToZCellPattern(Value: string): TZCellPattern;
 
 function StrToZCellType(Value: string): TZCellType;
 
+function ZEIsFontsEquals(const Font1, Font2: TFont): boolean;
+
+//Переводит дату в строку для XML (YYYY-MM-DDTHH:MM:SS[.mmm])
+function ZEDateTimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
+
+function ZEDateToStr(ADate: TDateTime): string;
+
+function ZETimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
+
+//YYYY-MM-DDTHH:MM:SS[.mmm] to DateTime
+function TryZEStrToDateTime(const AStrDateTime: string; out retDateTime: TDateTime): boolean;
+
+function IntToStrN(value: integer; NullCount: integer): string;
+
 implementation
+
+//Переводит число в строку минимальной длины NullCount
+//TODO: надо глянуть что с функциями в FlyLogReader-е
+//INPUT
+//      value: integer     - число
+//      NullCount: integer - кол-во знаков в строке
+//RETURN
+//      string
+function IntToStrN(value: integer; NullCount: integer): string;
+var
+  t: integer;
+  k: integer;
+
+begin
+  t := value;
+  k := 0;
+  if (t = 0) then
+    k := 1;
+  while t > 0 do
+  begin
+    inc(k);
+    t := t div 10;
+  end;
+  result := IntToStr(value);
+  for t := 1 to (NullCount - k) do
+    result := '0' + result;
+end; //IntToStrN
+
+//Переводит дату в строку для XML (YYYY-MM-DDTHH:MM:SS[.mmm])
+//INPUT
+//      ATime: TDateTime - нужная дата/время
+//      Addmms: boolean  - need add ms to result
+function ZEDateTimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
+var
+  HH, MM, SS, MS: word;
+
+begin
+  DecodeDate(ATime, HH, MM, SS);
+  result := IntToStrN(HH, 4) + '-' + IntToStrN(MM, 2) + '-' + IntToStrN(SS, 2) + 'T';
+  DecodeTime(ATime, HH, MM, SS, MS);
+  result := result + IntToStrN(HH, 2) + ':' + IntToStrN(MM, 2) + ':' + IntToStrN(SS, 2);
+  if (Addmms) then
+    Result := Result + '.' + IntToStrN(MS, 3);
+end;
+
+//Convert Date to string like "YYYY-MM-DD"
+//INPUT
+//      ADate: TDateTime - date
+function ZEDateToStr(ADate: TDateTime): string;
+var
+  YY, MM, DD: word;
+
+begin
+  DecodeDate(ADate, YY, MM, DD);
+  result := IntToStrN(YY, 4) + '-' + IntToStrN(MM, 2) + '-' + IntToStrN(DD, 2);
+end;
+
+//Convert time to string (THH:MM:SS[.mmm])
+//INPUT
+//      ATime: TDateTime - time
+//      Addmms: boolean  - need add ms to result
+function ZETimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
+var
+  HH, MM, SS, MS: word;
+
+begin
+  DecodeTime(ATime, HH, MM, SS, MS);
+  result := 'T' + IntToStrN(HH, 2) + ':' + IntToStrN(MM, 2) + ':' + IntToStrN(SS, 2);
+  if (Addmms) then
+    Result := Result + '.' + IntToStrN(MS, 3);
+end;
+
+//Try convert string (YYYY-MM-DDTHH:MM:SS[.mmm]) to datetime
+//INPUT
+//  const AStrDateTime: string  - string with datetime
+//  out retDateTime: TDateTime  - returns on success datetime
+//RETURN
+//      boolean - true - ok
+function TryZEStrToDateTime(const AStrDateTime: string; out retDateTime: TDateTime): boolean;
+var
+  a: array [0..10] of word;
+  i, l: integer;
+  s, ss: string;
+  count: integer;
+  ch: char;
+  datedelimeters: integer;
+  istimesign: boolean;
+  timedelimeters: integer;
+  istimezone: boolean;
+  lastdateindex: integer;
+  tmp: integer;
+  msindex: integer;
+  tzindex: integer;
+  timezonemul: integer;
+  _ms: word;
+
+  function TryAddToArray(const ST: string): boolean;
+  begin
+    if (count > 10) then
+    begin
+      Result := false;
+      exit;
+    end;
+    Result := TryStrToInt(ST, tmp);
+    if (Result) then
+    begin
+      a[Count] := word(tmp);
+      inc(Count);
+    end
+  end;
+
+  procedure _CheckDigits();
+  var
+    _l: integer;
+
+  begin
+    _l := length(s);
+    if (_l > 0) then
+    begin
+      if (_l > 4) then //it is not good
+      begin
+        if (istimesign) then
+        begin
+          // HHMMSS?
+          if (_l = 6) then
+          begin
+            ss := copy(s, 1, 2);
+            if (TryAddToArray(ss)) then
+            begin
+              ss := copy(s, 3, 2);
+              if (TryAddToArray(ss)) then
+              begin
+                ss := copy(s, 5, 2);
+                if (not TryAddToArray(ss)) then
+                  Result := false;
+              end
+              else
+                Result := false;
+            end
+            else
+              Result := false
+          end
+          else
+            Result := false;
+        end
+        else
+        begin
+          // YYYYMMDD?
+          if (_l = 8) then
+          begin
+            ss := copy(s, 1, 4);
+            if (not TryAddToArray(ss)) then
+              Result := false
+            else
+            begin
+              ss := copy(s, 5, 2);
+              if (not TryAddToArray(ss)) then
+                Result := false
+              else
+              begin
+                ss := copy(s, 7, 2);
+                if (not TryAddToArray(ss)) then
+                  Result := false;
+              end;
+            end;
+          end
+          else
+            Result := false;
+        end;
+      end
+      else
+        if (not TryAddToArray(s)) then
+          Result := false;
+    end; //if
+    if (Count > 10) then
+      Result := false;
+    s := '';
+  end;
+
+  procedure _processDigit();
+  begin
+    s := s + ch;
+  end;
+
+  procedure _processTimeSign();
+  begin
+    istimesign := true;
+    if (count > 0) then
+      lastdateindex := count;
+
+    _CheckDigits();
+  end;
+
+  procedure _processTimeDelimiter();
+  begin
+    _CheckDigits();
+    inc(timedelimeters)
+  end;
+
+  procedure _processDateDelimiter();
+  begin
+    _CheckDigits();
+    if (istimesign) then
+    begin
+      tzindex := count;
+      istimezone := true;
+      timezonemul := -1;
+    end
+    else
+      inc(datedelimeters);
+  end;
+
+  procedure _processMSDelimiter();
+  begin
+    _CheckDigits();
+    msindex := count;
+  end;
+
+  procedure _processTimeZoneSign();
+  begin
+    _CheckDigits();
+    istimezone := true;
+  end;
+
+  procedure _processTimeZonePlus();
+  begin
+    _CheckDigits();
+    istimezone := true;
+    timezonemul := -1;
+  end;
+
+  function _TryGetDateTime(): boolean;
+  var
+    _time: TDateTime;
+    _date: TDateTime;
+
+  begin
+    Result := true;
+    if (msindex >= 0) then
+      _ms := a[msindex];
+    if (lastdateindex >= 0) then
+    begin
+      Result := TryEncodeDate(a[0], a[1], a[2], _date);
+      if (Result) then
+      begin
+        Result := TryEncodeTime(a[lastdateindex + 1], a[lastdateindex + 2], a[lastdateindex + 3], _ms, _time);
+        if (Result) then
+          retDateTime := _date + _time;
+      end;
+    end
+    else
+      Result := TryEncodeTime(a[lastdateindex + 1], a[lastdateindex + 2], a[lastdateindex + 3], _ms, retDateTime);
+  end;
+
+  function _TryGetDate(): boolean;
+  begin
+    if (datedelimeters = 0) and (timedelimeters >= 2) then
+    begin
+      if (msindex >= 0) then
+        _ms := a[msindex];
+      result := TryEncodeTime(a[0], a[1], a[2], _ms, retDateTime);
+    end
+    else
+    if (count >= 3) then
+      Result := TryEncodeDate(a[0], a[1], a[2], retDateTime)
+    else
+      Result := false;
+  end;
+
+begin
+  Result := true;
+  datedelimeters := 0;
+  istimesign := false;
+  timedelimeters := 0;
+  istimezone := false;
+  lastdateindex := -1;
+  msindex := -1;
+  tzindex := -1;
+  timezonemul := 0;
+  _ms := 0;
+  FillChar(a, sizeof(a), 0);
+
+  l := length(AStrDateTime);
+  s := '';
+  count := 0;
+  for i := 1 to l do
+  begin
+    ch := AStrDateTime[i];
+    case (ch) of
+      '0'..'9': _processDigit();
+      't', 'T': _processTimeSign();
+      '-': _processDateDelimiter();
+      ':': _processTimeDelimiter();
+      '.', ',': _processMSDelimiter();
+      'z', 'Z': _processTimeZoneSign();
+      '+': _processTimeZonePlus();
+    end;
+    if (not Result) then
+      break
+  end;
+
+  if (Result and (s <> '')) then
+    _CheckDigits();
+
+  if (Result) then
+  begin
+    if (istimesign) then
+      Result := _TryGetDateTime()
+    else
+      Result := _TryGetDate();
+  end;
+end; //TryZEStrToDateTime
+
+//Checks is Font1 equal Font2
+//INPUT
+//  const Font1: TFont
+//  const Font2: TFont
+//RETURN
+//    boolean - true - fonts are equals
+function ZEIsFontsEquals(const Font1, Font2: TFont): boolean;
+begin
+  Result := Assigned(Font1) and (Assigned(Font2));
+  if (Result) then
+  begin
+    Result := false;
+    if (Font1.Color <> Font2.Color) then
+      exit;
+
+    if (Font1.Height <> Font2.Height) then
+      exit;
+
+    if (Font1.Name <> Font2.Name) then
+      exit;
+
+    if (Font1.Pitch <> Font2.Pitch) then
+      exit;
+
+    if (Font1.Size <> Font2.Size) then
+      exit;
+
+    if (Font1.Style <> Font2.Style) then
+      exit;
+
+    Result := true;
+  end;
+end; //ZEIsFontsEquals
 
 //Проверяет строку на правильность, если что-то не правильно - правит
 //Input
@@ -1712,7 +2444,7 @@ end;
 // about default font in Excel - http://support.microsoft.com/kb/214123
 constructor TZStyle.Create();
 begin
-  FFont := TFont.Create();
+  FFont  := TFont.Create();
   FFont.Size := 10;
   FFont.Name := 'Arial';
   FFont.Color := ClBlack;
@@ -1721,7 +2453,7 @@ begin
   FBGColor := clWindow;
   FPatternColor := clWindow;
   FCellPattern := ZPNone;
-  FNumberFormat := 'General';
+  FNumberFormat := ''; // '' = General
   FProtect := true;
   FHideFormula := false;
 end;
@@ -1787,27 +2519,7 @@ begin
   if HideFormula <> zSource.HideFormula then
     exit;
 
-  //font
-  if Font.Color <> zSource.Font.Color then
-    exit;
-
-  if Font.Height <> zSource.Font.Height then
-    exit;
-
-  if Font.Name <> zSource.Font.Name then
-    exit;
-
-  if Font.Pitch <> zSource.Font.Pitch then
-    exit;
-
-  if Font.Size <> zSource.Font.Size then
-    exit;
-
-  if Font.Style <> zSource.Font.Style then
-    exit;
-    {tut} //Ничего не забыл?
-
-  Result := true;
+  Result := ZEIsFontsEquals(FFont, zSource.Font);
 end;
 
 procedure TZStyle.SetFont(const Value: TFont);
@@ -2018,11 +2730,54 @@ begin
   FShowComment := false;
 end;
 
+function TZCell.GetDataAsDateTime(): TDateTime;
+var
+  b: boolean;
+
+begin
+  b := false;
+  if (FData = '') then
+    Result := 0
+  else
+    if (not TryZEStrToDateTime(FData, Result)) then
+    begin
+      //If cell type is number then try convert "float" to datetime
+      if (CellType = ZENumber) then
+        Result := AsDouble
+      else
+        b := true;
+    end;
+
+  if (b) then
+    Raise EConvertError.Create('ZxCell: Cannot cast data to DateTime');;
+end;
+
+procedure TZCell.SetDataAsDateTime(const Value: TDateTime);
+begin
+  FCellType := ZEDateTime;
+  FData := ZEDateTimeToStr(Value, true);
+end;
+
 function TZCell.GetDataAsDouble: double;
-Var err: integer;
+Var
+  err: integer;
+  b: boolean;
+  _dt: TDateTime;
+
 begin
   Val(FData, Result, err); // need old-school to ignore regional settings
-  if err>0 then Raise EConvertError.Create('ZxCell: Cannot cast data to number');
+  if (err > 0) then
+  begin
+    b := true;
+    //If datetime ...
+    if (CellType = ZEDateTime) then
+      b := not TryZEStrToDateTime(FData, _dt);
+
+    if (b) then
+      Raise EConvertError.Create('ZxCell: Cannot cast data to number')
+    else
+      Result := _dt;
+  end;
 end;
 
 function TZCell.GetDataAsInteger: integer;
@@ -2663,6 +3418,10 @@ begin
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   FConditionalFormatting := TZConditionalFormatting.Create();
   {$ENDIF}
+
+  {$IFDEF ZUSE_CHARTS}
+  FCharts := TZEChartStore.Create();
+  {$ENDIF}
 end;
 
 destructor TZSheet.Destroy();
@@ -2678,6 +3437,10 @@ begin
     FColumns := nil;
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     FreeAndNil(FConditionalFormatting);
+    {$ENDIF}
+
+    {$IFDEF ZUSE_CHARTS}
+    FreeAndNil(FCharts);
     {$ENDIF}
   finally
     inherited Destroy();
@@ -2741,6 +3504,14 @@ begin
   if (Assigned(Value)) then
     FConditionalFormatting.Assign(Value);
 end; //SetConditionalFormatting
+{$ENDIF}
+
+{$IFDEF ZUSE_CHARTS}
+procedure TZSheet.SetCharts(const Value: TZEChartStore);
+begin
+  if (Assigned(Value)) then
+    FCharts.Assign(Value);
+end;
 {$ENDIF}
 
 function TZSheet.GetSheetOptions(): TZSheetOptions;
@@ -3951,6 +4722,962 @@ end; //IsEqual
 
 {$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
 
+
+////::::::::::::: TZECommonFrameAncestor :::::::::::::::::////
+
+constructor TZECommonFrameAncestor.Create();
+begin
+  FX := 0;
+  FY := 0;
+  FWidth := 10;
+  FHeight := 10;
+  FTransform := TZETransform.Create();
+end;
+
+constructor TZECommonFrameAncestor.Create(AX, AY, AWidth, AHeight: integer);
+begin
+  FX := AX;
+  FY := AY;
+  FWidth := AWidth;
+  FHeight := AHeight;
+  FTransform := TZETransform.Create();
+end;
+
+destructor TZECommonFrameAncestor.Destroy();
+begin
+  FreeAndNil(FTransform);
+  inherited;
+end;
+
+function TZECommonFrameAncestor.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZECommonFrameAncestor;
+
+begin
+  Result := false;
+  if (Assigned(Source)) then
+    if (Source is TZECommonFrameAncestor) then
+    begin
+      tmp := Source as TZECommonFrameAncestor;
+      Result := (FX = tmp.X) and (FY = tmp.Y) and
+                (FWidth = tmp.Width) and (FHeight = tmp.Height);
+      if (Result) then
+        Result := FTransform.IsEqual(tmp.Transform);
+    end;
+end; //IsEqual
+
+procedure TZECommonFrameAncestor.Assign(Source: TPersistent);
+var
+  b: boolean;
+  tmp: TZECommonFrameAncestor;
+
+begin
+  b := Source <> nil;
+  if (b) then
+    b := Source is TZECommonFrameAncestor;
+
+  if (b) then
+  begin
+    tmp := Source as TZECommonFrameAncestor;
+    FX := tmp.X;
+    FY := tmp.Y;
+    FWidth := tmp.Width;
+    FHeight := tmp.Height;
+    FTransform.Assign(tmp.Transform);
+  end
+  else
+    inherited Assign(Source);
+end; //Assign
+
+procedure TZECommonFrameAncestor.SetHeight(value: integer);
+begin
+  FHeight := value;
+end;
+
+procedure TZECommonFrameAncestor.SetTransform(const value: TZETransform);
+begin
+  if (Assigned(value)) then
+    FTransform.Assign(value);
+end;
+
+procedure TZECommonFrameAncestor.SetWidth(value: integer);
+begin
+  FWidth := value;
+end;
+
+procedure TZECommonFrameAncestor.SetX(value: integer);
+begin
+  FX := value;
+end;
+
+procedure TZECommonFrameAncestor.SetY(value: integer);
+begin
+  FY := value;
+end;
+
+////::::::::::::: TZETransform :::::::::::::::::////
+
+constructor TZETransform.Create();
+begin
+  Clear();
+end;
+
+procedure TZETransform.Assign(Source: TPersistent);
+var
+  b: boolean;
+  tmp: TZETransform;
+
+begin
+  b := Assigned(Source);
+  if (b) then
+    b := Source is TZETransform;
+
+  if (b) then
+  begin
+    tmp := Source as TZETransform;
+    FRotate := tmp.Rotate;
+    FScaleX := tmp.ScaleX;
+    FScaleY := tmp.ScaleY;
+    FSkewX := tmp.SkewX;
+    FSkewY := tmp.SkewY;
+    FTranslateX := tmp.TranslateX;
+    FTranslateY := tmp.TranslateY;
+  end
+  else
+    inherited Assign(Source);
+end; //Assign
+
+procedure TZETransform.Clear();
+begin
+  FRotate := 0;
+  FScaleX := 1;
+  FScaleY := 1;
+  FSkewX := 0;
+  FSkewY := 0;
+  FTranslateX := 0;
+  FTranslateY := 0;
+end; //Clear
+
+function TZETransform.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZETransform;
+
+begin
+  Result := Assigned(Source);
+  if (Result) then
+    Result := Source is TZETransform;
+
+  if (Result) then
+  begin
+    tmp := Source as TZETransform;
+    Result := (FRotate = tmp.Rotate) and
+              (FScaleX = tmp.ScaleX) and
+              (FScaleY = tmp.ScaleY) and
+              (FSkewX = tmp.SkewX) and
+              (FSkewY = tmp.SkewY) and
+              (FTranslateX = tmp.TranslateX) and
+              (FTranslateY = tmp.TranslateY);
+  end;
+end; //IsEqual
+
+{$IFDEF ZUSE_CHARTS}
+
+////::::::::::::: TZEChartRangeItem :::::::::::::::::////
+
+constructor TZEChartRangeItem.Create();
+begin
+  FSheetNum := -1;
+  FRow := 0;
+  FCol := 0;
+  FWidth := 1;
+  FHeight := 1;
+end;
+
+constructor TZEChartRangeItem.Create(ASheetNum: integer; ACol, ARow, AWidth, AHeight: integer);
+begin
+  FSheetNum := ASheetNum;
+  FRow := ARow;
+  FCol := ACol;
+  FWidth := AWidth;
+  FHeight := AHeight;
+end;
+
+procedure TZEChartRangeItem.Assign(Source: TPersistent);
+var
+  tmp: TZEChartRangeItem;
+  b: boolean;
+
+begin
+  b := Assigned(Source);
+  if (b) then
+  begin
+    b := Source is TZEChartRangeItem;
+    if (b) then
+    begin
+      tmp := Source as TZEChartRangeItem;
+      FSheetNum := tmp.SheetNum;
+      FRow := tmp.Row;
+      FCol := tmp.Col;
+      FWidth := tmp.Width;
+      FHeight := tmp.Height;
+    end;
+  end;
+
+  if (not b) then
+    inherited Assign(Source);
+end;
+
+function TZEChartRangeItem.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZEChartRangeItem;
+
+begin
+  Result := Assigned(Source);
+
+  if (Result) then
+  begin
+    Result := Source is TZEChartRangeItem;
+    if (Result) then
+    begin
+      tmp := Source as TZEChartRangeItem;
+      Result := (FSheetNum = tmp.SheetNum) and
+                (FCol = tmp.Col) and
+                (FRow = tmp.Row) and
+                (FHeight = tmp.Height) and
+                (FWidth = tmp.Width);
+    end;
+  end;
+end;
+
+////::::::::::::: TZEChartRange :::::::::::::::::////
+
+constructor TZEChartRange.Create();
+begin
+  FCount := 0;
+end;
+
+destructor TZEChartRange.Destroy();
+begin
+  Clear();
+  inherited;
+end;
+
+function TZEChartRange.GetItem(num: integer): TZEChartRangeItem;
+begin
+  Result := nil;
+  if ((num >= 0) and (num < FCount)) then
+    Result := FItems[num];
+end;
+
+procedure TZEChartRange.SetItem(num: integer; const Value: TZEChartRangeItem);
+begin
+  if ((num >= 0) and (num < FCount)) then
+    FItems[num].Assign(Value);
+end;
+
+function TZEChartRange.Add(): TZEChartRangeItem;
+begin
+  SetLength(FItems, FCount + 1);
+  Result := TZEChartRangeItem.Create();
+  FItems[FCount] := result;
+  inc(FCount);
+end;
+
+function TZEChartRange.Add(const ItemForClone: TZEChartRangeItem): TZEChartRangeItem;
+begin
+  Result := Add();
+  if (Assigned(ItemForClone)) then
+    Result.Assign(ItemForClone);
+end;
+
+function TZEChartRange.Delete(num: integer): boolean;
+var
+  i: integer;
+
+begin
+  Result := (num >= 0) and (num < FCount);
+  if (Result) then
+  begin
+    FreeAndNil(FItems[num]);
+    for i := num to FCount - 2 do
+      FItems[i] := FItems[i + 1];
+    Dec(FCount);
+    SetLength(FItems, FCount);
+  end;
+end;
+
+procedure TZEChartRange.Clear();
+var
+  i: integer;
+
+begin
+  for i := 0 to FCount - 1 do
+    FreeAndNil(FItems[i]);
+  FCount := 0;
+  SetLength(FItems, 0);
+end;
+
+procedure TZEChartRange.Assign(Source: TPersistent);
+var
+  tmp: TZEChartRange;
+  b: boolean;
+  i: integer;
+
+begin
+  b := Assigned(Source);
+  if (b) then
+  begin
+    b := Source is TZEChartRange;
+    if (b) then
+    begin
+      tmp := Source as TZEChartRange;
+
+      if (FCount > tmp.Count) then
+      begin
+        for i := tmp.Count to FCount - 1 do
+          FreeAndNil(FItems[i]);
+        FCount := tmp.Count;
+        SetLength(FItems, FCount);
+      end
+      else
+      if (FCount < tmp.Count) then
+      begin
+        SetLength(FItems, tmp.Count);
+        for i := FCount to tmp.Count - 1 do
+          FItems[i] := TZEChartRangeItem.Create();
+        FCount := tmp.Count;
+        SetLength(FItems, FCount);
+      end;
+
+      for i := 0 to FCount - 1 do
+        FItems[i].Assign(tmp.Items[i]);
+    end;
+  end;
+
+  if (not b) then
+    inherited Assign(Source);
+end;
+
+function TZEChartRange.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZEChartRange;
+  i: integer;
+
+begin
+  Result := Assigned(Source);
+  if (Result) then
+  begin
+    Result := Source is TZEChartRange;
+    if (Result) then
+    begin
+      tmp := Source as TZEChartRange;
+      Result := FCount = tmp.Count;
+      if (Result) then
+        for i := 0 to FCount - 1 do
+          if (not FItems[i].IsEqual(tmp.Items[i])) then
+          begin
+            Result := false;
+            break;
+          end;
+    end;
+  end;
+end;
+
+////::::::::::::: TZEChartTitleItem :::::::::::::::::////
+
+constructor TZEChartTitleItem.Create();
+begin
+  FFont := TFont.Create();
+  FText := '';
+  FRotationAngle := 0;
+  FIsDisplay := true;
+end;
+
+destructor TZEChartTitleItem.Destroy();
+begin
+  FreeAndNil(FFont);
+  inherited;
+end;
+
+procedure TZEChartTitleItem.Assign(Source: TPersistent);
+var
+  tmp: TZEChartTitleItem;
+  b: boolean;
+
+begin
+  b := Assigned(Source);
+
+  if (b) then
+  begin
+    b := Source is TZEChartTitleItem;
+    if (b) then
+    begin
+      tmp := Source as TZEChartTitleItem;
+
+      FText := tmp.Text;
+      FFont.Assign(tmp.Font);
+      FRotationAngle := tmp.RotationAngle;
+      FIsDisplay := tmp.IsDisplay;
+    end;
+  end;
+
+  if (not b) then
+    inherited Assign(Source);
+end;
+
+function TZEChartTitleItem.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZEChartTitleItem;
+
+begin
+  Result := Assigned(Source);
+  if (Result) then
+  begin
+    Result := Source is TZEChartTitleItem;
+    if (Result) then
+    begin
+      tmp := Source as TZEChartTitleItem;
+      Result := false;
+
+      if (FIsDisplay = tmp.IsDisplay) then
+        if (FRotationAngle = tmp.RotationAngle) then
+          if (FText = tmp.Text) then
+            Result := ZEIsFontsEquals(FFont, tmp.Font);
+    end;
+  end;
+end; //IsEqual
+
+procedure TZEChartTitleItem.SetFont(const value: TFont);
+begin
+  if (Assigned(value)) then
+    FFont.Assign(value);
+end;
+
+////::::::::::::: TZEChartLegend :::::::::::::::::////
+
+constructor TZEChartLegend.Create();
+begin
+  inherited;
+  FPosition := ZELegendStart;
+  FAlign := ZELegendAlignCenter;
+end;
+
+procedure TZEChartLegend.Assign(Source: TPersistent);
+var
+  tmp: TZEChartLegend;
+
+begin
+  inherited Assign(Source);
+
+  if (Assigned(Source)) then
+    if (Source is TZEChartLegend) then
+    begin
+      tmp := Source as TZEChartLegend;
+      FAlign := tmp.Align;
+      FPosition := tmp.Position;
+    end;
+end; //Assign
+
+function TZEChartLegend.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZEChartLegend;
+
+begin
+  Result := inherited IsEqual(Source);
+
+  if (Result) then
+  begin
+    Result := false;
+    if (Source is TZEChartLegend) then
+    begin
+      tmp := Source as TZEChartLegend;
+      Result := (FPosition = tmp.Position) and
+                (FAlign = tmp.Align);
+    end;
+  end;
+end; //IsEqual
+
+
+////::::::::::::: TZEChartAxis :::::::::::::::::////
+
+constructor TZEChartAxis.Create();
+begin
+  inherited;
+  FLogarithmic := false;
+  FReverseDirection := false;
+  FScaleMin := 0;
+  FScaleMax := 20000;
+  FAutoScaleMin := true;
+  FAutoScaleMax := true;
+end;
+
+procedure TZEChartAxis.Assign(Source: TPersistent);
+var
+  tmp: TZEChartAxis;
+
+begin
+  inherited Assign(Source);
+
+  if (Source is TZEChartAxis) then
+  begin
+    tmp := Source as TZEChartAxis;
+    FLogarithmic := tmp.Logarithmic;
+    FReverseDirection := tmp.ReverseDirection;
+    FScaleMin := tmp.ScaleMin;
+    FScaleMax := tmp.ScaleMax;
+    FAutoScaleMin := tmp.AutoScaleMin;
+    FAutoScaleMax := tmp.AutoScaleMax;
+  end
+end;
+
+function TZEChartAxis.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZEChartAxis;
+
+begin
+  Result := inherited IsEqual(Source);
+
+  if (Result) then
+  begin
+    Result := Source is TZEChartAxis;
+    if (Result) then
+    begin
+      tmp := Source as TZEChartAxis;
+      Result := (FLogarithmic = tmp.FLogarithmic) and
+                (FReverseDirection = tmp.FReverseDirection) and
+                (FAutoScaleMin = tmp.AutoScaleMin) and
+                (FAutoScaleMax = tmp.AutoScaleMax);
+      if (Result) then
+      begin
+        //TODO: for comparsion double values need check observational errors?
+        if (not FAutoScaleMin) then
+          Result := FScaleMin <> tmp.ScaleMin;
+        if (Result and (not FAutoScaleMin)) then
+          Result := FScaleMax <> tmp.ScaleMax;
+      end;
+    end;
+  end;
+end;
+
+////::::::::::::: TZEChartSettings :::::::::::::::::////
+
+constructor TZEChartSettings.Create();
+begin
+  FJapanCandle := true;
+end;
+
+destructor TZEChartSettings.Destroy();
+begin
+  inherited;
+end;
+
+procedure TZEChartSettings.Assign(Source: TPersistent);
+var
+  tmp: TZEChartSettings;
+  b: boolean;
+
+begin
+  b := Source <> nil;
+  if (b) then
+  begin
+    b := Source is TZEChartSettings;
+    if (b) then
+    begin
+      tmp := Source as TZEChartSettings;
+      FJapanCandle := tmp.JapanCandle;
+    end;
+  end;
+
+  if (not b) then
+    inherited Assign(Source);
+end;
+
+function TZEChartSettings.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZEChartSettings;
+
+begin
+  Result := Assigned(Source);
+  if (Result) then
+  begin
+    Result := Source is TZEChartSettings;
+    if (Result) then
+    begin
+      tmp := Source as TZEChartSettings;
+      Result := FJapanCandle = tmp.JapanCandle;
+    end;
+  end;
+end;
+
+////::::::::::::: TZEChartSeries :::::::::::::::::////
+
+constructor TZEChartSeries.Create();
+begin
+  FChartType := ZEChartTypeBar;
+  FSeriesName := '';
+  FSeriesNameSheet := -1;
+  FSeriesNameRow := -1;
+  FSeriesNameCol := -1;
+  FRanges := TZEChartRange.Create();
+end;
+
+destructor TZEChartSeries.Destroy();
+begin
+  FreeAndNil(FRanges);
+  inherited;
+end;
+
+procedure TZEChartSeries.Assign(Source: TPersistent);
+var
+  tmp: TZEChartSeries;
+  b: boolean;
+
+begin
+  b := Assigned(Source);
+
+  if (b) then
+  begin
+    b := Source is TZEChartSeries;
+    if (b) then
+    begin
+      tmp := TZEChartSeries.Create();
+      FChartType := tmp.ChartType;
+      FSeriesName := tmp.SeriesName;
+      FSeriesNameSheet := tmp.SeriesNameSheet;
+      FSeriesNameRow := tmp.SeriesNameRow;
+      FSeriesNameCol := tmp.SeriesNameCol;
+      FRanges.Assign(tmp.Ranges);
+    end;
+  end;
+
+  if (not b) then
+    inherited Assign(Source);
+end;
+
+function TZEChartSeries.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZEChartSeries;
+
+begin
+  Result := Source <> nil;
+  if (Result) then
+    Result := Source is TZEChartSeries;
+  if (Result) then
+  begin
+    tmp := TZEChartSeries.Create();
+    Result := (FChartType = tmp.ChartType) and
+              (FSeriesNameSheet = tmp.SeriesNameSheet);
+    if (Result) then
+    begin
+      if (((FSeriesNameRow < 0) or (FSeriesNameCol < 0)) and
+           (tmp.SeriesNameRow < 0) or (tmp.SeriesNameCol < 0)) then
+        Result := tmp.SeriesName = FSeriesName
+      else
+        Result := (tmp.SeriesNameRow = FSeriesNameRow) and
+                  (tmp.SeriesNameCol = FSeriesNameCol);
+    end;
+    if (Result) then
+      Result := FRanges.IsEqual(tmp.Ranges);
+  end;
+end;
+
+////::::::::::::: TZEChart :::::::::::::::::////
+
+procedure TZEChart.CommonInit();
+begin
+  FTitle := TZEChartTitleItem.Create();
+  FSubtitle := TZEChartTitleItem.Create();
+  FLegend := TZEChartLegend.Create();
+  FFooter := TZEChartTitleItem.Create();
+  FAxisX := TZEChartAxis.Create();
+  FAxisY := TZEChartAxis.Create();
+  FAxisZ := TZEChartAxis.Create();
+  FSecondaryAxisX := TZEChartAxis.Create();
+  FSecondaryAxisY := TZEChartAxis.Create();
+  FSecondaryAxisZ := TZEChartAxis.Create();
+  FDefaultChartType := ZEChartTypeBar;
+  FView3D := false;
+  FViewDeep := false;
+end;
+
+constructor TZEChart.Create(AX, AY, AWidth, AHeight: integer);
+begin
+  inherited;
+  CommonInit();
+  X := AX;
+  Y := AY;
+  Width := AWidth;
+  Height := AHeight;
+end;
+
+constructor TZEChart.Create();
+begin
+  inherited;
+  CommonInit();
+end;
+
+destructor TZEChart.Destroy();
+begin
+  FreeAndNil(FSubtitle);
+  FreeAndNil(FTitle);
+  FreeAndNil(FLegend);
+  FreeAndNil(FFooter);
+  FreeAndNil(FAxisX);
+  FreeAndNil(FAxisY);
+  FreeAndNil(FAxisZ);
+
+  FreeAndNil(FSecondaryAxisX);
+  FreeAndNil(FSecondaryAxisY);
+  FreeAndNil(FSecondaryAxisZ);
+
+  inherited;
+end;
+
+function TZEChart.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZEChart;
+
+begin
+  Result := inherited IsEqual(Source);
+  if (Result) then
+    if (Source is TZEChart) then
+    begin
+      tmp := Source as TZEChart;
+      Result := inherited IsEqual(Source);
+
+      if (Result) then
+        Result := FSubtitle.IsEqual(tmp.Subtitle) and
+                  FTitle.IsEqual(tmp.Title) and
+                  FLegend.IsEqual(tmp.Legend) and
+                  FAxisX.IsEqual(tmp.AxisX) and
+                  FAxisY.IsEqual(tmp.AxisY) and
+                  FAxisZ.IsEqual(tmp.AxisZ) and
+                  FSecondaryAxisX.IsEqual(tmp.SecondaryAxisX) and
+                  FSecondaryAxisY.IsEqual(tmp.SecondaryAxisY) and
+                  FSecondaryAxisZ.IsEqual(tmp.SecondaryAxisZ) and
+                  (FView3D = tmp.View3D) and
+                  (FViewDeep = tmp.ViewDeep);
+    end;
+end;
+
+procedure TZEChart.SetAxisX(const value: TZEChartAxis);
+begin
+  if (Assigned(value)) then
+    FAxisX.Assign(Value);
+end;
+
+procedure TZEChart.SetAxisY(const value: TZEChartAxis);
+begin
+  if (Assigned(value)) then
+    FAxisY.Assign(Value);
+end;
+
+procedure TZEChart.SetAxisZ(const value: TZEChartAxis);
+begin
+  if (Assigned(value)) then
+    FAxisZ.Assign(Value);
+end;
+
+procedure TZEChart.SetSecondaryAxisX(const value: TZEChartAxis);
+begin
+  if (Assigned(value)) then
+    FSecondaryAxisX.Assign(value);
+end;
+
+procedure TZEChart.SetSecondaryAxisY(const value: TZEChartAxis);
+begin
+  if (Assigned(value)) then
+    FSecondaryAxisY.Assign(value);
+end;
+
+procedure TZEChart.SetSecondaryAxisZ(const value: TZEChartAxis);
+begin
+  if (Assigned(value)) then
+    FSecondaryAxisZ.Assign(value);
+end;
+
+procedure TZEChart.SetFooter(const value: TZEChartTitleItem);
+begin
+  if (Assigned(value)) then
+    FFooter.Assign(value);
+end;
+
+procedure TZEChart.SetLegend(const value: TZEChartLegend);
+begin
+  if (Assigned(value)) then
+    FLegend.Assign(value);
+end;
+
+procedure TZEChart.SetSubtitle(const value: TZEChartTitleItem);
+begin
+  if (Assigned(value)) then
+    FSubtitle.Assign(value);
+end;
+
+procedure TZEChart.SetTitle(const value: TZEChartTitleItem);
+begin
+  if (Assigned(value)) then
+    FTitle.Assign(value);
+end;
+
+procedure TZEChart.Assign(Source: TPersistent);
+var
+  tmp: TZEChart;
+
+begin
+  inherited;
+  if (Assigned(Source)) then
+    if (Source is TZEChart) then
+    begin
+      tmp := Source as TZEChart;
+      FSubtitle.Assign(tmp.Subtitle);
+      FTitle.Assign(tmp.Title);
+      FLegend.Assign(tmp.Legend);
+      FAxisX.Assign(tmp.AxisX);
+      FAxisY.Assign(tmp.AxisY);
+      FAxisZ.Assign(tmp.AxisZ);
+      FSecondaryAxisX.Assign(tmp.SecondaryAxisX);
+      FSecondaryAxisY.Assign(tmp.SecondaryAxisY);
+      FSecondaryAxisZ.Assign(tmp.SecondaryAxisZ);
+      FView3D := tmp.View3D;
+      FViewDeep := tmp.ViewDeep;
+    end;
+end;
+
+////::::::::::::: TZEChartStore :::::::::::::::::////
+
+constructor TZEChartStore.Create();
+begin
+  FCount := 0;
+  SetLength(FItems, 0);
+end;
+
+destructor TZEChartStore.Destroy();
+begin
+  Clear();
+  inherited;
+end;
+
+function TZEChartStore.Add(): TZEChart;
+begin
+  Result := TZEChart.Create();
+  SetLength(FItems, FCount + 1);
+  FItems[FCount] := Result;
+  inc(FCount);
+end;
+
+function TZEChartStore.Add(const ItemForClone: TZEChart): TZEChart;
+begin
+  Result := Add();
+  Result.Assign(ItemForClone);
+end;
+
+procedure TZEChartStore.Assign(Source: TPersistent);
+var
+  tmp: TZEChartStore;
+  b: boolean;
+  i: integer;
+
+begin
+  b := Assigned(Source);
+  if (b) then
+  begin
+    b := Source is TZEChartStore;
+    if (b) then
+    begin
+      tmp := Source as TZEChartStore;
+
+      if (FCount > tmp.Count) then
+      begin
+        for i := tmp.Count to FCount - 1 do
+          FreeAndNil(FItems[i]);
+        Setlength(FItems, tmp.Count);
+      end
+      else
+      if (FCount < tmp.Count) then
+      begin
+        Setlength(FItems, tmp.Count);
+        for i := FCount to tmp.Count - 1 do
+          FItems[i] := TZEChart.Create();
+      end;
+      FCount := tmp.Count;
+
+      for i := 0 to FCount - 1 do
+        FItems[i].Assign(tmp[i]);
+    end;
+  end;
+
+  if (not b) then
+    inherited Assign(Source);
+end;
+
+function TZEChartStore.Delete(num: integer): boolean;
+var
+  i: integer;
+
+begin
+  Result := (num >= 0) and (num < FCount);
+  if (Result) then
+  begin
+    FreeAndNil(FItems[num]);
+    for i := num to FCount - 2 do
+      FItems[i] := FItems[i + 1];
+    dec(FCount);
+    SetLength(FItems, FCount);
+  end;
+end;
+
+procedure TZEChartStore.Clear();
+var
+  i: integer;
+
+begin
+  for i := 0 to FCount - 1 do
+    FreeAndNil(FItems[i]);
+  FCount := 0;
+  SetLength(FItems, 0);
+end;
+
+function TZEChartStore.GetItem(num: integer): TZEChart;
+begin
+  Result := nil;
+  if ((num >= 0) and (num < FCount)) then
+    Result := FItems[num];
+end;
+
+procedure TZEChartStore.SetItem(num: integer; const Value: TZEChart);
+begin
+  if ((num >= 0) and (num < FCount)) then
+    FItems[num].Assign(Value);
+end;
+
+function TZEChartStore.IsEqual(const Source: TPersistent): boolean;
+var
+  tmp: TZEChartStore;
+  i: integer;
+
+begin
+  Result := Assigned(Source);
+  if (Result) then
+  begin
+    Result := Source is TZEChartStore;
+    if (Result) then
+    begin
+      tmp := Source as TZEChartStore;
+      Result := FCount = tmp.Count;
+      if (Result) then
+        for i := 0 to FCount - 1 do
+          if (not FItems[i].IsEqual(tmp[i])) then
+          begin
+            Result := false;
+            break;
+          end;
+    end;
+  end;
+end;
+
+{$ENDIF} //ZUSE_CHARTS
+
 {$IFDEF FPC}
 initialization
   {$I zexmlss.lrs}
@@ -4010,5 +5737,3 @@ GetDeviceCaps(hdc, VERTSIZE) / GetDeviceCaps(hdc, VERTRES); //вертикальный разме
 }
 
 end.
-
-

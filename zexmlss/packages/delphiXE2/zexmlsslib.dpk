@@ -48,6 +48,7 @@ contains
   zeSaveODS in '..\..\src\zeSaveODS.pas',
   zeSaveXLSX in '..\..\src\zeSaveXLSX.pas',
   zeZippy in '..\..\src\zeZippy.pas',
-  zeZippyXE2 in '..\..\src\zeZippyXE2.pas';
+  zeZippyXE2 in '..\..\src\zeZippyXE2.pas',
+  zenumberformats in '..\..\src\zenumberformats.pas';
 
 end.

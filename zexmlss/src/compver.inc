@@ -5,6 +5,7 @@
   //Directive deprecated with string msg (deprecated 'Use "some else"';)
   //  works in FPC and D>=2009.
   {$DEFINE USE_DEPRECATED_STRING}
+  {$DEFINE FPC_OR_DELPHI_UNICODE}
   {$I fpccompver.inc}
 {$ENDIF}
 
@@ -101,6 +102,12 @@
 
 {$IFDEF DELPHI_UNICODE}
   {$DEFINE USE_DEPRECATED_STRING}
+  {$DEFINE FPC_OR_DELPHI_UNICODE}
+  {$DEFINE Z_USE_FORMAT_SETTINGS}  //Have Formatsettings
 {$ENDIF}
+
+{$IFDEF VER200} // RAD Studio 2009
+  {$UNDEF Z_USE_FORMAT_SETTINGS} //There are no FormatSettings in D2009!!!!
+{$ENDIF VER200}
 
 { $DEFINE DELPHI_UNICODE}

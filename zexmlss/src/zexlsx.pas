@@ -4,7 +4,7 @@
 // e-mail:  avemey@tut.by
 // URL:     http://avemey.com
 // License: zlib
-// Last update: 2015.01.24
+// Last update: 2016.07.03
 //----------------------------------------------------------------
 // Modified by the_Arioch@nm.ru - uniform save API for creating
 //     XLSX files in Delphi/Windows
@@ -173,15 +173,81 @@ type
 
 ///end Differential Formatting
 
+  //List of cell number formats (date/numbers/currencies etc formats)
+  TZEXLSXNumberFormats = class
+  private
+    FFormatsCount: integer;
+    FFormats: array of string; //numFmts (include default formats)
+    FStyleFmtID: array of integer;
+    FStyleFmtIDCount: integer;
+  protected
+    function GetFormat(num: integer): string;
+    procedure SetFormat(num: integer; const value: string);
+    function GetStyleFMTID(num: integer): integer;
+    procedure SetStyleFMTID(num: integer; const value: integer);
+    procedure SetStyleFMTCount(value: integer);
+  public
+    constructor Create();
+    destructor Destroy(); override;
+
+    procedure ReadNumFmts(const xml: TZsspXMLReaderH);
+
+    function IsDateFormat(StyleNum: integer): boolean;
+
+    function FindFormatID(const value: string): integer;
+
+    property FormatsCount: integer read FFormatsCount;
+    property Format[num: integer]: string read GetFormat write SetFormat; default;
+    property StyleFMTID[num: integer]: integer read GetStyleFMTID write SetStyleFMTID;
+    property StyleFMTCount: integer read FStyleFmtIDCount write SetStyleFMTCount;
+  end;
+
   TZEXLSXReadHelper = class
   private
     FDiffFormatting: TZXLSXDiffFormatting;
+    FNumberFormats: TZEXLSXNumberFormats;
   protected
     procedure SetDiffFormatting(const Value: TZXLSXDiffFormatting);
   public
     constructor Create();
     destructor Destroy(); override;
     property DiffFormatting: TZXLSXDiffFormatting read FDiffFormatting write SetDiffFormatting;
+    property NumberFormats: TZEXLSXNumberFormats read FNumberFormats;
+  end;
+
+  //Store link item
+  type TZEXLSXHyperLinkItem = record
+    ID: integer;
+    CellRef: string;
+    Target: string;
+    ScreenTip: string;
+    TargetMode: string;
+  end;
+
+  { TZEXLSXWriteHelper }
+
+  TZEXLSXWriteHelper = class
+  private
+    FHyperLinks: array of TZEXLSXHyperLinkItem;
+    FHyperLinksCount: integer;
+    FMaxHyperLinksCount: integer;
+    FCurrentRID: integer;                      //Current rID number (for HyperLinks/comments etc)
+    FisHaveComments: boolean;                  //Is Need create comments*.xml?
+    FSheetHyperlinksArray: array of integer;
+    FSheetHyperlinksCount: integer;
+  protected
+    function GenerateRID(): integer;
+  public
+    constructor Create();
+    destructor Destroy(); override;
+    procedure AddHyperLink(const ACellRef, ATarget, AScreenTip, ATargetMode: string);
+    procedure WriteHyperLinksTag(const xml: TZsspXMLWriterH);
+    function CreateSheetRels(const Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
+    procedure AddSheetHyperlink(PageNum: integer);
+    function IsSheetHaveHyperlinks(PageNum: integer): boolean;
+    procedure Clear();
+    property HyperLinksCount: integer read FHyperLinksCount;
+    property isHaveComments: boolean read FisHaveComments write FisHaveComments; //Is need create comments*.xml?
   end;
 
 
@@ -231,13 +297,16 @@ function ZEXSLXReadComments(var XMLSS: TZEXMLSS; var Stream: TStream): boolean;
 function ZEXLSXCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateWorkBook(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
                               const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
-function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring; out isHaveComments: boolean): integer;
+function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring; const WriteHelper: TZEXLSXWriteHelper): integer;
 function ZEXLSXCreateContentTypes(var XMLSS: TZEXMLSS; Stream: TStream; PageCount: integer; CommentCount: integer; const PagesComments: TIntegerDynArray;
-                                  TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
+                                  TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring;
+                                  const WriteHelper: TZEXLSXWriteHelper): integer;
 function ZEXLSXCreateRelsMain(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateDocPropsApp(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateDocPropsCore(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
+
+procedure ZEAddRelsRelation(xml: TZsspXMLWriterH; const rid: string; ridType: integer; const Target: string; const TargetMode: string = '');
 
 implementation
 
@@ -246,7 +315,8 @@ uses
   AnsiStrings,  // AnsiString targeted overloaded versions of Pos, Trim, etc
 {$EndIf}
   StrUtils,
-  Math;
+  Math,
+  zenumberformats;
 
 {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
 const
@@ -938,15 +1008,197 @@ end; //Clear
 // END Differential Formatting
 ////////////////////////////////////////////////////////////////////////////////
 
+////::::::::::::: TZEXLSXNumberFormats :::::::::::::::::////
+
+constructor TZEXLSXNumberFormats.Create();
+var
+  i: integer;
+  //_date_nums: set of byte;
+
+begin
+  FStyleFmtIDCount := 0;
+  FFormatsCount := 164;
+  SetLength(FFormats, FFormatsCount);
+  for i := 0 to FFormatsCount - 1 do
+    FFormats[i] := '';
+
+  //Some "Standart" formats for xlsx:
+  FFormats[1] := '0';
+  FFormats[2] := '0.00';
+  FFormats[3] := '#,##0';
+  FFormats[4] := '#,##0.00';
+  FFormats[5] := '$#,##0;\-$#,##0';
+  FFormats[6] := '$#,##0;[Red]\-$#,##0';
+  FFormats[7] := '$#,##0.00;\-$#,##0.00';
+  FFormats[8] := '$#,##0.00;[Red]\-$#,##0.00';
+  FFormats[9] := '0%';
+  FFormats[10] := '0.00%';
+  FFormats[11] := '0.00E+00';
+  FFormats[12] := '# ?/?';
+  FFormats[13] := '# ??/??';
+  FFormats[14] := 'mm-dd-yy';
+  FFormats[15] := 'd-mmm-yy';
+  FFormats[16] := 'd-mmm';
+  FFormats[17] := 'mmm-yy';
+  FFormats[18] := 'h:mm AM/PM';
+  FFormats[19] := 'h:mm:ss AM/PM';
+  FFormats[20] := 'h:mm';
+  FFormats[21] := 'h:mm:ss';
+  FFormats[22] := 'm/d/yy h:mm';
+  FFormats[27] := '[$-404]e/m/d';
+  FFormats[37] := '#,##0 ;(#,##0)';
+  FFormats[38] := '#,##0 ;[Red](#,##0)';
+  FFormats[39] := '#,##0.00;(#,##0.00)';
+  FFormats[40] := '#,##0.00;[Red](#,##0.00)';
+  FFormats[44] := '_("$"* #,##0.00_);_("$"* \(#,##0.00\);_("$"* "-"??_);_(@_)';
+  FFormats[45] := 'mm:ss';
+  FFormats[46] := '[h]:mm:ss';
+  FFormats[47] := 'mmss.0';
+  FFormats[48] := '##0.0E+0';
+  FFormats[49] := '@';
+
+  FFormats[30] := 'm/d/yy';
+  //27..36 - date
+  //50..58 - date
+
+  FFormats[59] := 't0';
+  FFormats[60] := 't0.00';
+  FFormats[61] := 't#,##0';
+  FFormats[62] := 't#,##0.00';
+  FFormats[67] := 't0%';
+  FFormats[68] := 't0.00%';
+  FFormats[69] := 't# ?/?';
+
+  FFormats[70] := 't# ??/??';
+
+  FFormats[81] := 'd/m/bb';
+
+
+  //_date_nums := [14..22, 27..36, 45..47, 50..58, 71..76, 78..81];
+end;
+
+destructor TZEXLSXNumberFormats.Destroy();
+begin
+  SetLength(FFormats, 0);
+  SetLength(FStyleFmtID, 0);
+  inherited;
+end;
+
+//Find format in formats. Return -1 if format not foud.
+//INPUT
+//  const value: string - format
+//RETURN
+//      integer - >= 0 - index number if store.
+//                 -1 - not found
+function TZEXLSXNumberFormats.FindFormatID(const value: string): integer;
+var
+  i: integer;
+
+begin
+  Result := -1;
+  for i := 0 to FFormatsCount - 1 do
+    if (FFormats[i] = value) then
+    begin
+      Result := i;
+      break;
+    end;
+end;
+
+function TZEXLSXNumberFormats.GetFormat(num: integer): string;
+begin
+  Result := '';
+  if ((num >= 0) and (num < FFormatsCount)) then
+    Result := FFormats[num];
+end;
+
+procedure TZEXLSXNumberFormats.SetFormat(num: integer; const value: string);
+var
+  i: integer;
+
+begin
+  if ((num >= 0) and (num < FFormatsCount)) then
+    FFormats[num] := value
+  else
+    if (num >= 0) then
+    begin
+      SetLength(FFormats, num + 1);
+      for i := FFormatsCount to num do
+        FFormats[i] := '';
+      FFormats[num] := value;
+      FFormatsCount := num + 1;
+    end;
+end;
+
+function TZEXLSXNumberFormats.GetStyleFMTID(num: integer): integer;
+begin
+  if ((num >= 0) and (num < FStyleFmtIDCount)) then
+    Result := FStyleFmtID[num]
+  else
+    Result := 0;
+end;
+
+function TZEXLSXNumberFormats.IsDateFormat(StyleNum: integer): boolean;
+var
+  _fmtId: integer;
+
+begin
+  Result := false;
+
+  if ((StyleNum >= 0) and (StyleNum < FStyleFmtIDCount)) then
+    _fmtId := FStyleFmtID[StyleNum]
+  else
+    exit;
+
+  //If default fmtID
+  if ((_fmtId >= 0) and (_fmtId < 100)) then
+    Result := _fmtId in [14..22, 27..36, 45..47, 50..58, 71..76, 78..81]
+  else
+    Result := GetXlsxNumberFormatType(FFormats[_fmtId]) = ZE_NUMFORMAT_IS_DATETIME;
+end;
+
+procedure TZEXLSXNumberFormats.ReadNumFmts(const xml: TZsspXMLReaderH);
+var
+  t: integer;
+
+begin
+  while (not((xml.TagName = 'numFmts') and (xml.TagType = 6))) and (not xml.Eof()) do
+  begin
+    xml.ReadTag();
+
+    if (xml.TagName = 'numFmt') then
+      if (TryStrToInt(xml.Attributes['numFmtId'], t)) then
+        Format[t] := xml.Attributes['formatCode'];
+  end;
+end;
+
+procedure TZEXLSXNumberFormats.SetStyleFMTID(num: integer; const value: integer);
+begin
+  if ((num >= 0) and (num < FStyleFmtIDCount)) then
+    FStyleFmtID[num] := value;
+end;
+
+procedure TZEXLSXNumberFormats.SetStyleFMTCount(value: integer);
+begin
+  if (value >= 0) then
+  begin
+    if (value > FStyleFmtIDCount) then
+      SetLength(FStyleFmtID, value);
+    FStyleFmtIDCount := value
+  end;
+end;
+
+////::::::::::::: TZEXLSXReadHelper :::::::::::::::::////
+
 constructor TZEXLSXReadHelper.Create();
 begin
   FDiffFormatting := TZXLSXDiffFormatting.Create();
+  FNumberFormats := TZEXLSXNumberFormats.Create();
 end;
 
 destructor TZEXLSXReadHelper.Destroy();
 begin
-  if (Assigned(FDiffFormatting)) then
-    FreeAndNil(FDiffFormatting);
+  FreeAndNil(FDiffFormatting);
+  FreeAndNil(FNumberFormats);
   inherited;
 end;
 
@@ -954,6 +1206,171 @@ procedure TZEXLSXReadHelper.SetDiffFormatting(const Value: TZXLSXDiffFormatting)
 begin
   if (Assigned(Value)) then
     FDiffFormatting.Assign(Value);
+end;
+
+////::::::::::::: TZEXLSXWriteHelper :::::::::::::::::////
+
+//Generate next RID for references
+function TZEXLSXWriteHelper.GenerateRID(): integer;
+begin
+  inc(FCurrentRID);
+  result := FCurrentRID;
+end;
+
+constructor TZEXLSXWriteHelper.Create();
+begin
+  FMaxHyperLinksCount := 10;
+  FSheetHyperlinksCount := 0;
+  SetLength(FHyperLinks, FMaxHyperLinksCount);
+  Clear();
+end;
+
+destructor TZEXLSXWriteHelper.Destroy();
+begin
+  SetLength(FHyperLinks, 0);
+  SetLength(FSheetHyperlinksArray, 0);
+  inherited Destroy;
+end;
+
+//Add hyperlink
+//INPUT
+//     const ACellRef: string    - cell name (like A1)
+//     const ATarget: string     - hyperlink target (http://example.com)
+//     const AScreenTip: string  -
+//     const ATargetMode: string -
+procedure TZEXLSXWriteHelper.AddHyperLink(const ACellRef, ATarget, AScreenTip,
+                                          ATargetMode: string);
+var
+  num: integer;
+
+begin
+  num := FHyperLinksCount;
+  inc(FHyperLinksCount);
+
+  if (FHyperLinksCount >= FMaxHyperLinksCount) then
+  begin
+    inc(FMaxHyperLinksCount, 20);
+    SetLength(FHyperLinks, FMaxHyperLinksCount);
+  end;
+
+  FHyperLinks[num].ID := GenerateRID();
+  FHyperLinks[num].TargetMode := ATargetMode;
+  FHyperLinks[num].CellRef := ACellRef;
+  FHyperLinks[num].Target := ATarget;
+  FHyperLinks[num].ScreenTip := AScreenTip;
+end;
+
+//Writes tag <hyperlinks> .. </hyperlinks>
+//INPUT
+//     const xml: TZsspXMLWriterH
+procedure TZEXLSXWriteHelper.WriteHyperLinksTag(const xml: TZsspXMLWriterH);
+var
+  i: integer;
+
+begin
+  if (FHyperLinksCount > 0) then
+  begin
+    xml.Attributes.Clear();
+    xml.WriteTagNode('hyperlinks', true, true, true);
+    for i := 0 to FHyperLinksCount - 1 do
+    begin
+      xml.Attributes.Clear();
+      xml.Attributes.Add('ref', FHyperLinks[i].CellRef);
+      xml.Attributes.Add('r:id', 'rId' + IntToStr(FHyperLinks[i].ID));
+
+      if (FHyperLinks[i].ScreenTip <> '') then
+        xml.Attributes.Add('tooltip', FHyperLinks[i].ScreenTip);
+
+      xml.WriteEmptyTag('hyperlink', true);
+
+      {
+      xml.Attributes.Add('Id', 'rId' + IntToStr(FHyperLinks[i].ID));
+      xml.Attributes.Add('Type', ZEXLSXGetRelationName(6));
+      xml.Attributes.Add('Target', FHyperLinks[i].Target);
+      if (FHyperLinks[i].TargetMode <> '')
+         xml.Attributes.Add('TargetMode', FHyperLinks[i].TargetMode);
+      }
+    end; //for i
+    xml.WriteEndTagNode(); //hyperlinks
+  end; //if
+end; //WriteHyperLinksTag
+
+//Create sheet relations
+//INPUT
+//  const Stream: TStream
+//        TextConverter: TAnsiToCPConverter
+//        CodePageName: string
+//        BOM: ansistring
+//RETURN
+function TZEXLSXWriteHelper.CreateSheetRels(const Stream: TStream;
+                                            TextConverter: TAnsiToCPConverter;
+                                            CodePageName: string; BOM: ansistring
+                                           ): integer;
+var
+  _xml: TZsspXMLWriterH;
+  i: integer;
+
+begin
+  result := 0;
+  _xml := nil;
+  try
+    _xml := TZsspXMLWriterH.Create();
+    _xml.TabLength := 1;
+    _xml.TextConverter := TextConverter;
+    _xml.TabSymbol := ' ';
+    if (not _xml.BeginSaveToStream(Stream)) then
+    begin
+      result := 2;
+      exit;
+    end;
+
+    ZEWriteHeaderCommon(_xml, CodePageName, BOM);
+
+    _xml.Attributes.Clear();
+    _xml.Attributes.Add('xmlns', 'http://schemas.openxmlformats.org/package/2006/relationships');
+    _xml.WriteTagNode('Relationships', true, true, false);
+
+    for i := 0 to FHyperLinksCount - 1 do
+      ZEAddRelsRelation(_xml,
+                        'rId' + IntToStr(FHyperLinks[i].ID),
+                        6,
+                        FHyperLinks[i].Target,
+                        FHyperLinks[i].TargetMode);
+
+    _xml.WriteEndTagNode(); //Relationships
+
+  finally
+    if (Assigned(_xml)) then
+      FreeAndNil(_xml);
+  end;
+end; //CreateSheetRels
+
+procedure TZEXLSXWriteHelper.AddSheetHyperlink(PageNum: integer);
+begin
+  SetLength(FSheetHyperlinksArray, FSheetHyperlinksCount + 1);
+  FSheetHyperlinksArray[FSheetHyperlinksCount] := PageNum;
+  inc(FSheetHyperlinksCount);
+end;
+
+function TZEXLSXWriteHelper.IsSheetHaveHyperlinks(PageNum: integer): boolean;
+var
+  i: integer;
+
+begin
+  result := false;
+  for i := 0 to FSheetHyperlinksCount - 1 do
+    if (FSheetHyperlinksArray[i] = PageNum) then
+    begin
+      result := true;
+      break;
+    end;
+end;
+
+procedure TZEXLSXWriteHelper.Clear();
+begin
+  FHyperLinksCount := 0;
+  FCurrentRID := 0;
+  FisHaveComments := false;
 end;
 
 //Возвращает номер Relations из rels
@@ -1352,6 +1769,8 @@ var
   s: string;
   _tmpr: real;
   _t: integer;
+  _td: TDateTime;
+  _tfloat: Double;
 
   //Проверить кол-во строк
   procedure CheckRow(const RowCount: integer);
@@ -1438,9 +1857,20 @@ var
         //  e - error
         //  str - string
         //  inlineStr - inline string ??
+        //  d - date
         //По-умолчанию - number
         if ((_type = 'n') or (_type = '')) then
-          _currCell.CellType := ZENumber
+        begin
+          _currCell.CellType := ZENumber;
+          //Trouble: if cell style is number, and number format is date, then
+          // cell style is date. F****** m$!
+          if (ReadHelper.NumberFormats.IsDateFormat(_currCell.CellStyle)) then
+            if (ZEIsTryStrToFloat(v, _tfloat)) then
+            begin
+              _currCell.CellType := ZEDateTime;
+              v := ZEDateTimeToStr(_tfloat);
+            end;
+        end
         else
         if (_type = 's') then
         begin
@@ -1448,6 +1878,18 @@ var
           if (TryStrToInt(v, t)) then
             if ((t >= 0) and (t < StrCount)) then
               v := StrArray[t];
+        end
+        else
+        if (_type = 'd') then
+        begin
+          _currCell.CellType := ZEDateTime;
+          if (TryZEStrToDateTime(v, _td)) then
+            v := ZEDateTimeToStr(_td)
+          else
+          if (ZEIsTryStrToFloat(v, _tfloat)) then
+            v := ZEDateTimeToStr(_tfloat)
+          else
+            _currCell.CellType := ZEString;
         end;
 
         _currCell.Data := ZEReplaceEntity(v);
@@ -1654,13 +2096,10 @@ var
         if (_max > _min) then
         begin
           _delta := _max - _min;
-          if (_delta < 100) then
-          begin
-            CheckCol(num + _delta);
-            for i := num + 1 to num + _delta do
-              _currSheet.Columns[i].Assign(_currSheet.Columns[num]);
-            inc(num, _delta);
-          end;
+          CheckCol(_max);
+          for i := _min to _max - 1 do
+            _currSheet.Columns[i].Assign(_currSheet.Columns[num]);
+          inc(num, _delta);
         end;
 
         inc(num);
@@ -1775,6 +2214,12 @@ var
       xml.ReadTag();
       if (xml.Eof()) then
         break;
+
+      if ((xml.TagName = 'sheetView')) then
+      begin
+        s := xml.Attributes.ItemsByName['tabSelected'];
+        _currSheet.Selected := s = '1';
+      end;
 
       if ((xml.TagName = 'pane') and (xml.TagType = 5)) then
       begin
@@ -3561,9 +4006,10 @@ var
 
   procedure XLSXApplyColor(var AColor: TColor; ColorType: byte; LumFactor: double);
   begin
+    //Thema color
     if (ColorType = 2) then
     begin
-      t := AColor;
+      t := AColor - 1;
       if ((t >= 0) and (t < ThemaColorCount)) then
         AColor := ThemaFillsColors[t];
     end;
@@ -3656,64 +4102,72 @@ var
   //  Using standart colors.
   procedure _CheckIndexedColors();
   const
-    _standart: array [0..55] of string =
+    _standart: array [0..63] of string =
     (
-      '#000000',
-      '#FFFFFF',
-      '#FF0000',
-      '#00FF00',
-      '#0000FF',
-      '#FFFF00',
-      '#FF00FF',
-      '#00FFFF',
-      '#800000',
-      '#008000',
-      '#000080',
-      '#808000',
-      '#800080',
-      '#008080',
-      '#C0C0C0',
-      '#808080',
-      '#9999FF',
-      '#993366',
-      '#FFFFCC',
-      '#CCFFFF',
-      '#660066',
-      '#FF8080',
-      '#0066CC',
-      '#CCCCFF',
-      '#000080',
-      '#FF00FF',
-      '#FFFF00',
-      '#00FFFF',
-      '#800080',
-      '#800000',
-      '#008080',
-      '#0000FF',
-      '#00CCFF',
-      '#CCFFFF',
-      '#CCFFCC',
-      '#FFFF99',
-      '#99CCFF',
-      '#FF99CC',
-      '#CC99FF',
-      '#FF66CC',
-      '#3366FF',
-      '#33CCCC',
-      '#99CC00',
-      '#FFCC00',
-      '#FF9900',
-      '#FF99CC',
-      '#666699',
-      '#969696',
-      '#003300',
-      '#339966',
-      '#003300',
-      '#333300',
-      '#993300',
-      '#993366',
-      '#333399',
-      '#333333'
+      '#000000',      //0
+      '#FFFFFF',      //1
+      '#FF0000',      //2
+      '#00FF00',      //3
+      '#0000FF',      //4
+      '#FFFF00',      //5
+      '#FF00FF',      //6
+      '#00FFFF',      //7
+      '#000000',      //8
+      '#FFFFFF',      //9
+      '#FF0000',      //10
+      '#00FF00',      //11
+      '#0000FF',      //12
+      '#FFFF00',      //13
+      '#FF00FF',      //14
+      '#00FFFF',      //15
+      '#800000',      //16
+      '#008000',      //17
+      '#000090',      //18
+      '#808000',      //19
+      '#800080',      //20
+      '#008080',      //21
+      '#C0C0C0',      //22
+      '#808080',      //23
+      '#9999FF',      //24
+      '#993366',      //25
+      '#FFFFCC',      //26
+      '#CCFFFF',      //27
+      '#660066',      //28
+      '#FF8080',      //29
+      '#0066CC',      //30
+      '#CCCCFF',      //31
+      '#000080',      //32
+      '#FF00FF',      //33
+      '#FFFF00',      //34
+      '#00FFFF',      //35
+      '#800080',      //36
+      '#800000',      //37
+      '#008080',      //38
+      '#0000FF',      //39
+      '#00CCFF',      //40
+      '#CCFFFF',      //41
+      '#CCFFCC',      //42
+      '#FFFF99',      //43
+      '#99CCFF',      //44
+      '#FF99CC',      //45
+      '#CC99FF',      //46
+      '#FFCC99',      //47
+      '#3366FF',      //48
+      '#33CCCC',      //49
+      '#99CC00',      //50
+      '#FFCC00',      //51
+      '#FF9900',      //52
+      '#FF6600',      //53
+      '#666699',      //54
+      '#969696',      //55
+      '#003366',      //56
+      '#339966',      //57
+      '#003300',      //58
+      '#333300',      //59
+      '#993300',      //60
+      '#993366',      //61
+      '#333399',      //62
+      '#333333'       //63
     );
   var
     i: integer;
@@ -3721,10 +4175,10 @@ var
   begin
     if (indexedColorCount = 0) then
     begin
-      indexedColorCount := 56;
+      indexedColorCount := 63;
       indexedColorMax := indexedColorCount + 10;
       SetLength(indexedColor, indexedColorMax);
-      for i := 0 to 55 do
+      for i := 0 to 63 do
         indexedColor[i] := HTMLHexToColor(_standart[i]);
     end;
   end; //_CheckIndexedColors
@@ -3776,7 +4230,10 @@ begin
         _ReadColors()
       else
       if ((xml.TagType = 4) and (xml.TagName = 'dxfs')) then
-        _Readdxfs();
+        _Readdxfs()
+      else
+      if ((xml.TagType = 4) and (xml.TagName = 'numFmts')) then
+        ReadHelper.NumberFormats.ReadNumFmts(xml);
     end; //while
 
     //тут незабыть применить номера цветов, если были введены
@@ -3793,9 +4250,12 @@ begin
     //{tut}
 
     XMLSS.Styles.Count := CellXfsCount;
+    ReadHelper.NumberFormats.StyleFMTCount := CellXfsCount;
     for i := 0 to CellXfsCount - 1 do
     begin
       t := CellXfsArray[i].xfId;
+      ReadHelper.NumberFormats.StyleFMTID[i] := CellXfsArray[i].numFmtId;
+
       _Style := XMLSS.Styles[i];
       if ((t >= 0) and (t < CellStyleCount)) then
         _ApplyStyle(_Style, CellStyleArray[t]);
@@ -4735,10 +5195,12 @@ end; //ReadXLSX
 //  const PagesComments: TIntegerDynArray- номера страниц с комментариями (нумеряция с нуля)
 //    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
+//  const WriteHelper: TZEXLSXWriteHelper - additional data
 //RETURN
 //      integer
 function ZEXLSXCreateContentTypes(var XMLSS: TZEXMLSS; Stream: TStream; PageCount: integer; CommentCount: integer; const PagesComments: TIntegerDynArray;
-                                  TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
+                                  TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring;
+                                  const WriteHelper: TZEXLSXWriteHelper): integer;
 var
   _xml: TZsspXMLWriterH;    //писатель
   s: string;
@@ -4767,11 +5229,23 @@ var
     i: integer;
 
   begin
+    _xml.Attributes.Clear();
+    _xml.Attributes.Add('Extension', 'rels');
+    _xml.Attributes.Add('ContentType', 'application/vnd.openxmlformats-package.relationships+xml', false);
+    _xml.WriteEmptyTag('Default', true);
+    _xml.Attributes.Clear();
+    _xml.Attributes.Add('Extension', 'xml');
+    _xml.Attributes.Add('ContentType', 'application/xml', false);
+    _xml.WriteEmptyTag('Default', true);
     //Страницы
-    _WriteOverride('/_rels/.rels', 3);
-    _WriteOverride('/xl/_rels/workbook.xml.rels', 3);
+    //_WriteOverride('/_rels/.rels', 3);
+    //_WriteOverride('/xl/_rels/workbook.xml.rels', 3);
     for i := 0 to PageCount - 1 do
+    begin
       _WriteOverride('/xl/worksheets/sheet' + IntToStr(i + 1) + '.xml', 0);
+      if (WriteHelper.IsSheetHaveHyperlinks(i)) then
+        _WriteOverride('/xl/worksheets/_rels/sheet' + IntToStr(i + 1) + '.xml.rels', 3);
+    end;
     //комментарии
     for i := 0 to CommentCount - 1 do
     begin
@@ -4820,10 +5294,11 @@ end; //ZEXLSXCreateContentTypes
 //    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
 //  var isHaveComments: boolean         - возвращает true, если были комментарии (чтобы создать comments*.xml)
+//  const WriteHelper: TZEXLSXWriteHelper - additional data
 //RETURN
 //      integer
 function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter;
-                                     CodePageName: String; BOM: ansistring; out isHaveComments: boolean): integer;
+                                     CodePageName: String; BOM: ansistring; const WriteHelper: TZEXLSXWriteHelper): integer;
 var
   _xml: TZsspXMLWriterH;    //писатель
   _sheet: TZSheet;
@@ -4912,7 +5387,10 @@ var
     _xml.Attributes.Add('showOutlineSymbols', 'true', false);
     _xml.Attributes.Add('showRowColHeaders', 'true', false);
     _xml.Attributes.Add('showZeros', 'true', false);
-    _xml.Attributes.Add('tabSelected', 'true', false);
+
+    if (_sheet.Selected) then
+      _xml.Attributes.Add('tabSelected', 'true', false);
+
     _xml.Attributes.Add('topLeftCell', 'A1', false);
     _xml.Attributes.Add('view', 'normal', false);
     _xml.Attributes.Add('windowProtection', 'false', false);
@@ -4922,7 +5400,7 @@ var
     _xml.Attributes.Add('zoomScalePageLayoutView', '100', false);
     _xml.WriteTagNode('sheetView', true, true, false);
 
-    _SOptions := XMLSS.Sheets[SheetNum].SheetOptions;
+    _SOptions := _sheet.SheetOptions;
 
     b := (_SOptions.SplitVerticalMode <> ZSplitNone) or
          (_SOptions.SplitHorizontalMode <> ZSplitNone);
@@ -4997,7 +5475,7 @@ var
     _AddSelection('F16', 'topLeft');
     }
     
-    s := ZEGetA1byCol(XMLSS.Sheets[SheetNum].SheetOptions.ActiveCol) + IntToSTr(XMLSS.Sheets[SheetNum].SheetOptions.ActiveRow + 1);
+    s := ZEGetA1byCol(_sheet.SheetOptions.ActiveCol) + IntToSTr(_sheet.SheetOptions.ActiveRow + 1);
     _xml.Attributes.Clear();
     _xml.Attributes.Add('activeCell', s);
     _xml.Attributes.Add('sqref', s);
@@ -5070,12 +5548,17 @@ var
       for j := 0 to n do
       begin
         _xml.Attributes.Clear();
-        if (not isHaveComments) then
+        if (not WriteHelper.isHaveComments) then
           if (_sheet.Cell[j, i].Comment > '') then
-            isHaveComments := true;
+            WriteHelper.isHaveComments := true;
         b := (_sheet.Cell[j, i].Data > '') or
              (_sheet.Cell[j, i].Formula > '');
-        _xml.Attributes.Add('r', ZEGetA1byCol(j) + IntToStr(i + 1));
+        s := ZEGetA1byCol(j) + IntToStr(i + 1);
+
+        if (_sheet.Cell[j, i].HRef <> '') then
+          WriteHelper.AddHyperLink(s, _sheet.Cell[j, i].HRef, _sheet.Cell[j, i].HRefScreenTip, 'External');
+
+        _xml.Attributes.Add('r', s);
         _in_merge_not_top := false;
         k := _sheet.MergeCells.InMergeRange(j, i);
         if (k >= 0) then
@@ -5100,7 +5583,7 @@ var
 
         case _sheet.Cell[j, i].CellType of
           ZENumber: s := 'n';
-          ZEDateTime: s := 'str'; //??
+          ZEDateTime: s := 'd'; //??
           ZEBoolean: s := 'b';
           ZEString: s := 'str';
           ZEError: s := 'e';
@@ -5154,6 +5637,8 @@ var
       end;
       _xml.WriteEndTagNode(); //mergeCells
     end; //if
+
+    WriteHelper.WriteHyperLinksTag(_xml);
   end; //WriteXLSXSheetData
 
   procedure WriteXLSXSheetFooter();
@@ -5214,7 +5699,7 @@ var
   end; //WriteXLSXSheetFooter
 
 begin
-  isHaveComments := false;
+  WriteHelper.Clear();
   result := 0;
   _xml := nil;
   try
@@ -5368,7 +5853,151 @@ var
   _FontIndex: TIntegerDynArray;  //соответствия шрифтов
   _FillIndex: TIntegerDynArray;  //заливки
   _BorderIndex: TIntegerDynArray;//границы
-  _StylesCount: integer;        
+  _StylesCount: integer;
+  _NumFmtIndexes: array of integer;
+  _FmtParser: TNumFormatParser;
+  _DateParser: TZDateTimeODSFormatParser;
+
+  // <numFmts> .. </numFmts>
+  procedure WritenumFmts();
+  var
+    kol: integer;
+    i: integer;
+    _nfmt: TZEXLSXNumberFormats;
+    _is_dateTime: array of boolean;
+    s: string;
+    _count: integer;
+    _idx: array of integer;
+    _fmt: array of string;
+    _style: TZStyle;
+    _currSheet: integer;
+    _currRow, _currCol: integer;
+    _sheet: TZSheet;
+    _currstylenum: integer;
+    _numfmt_counter: integer;
+
+    function _GetNumFmt(StyleNum: integer): integer;
+    var
+      i, j, k: integer;
+      b: boolean;
+      _cs, _cr, _cc: integer;
+
+    begin
+      Result := 0;
+      _style := XMLSS.Styles[StyleNum];
+
+      //If cell type is datetime and cell style is empty then need write default NumFmtId = 14.
+      if ((Trim(_style.NumberFormat) = '') or (UpperCase(_style.NumberFormat) = 'GENERAL')) then
+      begin
+        if (_is_dateTime[StyleNum + 1]) then
+          Result := 14
+        else
+        begin
+          b := false;
+          _cs := _currSheet;
+          for i := _cs to XMLSS.Sheets.Count - 1 do
+          begin
+            _sheet := XMLSS.Sheets[i];
+            _cr := _currRow;
+            for j := _cr to _sheet.RowCount - 1 do
+            begin
+              _cc := _currCol;
+              for k := _cc to _sheet.ColCount - 1 do
+              begin
+                _currstylenum := _sheet[k, j].CellStyle + 1;
+                if (_currstylenum >= 0) and (_currstylenum < kol) then
+                  if (_sheet[k, j].CellType = ZEDateTime) then
+                  begin
+                    _is_dateTime[_currstylenum] := true;
+                    if (_currstylenum = StyleNum + 1) then
+                    begin
+                      b := true;
+                      break;
+                    end;
+                  end;
+              end; //for k
+              _currRow := j + 1;
+              _currCol := 0;
+              if (b) then
+                break;
+            end; //for j
+
+            _currSheet := i + 1;
+            _currRow := 0;
+            _currCol := 0;
+            if (b) then
+              break;
+          end; //for i
+
+          if (b) then
+            Result := 14;
+        end;
+      end //if
+      else
+      begin
+        s := ConvertFormatNativeToXlsx(_style.NumberFormat, _FmtParser, _DateParser);
+        i := _nfmt.FindFormatID(s);
+        if (i < 0) then
+        begin
+          i := _numfmt_counter;
+          _nfmt.Format[i] := s;
+          inc(_numfmt_counter);
+
+          SetLength(_idx, _count + 1);
+          SetLength(_fmt, _count + 1);
+          _idx[_count] := i;
+          _fmt[_count] := s;
+
+          inc(_count);
+        end;
+        Result := i;
+      end;
+    end; //_GetNumFmt
+
+  begin
+    kol := XMLSS.Styles.Count + 1;
+    SetLength(_NumFmtIndexes, kol);
+    SetLength(_is_dateTime, kol);
+    for i := 0 to kol - 1 do
+      _is_dateTime[i] := false;
+
+    _nfmt := nil;
+    _count := 0;
+
+    _numfmt_counter := 164;
+
+    _currSheet := 0;
+    _currRow := 0;
+    _currCol := 0;
+
+    try
+      _nfmt := TZEXLSXNumberFormats.Create();
+      for i := -1 to kol - 2 do
+        _NumFmtIndexes[i + 1] := _GetNumFmt(i);
+
+      if (_count > 0) then
+      begin
+        _xml.Attributes.Clear();
+        _xml.Attributes.Add('count', IntToStr(_count));
+        _xml.WriteTagNode('numFmts', true, true, false);
+
+        for i := 0 to _count - 1 do
+        begin
+          _xml.Attributes.Clear();
+          _xml.Attributes.Add('numFmtId', IntToStr(_idx[i]));
+          _xml.Attributes.Add('formatCode', _fmt[i]);
+          _xml.WriteEmptyTag('numFmt', true, true);
+        end;
+
+        _xml.WriteEndTagNode(); //numFmts
+      end;
+    finally
+      FreeAndNil(_nfmt);
+      SetLength(_idx, 0);
+      SetLength(_fmt, 0);
+      SetLength(_is_dateTime, 0);
+    end;
+  end; //WritenumFmts
 
   //Являются ли шрифты одинаковыми
   function _isFontsEqual(const fnt1, fnt2: TFont): boolean;
@@ -5803,7 +6432,9 @@ var
   var
     _addalignment: boolean;
     _style: TZStyle;
-    s: string; i: integer;
+    s: string;
+    i: integer;
+    _num: integer;
 
   begin
     _xml.Attributes.Clear();
@@ -5826,7 +6457,15 @@ var
 
     // ECMA 376 Ed.4:  12.3.20 Styles Part; 17.9.17 numFmt (Numbering Format); 18.8.30 numFmt (Number Format)
     // http://social.msdn.microsoft.com/Forums/sa/oxmlsdk/thread/3919af8c-644b-4d56-be65-c5e1402bfcb6
-    _xml.Attributes.Add('numFmtId', '0' {'164'}, false); // TODO: support formats
+    if (isxfId) then
+      _num := _NumFmtIndexes[NumStyle + 1]
+    else
+      _num := 0;
+
+    _xml.Attributes.Add('numFmtId', IntToStr(_num) {'164'}, false); // TODO: support formats
+
+    if (_num > 0) then
+      _xml.Attributes.Add('applyNumberFormat', '1', false);
 
     if (isxfId) then
       _xml.Attributes.Add('xfId', IntToStr(xfId), false);
@@ -5909,6 +6548,8 @@ var
 begin
   result := 0;
   _xml := nil;
+  _FmtParser := nil;
+  _DateParser := nil;
   try
     _xml := TZsspXMLWriterH.Create();
     _xml.TabLength := 1;
@@ -5920,12 +6561,17 @@ begin
       exit;
     end;
 
+    _FmtParser := TNumFormatParser.Create();
+    _DateParser := TZDateTimeODSFormatParser.Create();
+
     ZEWriteHeaderCommon(_xml, CodePageName, BOM);
     _StylesCount := XMLSS.Styles.Count;
 
     _xml.Attributes.Clear();
     _xml.Attributes.Add('xmlns', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
     _xml.WriteTagNode('styleSheet', true, true, true);
+
+    WritenumFmts();
 
     WriteXLSXFonts();
     WriteXLSXFills();
@@ -5947,12 +6593,14 @@ begin
   finally
     if (Assigned(_xml)) then
       FreeAndNil(_xml);
+    if (Assigned(_FmtParser)) then
+      FreeAndNil(_FmtParser);
+    if (Assigned(_DateParser)) then
+      FreeAndNil(_DateParser);
     SetLength(_FontIndex, 0);
-    _FontIndex := nil;
     SetLength(_FillIndex, 0);
-    _FillIndex := nil;
     SetLength(_BorderIndex, 0);
-    _BorderIndex := nil;
+    SetLength(_NumFmtIndexes, 0);
   end;
 end; //ZEXLSXCreateStyles
 
@@ -5960,14 +6608,17 @@ end; //ZEXLSXCreateStyles
 //INPUT
 //      xml: TZsspXMLWriterH  - писалка
 //  const rid: string         - rid
-//      ridType: integer      -
+//      ridType: integer      - rIdType (0..8)
 //  const Target: string      -
-procedure ZEAddRelsRelation(xml: TZsspXMLWriterH; const rid: string; ridType: integer; const Target: string);
+//  const TargetMode: string  -
+procedure ZEAddRelsRelation(xml: TZsspXMLWriterH; const rid: string; ridType: integer; const Target: string; const TargetMode: string = '');
 begin
   xml.Attributes.Clear();
   xml.Attributes.Add('Id', rid);
   xml.Attributes.Add('Type',  ZEXLSXGetRelationName(ridType), false);
   xml.Attributes.Add('Target', Target, false);
+  if (TargetMode <> '') then
+     xml.Attributes.Add('TargetMode', TargetMode, true);
   xml.WriteEmptyTag('Relationship', true, true);
 end; //ZEAddRelsID
 
@@ -6106,7 +6757,7 @@ begin
   end;
 end; //ZEXLSXCreateSharedStrings
 
-//Создаёт app.xml 
+//Создаёт app.xml
 //INPUT
 //    Stream: TStream                   - поток для записи
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
@@ -6197,7 +6848,7 @@ begin
 
     _xml.Attributes.Clear();
     _xml.Attributes.Add('xsi:type', 'dcterms:W3CDTF');
-    s := ZEDateToStr(XMLSS.DocumentProperties.Created) + 'Z';
+    s := ZEDateTimeToStr(XMLSS.DocumentProperties.Created) + 'Z';
     _xml.WriteTag('dcterms:created', s, true, false, false);
     _xml.WriteTag('dcterms:modified', s, true, false, false);
 
@@ -6234,9 +6885,10 @@ var
   _names: TStringDynArray;      //названия страниц
   kol, i: integer;
   Stream: TStream;
-  need_comments: boolean;
   path_xl, path_sheets, path_relsmain, path_relsw, path_docprops: string;
   _commentArray: TIntegerDynArray;
+
+  _WriteHelper: TZEXLSXWriteHelper;
 
   azg: TZxZipGen; // Actual Zip Generator
 
@@ -6244,7 +6896,7 @@ begin
   Result := 0;
   Stream := nil;
   kol := 0;
-  need_comments := false;
+  _WriteHelper := nil;
 
   azg := nil;
   try
@@ -6262,7 +6914,10 @@ begin
            else raise EZxZipGen.Create('No zip generators registered, folder output disabled.');
            // result := 3 ????
     end;
+
     azg := ZipGenerator.Create(PathName);
+
+    _WriteHelper := TZEXLSXWriteHelper.Create();
 
 //    if (not ZE_CheckDirExist(PathName)) then
 //    begin
@@ -6314,14 +6969,22 @@ begin
     begin
       _commentArray[i] := 0;
       Stream := azg.NewStream(path_sheets + 'sheet' + IntToStr(i + 1) + '.xml');
-      ZEXLSXCreateSheet(XMLSS, Stream, _pages[i], TextConverter, CodePageName, BOM, need_comments);
-      if (need_comments) then
+      ZEXLSXCreateSheet(XMLSS, Stream, _pages[i], TextConverter, CodePageName, BOM, _WriteHelper);
+      if (_WriteHelper.isHaveComments) then
         _commentArray[i] := 1;
       azg.SealStream(Stream);   Stream := nil;
 
-      if (need_comments) then
+      if (_WriteHelper.HyperLinksCount > 0) then
       begin
-        _commentArray[i] := 1;
+        _WriteHelper.AddSheetHyperlink(i);
+        Stream := azg.NewStream(path_sheets + '_rels' + PathDelim + 'sheet' + IntToStr(i + 1) + '.xml.rels');
+        _WriteHelper.CreateSheetRels(Stream, TextConverter, CodePageName, BOM);
+        azg.SealStream(Stream);
+        Stream := nil;
+      end;
+
+      if (_WriteHelper.isHaveComments) then
+      begin
         //создать файл с комментариями
       end;  
     end; //for i
@@ -6333,7 +6996,7 @@ begin
 
     //[Content_Types].xml
     Stream := azg.NewStream({PathName +} '[Content_Types].xml');
-    ZEXLSXCreateContentTypes(XMLSS, Stream, kol, 0, nil, TextConverter, CodePageName, BOM);
+    ZEXLSXCreateContentTypes(XMLSS, Stream, kol, 0, nil, TextConverter, CodePageName, BOM, _WriteHelper);
     azg.SealStream(Stream);  Stream := nil;
 
     path_docprops := {PathName +} 'docProps' + PathDelim;
@@ -6353,6 +7016,7 @@ begin
     azg.SaveAndSeal;
   finally
     ZESClearArrays(_pages, _names);
+    FreeAndNil(_WriteHelper);
     if (Assigned(Stream)) then
       FreeAndNil(Stream);
     SetLength(_commentArray, 0);
@@ -6380,15 +7044,16 @@ var
   _names: TStringDynArray;      //названия страниц
   kol, i: integer;
   Stream: TStream;
-  need_comments: boolean;
+  _WriteHelper: TZEXLSXWriteHelper;
   path_xl, path_sheets, path_relsmain, path_relsw, path_docprops: string;
   _commentArray: TIntegerDynArray;
+  s: string;
 
 begin
   Result := 0;
   Stream := nil;
+  _WriteHelper := nil;
   kol := 0;
-  need_comments := false;
   try
     if (not ZE_CheckDirExist(PathName)) then
     begin
@@ -6401,6 +7066,8 @@ begin
       result := 2;
       exit;
     end;
+
+    _WriteHelper := TZEXLSXWriteHelper.Create();
 
     path_xl := PathName + 'xl' + PathDelim;
     if (not DirectoryExists(path_xl)) then
@@ -6443,12 +7110,21 @@ begin
     begin
       _commentArray[i] := 0;
       Stream := TFileStream.Create(path_sheets + 'sheet' + IntToStr(i + 1) + '.xml', fmCreate);
-      ZEXLSXCreateSheet(XMLSS, Stream, _pages[i], TextConverter, CodePageName, BOM, need_comments);
-      if (need_comments) then
-        _commentArray[i] := 1;
+      ZEXLSXCreateSheet(XMLSS, Stream, _pages[i], TextConverter, CodePageName, BOM, _WriteHelper);
       FreeAndNil(Stream);
 
-      if (need_comments) then
+      if (_WriteHelper.HyperLinksCount > 0) then
+      begin
+        _WriteHelper.AddSheetHyperlink(i);
+        s := path_sheets + '_rels' + PathDelim;
+        if (not DirectoryExists(s)) then
+          ForceDirectories(s);
+        Stream := TFileStream.Create(s + 'sheet' + IntToStr(i + 1) + '.xml.rels', fmCreate);
+        _WriteHelper.CreateSheetRels(Stream, TextConverter, CodePageName, BOM);
+        FreeAndNil(Stream);
+      end;
+
+      if (_WriteHelper.isHaveComments) then
       begin
         _commentArray[i] := 1;
         //создать файл с комментариями
@@ -6462,7 +7138,7 @@ begin
 
     //[Content_Types].xml
     Stream := TFileStream.Create(PathName + '[Content_Types].xml', fmCreate);
-    ZEXLSXCreateContentTypes(XMLSS, Stream, kol, 0, nil, TextConverter, CodePageName, BOM);
+    ZEXLSXCreateContentTypes(XMLSS, Stream, kol, 0, nil, TextConverter, CodePageName, BOM, _WriteHelper);
     FreeAndNil(Stream);
 
     path_docprops := PathName + 'docProps' + PathDelim;
@@ -6485,6 +7161,7 @@ begin
       FreeAndNil(Stream);
     SetLength(_commentArray, 0);
     _commentArray := nil;
+    FreeAndNil(_WriteHelper);
   end;
 end; //SaveXmlssToXLSXPath
 
@@ -6540,7 +7217,7 @@ var
   Stream: array of TStream;
   StreamCount: integer;
   MaxStreamCount: integer;
-  need_comments: boolean;
+  _WriteHelper: TZEXLSXWriteHelper;
   path_xl, path_sheets, path_relsmain, path_relsw, path_docprops: string;
   _commentArray: TIntegerDynArray;
 
@@ -6570,6 +7247,7 @@ begin
   zip := nil;
   StreamCount := 0;
   MaxStreamCount := -1;
+  _WriteHelper := nil;
   try
 
     if (not ZECheckTablesTitle(XMLSS, SheetsNumbers, SheetsNames, _pages, _names, kol)) then
@@ -6577,6 +7255,8 @@ begin
       result := 2;
       exit;
     end;
+
+    _WriteHelper := TZEXLSXWriteHelper.Create();
 
     zip := TZipper.Create();
     zip.FileName := FileName;
@@ -6613,12 +7293,18 @@ begin
     begin
       _commentArray[i] := 0;
       _AddStream();
-      ZEXLSXCreateSheet(XMLSS, Stream[StreamCount - 1], _pages[i], TextConverter, CodePageName, BOM, need_comments);
-      if (need_comments) then
-        _commentArray[i] := 1;
+      ZEXLSXCreateSheet(XMLSS, Stream[StreamCount - 1], _pages[i], TextConverter, CodePageName, BOM, _WriteHelper);
       _AddFile(path_sheets + 'sheet' + IntToStr(i + 1) + '.xml');
 
-      if (need_comments) then
+      if (_WriteHelper.HyperLinksCount > 0) then
+      begin
+        _WriteHelper.AddSheetHyperlink(i);
+        _AddStream();
+        _WriteHelper.CreateSheetRels(Stream[StreamCount - 1], TextConverter, CodePageName, BOM);
+        _AddFile(path_sheets + '_rels/sheet' + IntToStr(i + 1) + '.xml.rels');
+      end;
+
+      if (_WriteHelper.isHaveComments) then
       begin
         _commentArray[i] := 1;
         //создать файл с комментариями
@@ -6632,7 +7318,7 @@ begin
 
     //[Content_Types].xml
     _AddStream();
-    ZEXLSXCreateContentTypes(XMLSS, Stream[StreamCount - 1], kol, 0, nil, TextConverter, CodePageName, BOM);
+    ZEXLSXCreateContentTypes(XMLSS, Stream[StreamCount - 1], kol, 0, nil, TextConverter, CodePageName, BOM, _WriteHelper);
     _AddFile('[Content_Types].xml');
 
     path_docprops :='docProps/';
@@ -6660,6 +7346,7 @@ begin
       FreeAndNil(Stream[i]);
     SetLength(Stream, 0);
     Stream := nil;
+    FreeAndNil(_WriteHelper);
   end;
   Result := 0;
 end; //SaveXmlssToXSLX
