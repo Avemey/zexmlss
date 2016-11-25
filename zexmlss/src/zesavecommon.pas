@@ -96,7 +96,7 @@ function ZEPTDateDurationToDateTime(const APTTime: string): TDateTime;
 //      string
 function ZEDateTimeToPTDurationStr(const ADateTime: TDateTime): string;
 
-const ZELibraryVersion = '0.0.14';
+const ZELibraryVersion = '0.0.15';
       ZELibraryFork = '';//'Arioch';  // or empty str   // URL ?
 
 implementation
