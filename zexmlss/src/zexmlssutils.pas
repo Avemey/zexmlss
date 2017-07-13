@@ -5,9 +5,9 @@
 // Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
 // e-mail: avemey(мяу)tut(точка)by
 // URL:    http://avemey.com
-// Ver:    0.0.8
+// Ver:    0.0.11
 // Лицензия: zlib
-// Last update: 2015.01.24
+// Last update: 2016.09.10
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
@@ -109,14 +109,25 @@ function SplitString(const buffer: string; const delimeter: char): TStringDynArr
 {$IfDef DELPHI_UNICODE} overload; {$EndIf}
 
 implementation
+uses
+  zenumberformats  //ConvertFormatNativeToXlsx / ConvertFormatXlsxToNative
 {$IfDef DELPHI_UNICODE}
-uses  StrUtils,  // stock SplitString(string, string) implementation
-      AnsiStrings;  // AnsiString targeted overloaded versions of Pos, Trim, etc
+  ,
+  StrUtils,  // stock SplitString(string, string) implementation
+  AnsiStrings  // AnsiString targeted overloaded versions of Pos, Trim, etc
 {$EndIf}
+  ;
 
+{$IFDEF DELPHI_UNICODE}
+  {$DEFINE USE_STRUTILS_SPLIT_STRING}
+{$ENDIF}
+
+{$IFDEF VER200} // RAD Studio 2009
+  {$UNDEF USE_STRUTILS_SPLIT_STRING} //There are no StrUtils.SplitString in D2009!!!!
+{$ENDIF VER200}
 
 function SplitString(const buffer: string; const delimeter: char): TStringDynArray;
-{$IfDef DELPHI_UNICODE}
+{$IfDef USE_STRUTILS_SPLIT_STRING}
 begin
    Result := StrUtils.SplitString(buffer, delimeter); // implicit typecast
 end;
@@ -906,7 +917,7 @@ begin
       s := s + ' ' + IntToStr(Style.Border[i].Weight) + 'px'
     else inc(l);
     case Style.Border[i].LineStyle of
-      ZEContinuous: s := s + ' ' + 'solid';
+      ZEContinuous, ZEHair: s := s + ' ' + 'solid';
       ZEDot, ZEDashDotDot: s := s + ' ' + 'dotted';
       ZEDash, ZEDashDot, ZESlantDashDot: s := s + ' ' + 'dashed';
       ZEDouble: s := s + ' ' + 'double';
@@ -1116,6 +1127,9 @@ var
   _names: TStringDynArray;    //названия страниц
   kol: integer;               //количество страниц
   i: integer;
+  _FmtParser: TNumFormatParser;
+  _DateParser: TZDateTimeODSFormatParser;
+
 
   //заголовок xml-ины
   procedure WriteHeader();
@@ -1136,7 +1150,7 @@ var
       WriteTagNode('DocumentProperties',[ToAttribute('xmlns','urn:schemas-microsoft-com:office:office')], true, true, false);
       WriteTag('Author', XMLSS.DocumentProperties.Author);
       WriteTag('LastAuthor', XMLSS.DocumentProperties.LastAuthor);
-      WriteTag('Created', ZEDateToStr(XMLSS.DocumentProperties.Created) + 'Z'{s});
+      WriteTag('Created', ZEDateTimeToStr(XMLSS.DocumentProperties.Created) + 'Z'{s});
       WriteTag('Company', XMLSS.DocumentProperties.Company);
 
       WriteTag('Version', XMLSS.DocumentProperties.Version); // зачем ???
@@ -1270,7 +1284,8 @@ var
      for i := 0 to 5 do
      begin
        _xml.Attributes.Clear();
-       if not((_border[i].LineStyle = ZEContinuous) and (_border[i].Weight = 0)) then
+       if not(((_border[i].LineStyle = ZEContinuous) or (_border[i].LineStyle = ZEHair)) and 
+              (_border[i].Weight = 0)) then
        begin
          case i of
            0: _xml.Attributes.Add('ss:Position','Left', false);
@@ -1410,10 +1425,10 @@ var
       if Attributes.Count > 0 then
         WriteEmptyTag('Interior', true, true);
       //=====NumberFormat======
-      if (XMLSS.Styles.DefaultStyle.NumberFormat > '') then
+      if (_style.NumberFormat <> '') then
       begin
         Attributes.Clear();
-        AddAttribute('ss:Format', _style.NumberFormat, 'General', XMLSS.Styles.DefaultStyle.NumberFormat, _def);
+        AddAttribute('ss:Format', ConvertFormatNativeToXlsx(_style.NumberFormat, _FmtParser, _DateParser), 'General', ConvertFormatNativeToXlsx(XMLSS.Styles.DefaultStyle.NumberFormat, _FmtParser, _DateParser), _def);
         if Attributes.Count > 0 then
           WriteEmptyTag('NumberFormat', true, true);
       end;
@@ -1438,8 +1453,18 @@ var
     _xml.Attributes.Clear();
     _xml.WriteTagNode('Styles', true, true);
     WriteStyle('Default', 'Normal', XMLSS.Styles.DefaultStyle, true);
-    for i := 0 to XMLSS.Styles.Count - 1 do
-      WriteStyle('s'+inttostr(i+20), '', XMLSS.Styles[i], false);
+
+    _FmtParser := TNumFormatParser.Create();
+    _DateParser := TZDateTimeODSFormatParser.Create();
+
+    try
+      for i := 0 to XMLSS.Styles.Count - 1 do
+        WriteStyle('s'+inttostr(i+20), '', XMLSS.Styles[i], false);
+    finally
+      FreeAndNil(_FmtParser);
+      FreeAndNil(_DateParser);
+    end;
+
     _xml.WriteEndTagNode();
   end;
 
@@ -1728,7 +1753,16 @@ var
               if (ProcessedCell.Data > '') or
                  (isFormula) then
               begin
-                CorrectStrForXML(ProcessedCell.Data, s, b);
+                if (ProcessedCell.CellType = ZEBoolean) then
+                begin
+                  if (ZETryStrToBoolean(ProcessedCell.Data)) then
+                    s := '1'
+                  else
+                    s := '0';
+                end
+                else
+                  CorrectStrForXML(ProcessedCell.Data, s, b);
+
                 if b then
                   AttrData.Add('xmlns','http://www.w3.org/TR/REC-html40', false);
                 WriteTag('ss:Data', s, AttrData, true, false, false);
@@ -2168,7 +2202,7 @@ var
         end else
         //NumberFormat
         if _xml.TagName = 'NumberFormat' then
-          NumberFormat := _xml.Attributes.ItemsByName['ss:Format']
+          NumberFormat := ConvertFormatXlsxToNative(_xml.Attributes.ItemsByName['ss:Format'])
         else
         //Protection
         if _xml.TagName = 'Protection' then

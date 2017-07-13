@@ -1,0 +1,1 @@
+Support SciZipFile packer by Daniel Schnabel

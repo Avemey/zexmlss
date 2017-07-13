@@ -73,6 +73,7 @@ begin
     _un := TJclZipDecompressArchive.Create(ZipName);
     _un.ListFiles();
     _un.ExtractAll(PathName, true);
+    Result := true;
   finally
     if (Assigned(_un)) then
       FreeAndNil(_un);
