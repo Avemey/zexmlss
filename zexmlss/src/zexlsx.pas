@@ -4028,8 +4028,8 @@ var
     i: integer;
 
   begin
-    if (XLSXStyle.numFmtId<>-1)
-    then XMLSSStyle.NumberFormat:=ReadHelper.NumberFormats.GetFormat(XLSXStyle.numFmtId);
+    if (XLSXStyle.numFmtId >= 0) then
+      XMLSSStyle.NumberFormat := ReadHelper.NumberFormats.GetFormat(XLSXStyle.numFmtId);
     
     if (XLSXStyle.applyAlignment) then
     begin
