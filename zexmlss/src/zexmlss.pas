@@ -44,7 +44,7 @@ const
 
 type
   //тип данных €чейки
-  TZCellType = (ZENumber, ZEDateTime, ZEBoolean, ZEString, ZEError);
+  TZCellType = (ZENumber, ZEDateTime, ZEBoolean, ZEString, ZEError, ZEGeneral);
       const ZEAnsiString = ZEString deprecated {$IFDEF USE_DEPRECATED_STRING}'use ZEString'{$ENDIF}; // backward compatibility
 type
   //—тиль начертани€ линий рамки €чейки
