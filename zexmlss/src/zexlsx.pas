@@ -1858,8 +1858,10 @@ var
         //  str - string
         //  inlineStr - inline string ??
         //  d - date
-        //По-умолчанию - number
-        if ((_type = 'n') or (_type = '')) then
+        //  тип может отсутствовать. Интерпретируем в таком случае как ZEGeneral
+        if (_type = '') then _currCell.CellType := ZEGeneral
+        else
+        if (_type = 'n') then
         begin
           _currCell.CellType := ZENumber;
           //Trouble: if cell style is number, and number format is date, then
@@ -5592,7 +5594,10 @@ var
           ZEError: s := 'e';
         end;
         
-        _xml.Attributes.Add('t', s, false);
+        // если тип ячейки ZEGeneral, то атрибут опускаем
+        if _sheet.Cell[j, i].CellType <> ZEGeneral then
+          _xml.Attributes.Add('t', s, false);
+
         if (b) then
         begin
           _xml.WriteTagNode('c', true, true, false);
