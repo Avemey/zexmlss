@@ -2069,11 +2069,11 @@ end;
 function ZCellTypeToStr(pp: TZCellType): string;
 begin
   case pp of
-    ZENumber:         result := 'Number';
-    ZEDateTime:       result := 'DateTime';
-    ZEBoolean:        result := 'Boolean';
-    ZEString:         result := 'String';
-    ZEError:          result := 'Error';
+    ZENumber:            result := 'Number';
+    ZEDateTime:          result := 'DateTime';
+    ZEBoolean:           result := 'Boolean';
+    ZEString, ZEGeneral: result := 'String';
+    ZEError:             result := 'Error';
   end;
 end;
 
@@ -2190,7 +2190,9 @@ end;
 function StrToZCellType(Value: string): TZCellType;
 begin
   Value := UpperCase(Value);
-  if Value = 'NUMBER' then
+  if Value = '' then
+    result := ZEGeneral
+  else if Value = 'NUMBER' then
     result := ZENumber
   else if Value = 'DATETIME' then
     result := ZEDateTime
