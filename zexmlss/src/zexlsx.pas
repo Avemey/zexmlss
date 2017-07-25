@@ -2203,6 +2203,20 @@ var
     end; //while
   end; //_ReadHyperLinks();
 
+  //<sheetPr> ... </sheetPr> 
+  procedure _ReadSheetPr();
+  begin
+    while (not ((xml.TagName = 'sheetPr') and (xml.TagType = 6))) do
+    begin
+      xml.ReadTag();
+      if (xml.Eof()) then
+        break;
+      
+      if xml.TagName = 'tabColor' then
+        _currSheet.TabColor := ARGBToColor(xml.Attributes.ItemsByName['rgb']);  
+    end;    
+  end; //_ReadSheetPr();
+
   //<sheetViews> ... </sheetViews>
   procedure _ReadSheetViews();
   var
@@ -2737,6 +2751,9 @@ begin
       else
       if ((xml.TagName = 'hyperlinks') and (xml.TagType = 4)) then
         _ReadHyperLinks()
+      else
+      if ((xml.TagName = 'sheetPr') and (xml.TagType = 4)) then
+        _ReadSheetPr()
       else
       if ((xml.TagName = 'sheetViews') and (xml.TagType = 4)) then
         _ReadSheetViews()
@@ -5367,6 +5384,10 @@ var
     _xml.Attributes.Clear();
     _xml.Attributes.Add('filterMode', 'false');
     _xml.WriteTagNode('sheetPr', true, true, false);
+
+    _xml.Attributes.Clear();
+    _xml.Attributes.Add('rgb', 'FF'+ColorToHTMLHex(_sheet.TabColor)); //ARGB ס אכüפא FF
+    _xml.WriteEmptyTag('tabColor', true, false);
 
     _xml.Attributes.Clear();
     _xml.Attributes.Add('fitToPage', 'false');

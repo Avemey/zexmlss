@@ -1232,6 +1232,13 @@ function ColorToHTMLHex(Color: TColor): string;
 //переводит Hex RGB (string) в TColor
 function HTMLHexToColor(value: string): TColor;
 
+//переводит Hex ARGB (string) в TColor
+//32-разрядное значение ARGB представлено в виде AARRGGBB.
+//Самый старший байт (MSB), представленный AA, является значением альфа-компонента. 
+//Второй, третий и четвертый байты, представленные RR, GG и BB, 
+//соответственно, являются компонентами красный цвет, зеленого и синего соответственно.
+function ARGBToColor(value: string): TColor;
+
 //Перевести пиксели в типографский пункт (point)
 function PixelToPoint(inPixel: integer; PixelSizeMM: real = 0.265): real;
 
@@ -1944,6 +1951,42 @@ begin
     if value[1] = '#' then delete(value, 1, 1);
     //А что, если будут цвета типа "black"?  {tut}
     for i := 1 to length(value) do
+    begin
+      if n > 2 then break;
+      case value[i] of
+        '0'..'9': t := ord(value[i]) - 48;
+        'A'..'F': t := 10 + ord(value[i]) - 65;
+        else
+          t := 0;
+      end;
+      a[n] := a[n] * 16 + t;
+      if i mod 2 = 0 then inc(n);
+    end;
+    result := a[2] shl 16 or a[1] shl 8 or a[0]//RGB(a[0], a[1], a[2]);
+    //a[2] shl 16 or a[1] shl 8 or a[0]; = RGB
+  end;
+end;
+
+//переводит Hex ARGB (string) в TColor
+//не уверен возможно ли учитывать альфа-канал при переводе
+//пока отбросим его
+function ARGBToColor(value: string): TColor;
+var
+  a: array [0..2] of integer;
+  i, n, t: integer;
+
+begin
+  result := 0;
+  if (value > '') then
+  begin
+    value := UpperCase(value);
+    {$HINTS OFF}
+    FillChar(a, sizeof(a), 0);
+    {$HINTS ON}
+    n := 0;
+    if value[1] = '#' then delete(value, 1, 1);
+    //А что, если будут цвета типа "black"?  {tut}
+    for i := 3 to length(value) do
     begin
       if n > 2 then break;
       case value[i] of
