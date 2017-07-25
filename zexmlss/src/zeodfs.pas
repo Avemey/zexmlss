@@ -6259,7 +6259,7 @@ var
               else
                 _CurrCell.Data := xml.Attributes.ItemsByName['office:date-value'];
             end;
-          ZEString:
+          ZEString, ZEGeneral:
             begin
               _stringValue := xml.Attributes.ItemsByName['office:string-value'];
               _isStringValue := _stringValue <> '';
@@ -6387,7 +6387,7 @@ var
         if (not (_CurrCell.CellType in [ZENumber, ZEDateTime, ZEBoolean])) then
           _CurrCell.Data := ZEReplaceEntity(_celltext);
 
-        if ((_CurrCell.CellType = ZEString) and _isStringValue) then
+        if ((_CurrCell.CellType in [ZEString, ZEGeneral]) and _isStringValue) then
         begin
           _CurrCell.Data := ZEReplaceEntity(_stringValue);
           _isHaveTextCell := true;

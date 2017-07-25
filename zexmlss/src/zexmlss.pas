@@ -44,7 +44,7 @@ const
 
 type
   //тип данных €чейки
-  TZCellType = (ZENumber, ZEDateTime, ZEBoolean, ZEString, ZEError);
+  TZCellType = (ZENumber, ZEDateTime, ZEBoolean, ZEString, ZEError, ZEGeneral);
       const ZEAnsiString = ZEString deprecated {$IFDEF USE_DEPRECATED_STRING}'use ZEString'{$ENDIF}; // backward compatibility
 type
   //—тиль начертани€ линий рамки €чейки
@@ -84,6 +84,7 @@ type
 
     function GetDataAsDateTime(): TDateTime;
     procedure SetDataAsDateTime(const Value: TDateTime);
+    procedure SetDataAsString(const Value: string);
   public
     constructor Create();virtual;
     procedure Assign(Source: TPersistent); override;
@@ -102,6 +103,7 @@ type
     property AsDouble: double read GetDataAsDouble write SetDataAsDouble;
     property AsInteger: integer read GetDataAsInteger write SetDataAsInteger;
     property AsDateTime: TDateTime read GetDataAsDateTime write SetDataAsDateTime;
+    property AsString: string read FData write SetDataAsString;
   end;
 
   //стиль линии границы
@@ -2067,11 +2069,11 @@ end;
 function ZCellTypeToStr(pp: TZCellType): string;
 begin
   case pp of
-    ZENumber:         result := 'Number';
-    ZEDateTime:       result := 'DateTime';
-    ZEBoolean:        result := 'Boolean';
-    ZEString:         result := 'String';
-    ZEError:          result := 'Error';
+    ZENumber:            result := 'Number';
+    ZEDateTime:          result := 'DateTime';
+    ZEBoolean:           result := 'Boolean';
+    ZEString, ZEGeneral: result := 'String';
+    ZEError:             result := 'Error';
   end;
 end;
 
@@ -2188,7 +2190,9 @@ end;
 function StrToZCellType(Value: string): TZCellType;
 begin
   Value := UpperCase(Value);
-  if Value = 'NUMBER' then
+  if Value = '' then
+    result := ZEGeneral
+  else if Value = 'NUMBER' then
     result := ZENumber
   else if Value = 'DATETIME' then
     result := ZEDateTime
@@ -2813,6 +2817,12 @@ begin
       // Seem out of "brain-dead no-automation overall aproach of a component...
       // Correct choice? dunno. I prefer making export better
     end
+end;
+
+procedure TZCell.SetDataAsString(const Value: string);
+begin
+  FData := Value;
+  CellType := ZEString;
 end;
 
 procedure TZCell.Assign(Source: TPersistent);
