@@ -466,6 +466,10 @@ type
     FPaperSize: byte;
     FPaperWidth: integer;
     FPaperHeight: integer;
+
+    FFitToHeight: integer; //Number of vertical pages to fit on
+    FFitToWidth: integer;  //Number of horizontal pages to fit on
+
     FSplitVerticalMode: TZSplitMode;
     FSplitHorizontalMode: TZSplitMode;
     FSplitVerticalValue: integer;       //Вроде можно вводить отрицательные
@@ -497,6 +501,10 @@ type
                                                                                   // used only for PaperSize = 0!
     property PaperHeight: integer read FPaperHeight write FPaperHeight default 0; //User defined paper height in mm.
                                                                                   // used only for PaperSize = 0!
+
+    property FitToHeight: integer read FFitToHeight write FFitToHeight default -1;
+    property FitToWidth: integer read FFitToWidth write FFitToWidth default -1;
+
     property PortraitOrientation: boolean read FPortraitOrientation write FPortraitOrientation default true;
     property CenterHorizontal: boolean read FCenterHorizontal write FCenterHorizontal default false;
     property CenterVertical: boolean read FCenterVertical write FCenterVertical default false;
@@ -1057,6 +1065,7 @@ type
     FRowCount: integer;
     FColCount: integer;
     FTabColor: TColor;                  //цвет закладки
+    FFitToPage: Boolean;
     FDefaultRowHeight: real;
     FDefaultColWidth: real;
     FMergeCells: TZMergeCells;
@@ -1115,6 +1124,7 @@ type
     property AutoFilter: string read FAutoFilter write FAutoFilter;
     property Protect: boolean read FProtect write FProtect default false; //защищён ли лист от изменения
     property TabColor: TColor read FTabColor write FTabColor default ClWindow;
+    property FitToPage: Boolean read FFitToPage write FFitToPage default false;
     property Title: string read FTitle write FTitle;
     property RowCount: integer read GetRowCount write SetRowCount;
     property RightToLeft: boolean read FRightToLeft write FRightToLeft default false;
@@ -3312,6 +3322,8 @@ begin
   HeaderMargin := 13;
   FooterMargin := 13;
   FPaperSize := 9;
+  FFitToHeight:=-1;
+  FFitToWidth:=-1;
 
   FIsEvenFooterEqual := true;
   FIsEvenHeaderEqual := true;
@@ -3406,6 +3418,8 @@ begin
     HeaderData := t.HeaderData;
     FooterData := t.FooterData;
     PaperSize := t.PaperSize;
+    FitToHeight := t.FitToHeight;
+    FitToWidth := t.FitToWidth;
     SplitVerticalMode := t.SplitVerticalMode;
     SplitHorizontalMode := t.SplitHorizontalMode;
     SplitVerticalValue := t.SplitVerticalValue;
@@ -3513,6 +3527,7 @@ begin
     RowCount    := zSource.RowCount;
     ColCount    := zSource.ColCount;
     TabColor    := zSource.TabColor;
+    FitToPage   := zSource.FitToPage;
     Title       := zSource.Title;
     Protect     := zSource.Protect;
     RightToLeft := zSource.RightToLeft;
