@@ -316,7 +316,7 @@ uses
 {$EndIf}
   StrUtils,
   Math,
-  zenumberformats;
+  zenumberformats, System.UITypes; // for inlining
 
 {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
 const

@@ -31,6 +31,7 @@ begin
    'Office Open XML*OOXML*OpenXML*ECMA-376*ISO/IEC 29500*ISO 29500', '*');
 end;
 
+{$WARNINGS OFF}  // Ansi warning
 function TZxXlsxSaver.DoSave: integer;
 begin
   Result := ExportXmlssToXLSX(

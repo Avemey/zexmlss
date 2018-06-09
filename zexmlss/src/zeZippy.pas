@@ -108,7 +108,7 @@ TStringList = class;
    end;
 {$ENDIF}
 
-implementation uses TypInfo, Contnrs;
+implementation uses TypInfo, Contnrs, System.Types; // inlining
 
 resourcestring
 //   EZxCannotOverwriteZip    = 'Cannot remove outdated file %s';

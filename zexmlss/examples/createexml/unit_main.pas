@@ -264,12 +264,8 @@ begin
       //кодировка - utf8, имя кодировки='utf-8' (для utf-8 можно ''), BOM=''
 //      SaveXmlssToEXML(tz, sd.FileName, [0, 1], [], @TextConverter, 'utf-8');
 
-      if AnsiEndsText('.xlsx', sd.FileName) then
-       SaveXmlssToXLSX(tz, sd.FileName, [0], [], @TextConverter, 'utf-8')
-      else if AnsiEndsText('.ods', sd.FileName) then
-       SaveXmlssToODFS(tz, sd.FileName, [0], [], @TextConverter, 'utf-8')
-      else
-       TZXMLSSave.From(tz).Charset('utf-8', TextConverter).Save(sd.FileName);
+      // Removed Old code
+      TZXMLSSave.From(tz).Charset('utf-8', TextConverter).Save(sd.FileName);
       // Page 1 - formulae - only XML SS format
 
       // formulae would fail in XLSX format and Excel would complain on "corrupt worksheet"

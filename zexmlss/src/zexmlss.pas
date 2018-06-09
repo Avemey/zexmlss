@@ -1284,6 +1284,9 @@ function IntToStrN(value: integer; NullCount: integer): string;
 
 implementation
 
+uses
+  System.UITypes; // inlining
+
 //Переводит число в строку минимальной длины NullCount
 //TODO: надо глянуть что с функциями в FlyLogReader-е
 //INPUT

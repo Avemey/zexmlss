@@ -19,6 +19,7 @@ interface
 
 {$I zexml.inc}
 {$I compver.inc}
+{$DEFINE NOZCOLORSTRINGGRID} // not using that
 
 {$IFDEF FPC}
   {$mode objfpc}{$H+}
@@ -116,7 +117,7 @@ uses
   StrUtils,  // stock SplitString(string, string) implementation
   AnsiStrings  // AnsiString targeted overloaded versions of Pos, Trim, etc
 {$EndIf}
-  ;
+  , System.UITypes; // inlining
 
 {$IFDEF DELPHI_UNICODE}
   {$DEFINE USE_STRUTILS_SPLIT_STRING}

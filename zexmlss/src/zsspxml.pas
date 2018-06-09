@@ -247,7 +247,6 @@ type
     FAttributesMatch: boolean;
     function  GetTag(num: integer): ansistring;
     procedure SetMaxBufferLength(Value: integer);
-    procedure SetAttributes(Value: TZAttributes);
     procedure AddTag(const Value: ansistring);
     procedure DeleteClosedTag();
     procedure DeleteTag();
@@ -255,6 +254,7 @@ type
     procedure SetQuotesEqual(Value: boolean);
     procedure SetAttributesMatch(Value: boolean);
   protected
+    procedure SetAttributes(Value: TZAttributes); // moved here to stop never used warning
     procedure Clear();
     procedure ClearAll();
     procedure RecognizeEncoding(var txt: ansistring);      //Попытка распознания кодировки
@@ -423,13 +423,13 @@ type
     function  GetTag(num: integer): string;
     procedure SetMaxBufferLength(Value: integer);
     function GetMaxBufferLength(): integer;
-    procedure SetAttributes(Value: TZAttributesH);
     procedure SetIgnoreCase(Value: boolean);
     procedure SetQuotesEqual(Value: boolean);
     function GetQuotesEqual(): boolean;
     procedure SetAttributesMatch(Value: boolean);
     function GetAttributesMatch(): boolean;
   protected
+    procedure SetAttributes(Value: TZAttributesH); // moved here to stop never used warning
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
@@ -3482,7 +3482,7 @@ end;
 
 function TZAttributesH.IsContainsAttribute(const AttrName: string; CaseSensitivity: boolean = true): boolean;
 begin
-  Result := FAttributes.IsContainsAttribute(UTF8ToString(AttrName), CaseSensitivity);
+  Result := FAttributes.IsContainsAttribute(UTF8EncodeToShortString(AttrName), CaseSensitivity); // conversion with data loss warning
 end;
 
 ////////////////////////////////////////////////////////////////////////////////

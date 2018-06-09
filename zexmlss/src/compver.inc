@@ -1,4 +1,5 @@
 {$DEFINE UNKNOWN_COMPILER}
+{$WARN IMPLICIT_STRING_CAST OFF}                    // Only care on Loss
 
 {$IFDEF FPC} //KO: FPC
   {$UNDEF UNKNOWN_COMPILER}

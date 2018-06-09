@@ -1,7 +1,7 @@
 
 // Если не используется ZColorStringGrid 
 { $DEFINE NOZCOLORSTRINGGRID}
-
+{$T-} { Typed @ operator }
 // Условное форматирование
 {$DEFINE ZUSE_CONDITIONAL_FORMATTING}
 

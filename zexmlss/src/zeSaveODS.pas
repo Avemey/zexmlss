@@ -7,6 +7,8 @@ unit zeSaveODS;
 
 interface
 
+{$I compver.inc}  // missing
+
 implementation
 uses zeSave, zexmlss, zeodfs, Types,
 {$IfDef Delphi_Unicode}
