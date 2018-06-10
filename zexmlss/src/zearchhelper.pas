@@ -32,6 +32,7 @@
 unit zearchhelper;
 
 interface
+{$I compver.inc}
 
 uses
   sysutils;
@@ -68,7 +69,7 @@ var
   kol: integer;
 
 begin
-  result := false;
+  {$IFNDEF BERLIN_UP} Result := true; {$ENDIF Value assigned never used}
   l := length(ADir);
   retTmpDir := ADir;
   if (l > 1) then

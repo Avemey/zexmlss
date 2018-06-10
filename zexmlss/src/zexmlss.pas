@@ -1523,7 +1523,7 @@ var
     _date: TDateTime;
 
   begin
-    Result := true;
+    {$IFNDEF BERLIN_UP} Result := true; {$ENDIF Value assigned never used}
     if (msindex >= 0) then
       _ms := a[msindex];
     if (lastdateindex >= 0) then

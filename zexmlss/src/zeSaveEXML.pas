@@ -6,6 +6,7 @@
 unit zeSaveEXML;
 
 interface
+{$I compver.inc}
 
 implementation
 uses zeSave, zexmlss, Types, zexmlssutils;
@@ -26,7 +27,7 @@ end;
 
 function TZxXMLSSSaver.DoSave: integer;
 begin
-  Result := SaveXmlssToEXML( fBook, FFile, GetPageNumbers, GetPageTitles, fConv, fCharSet, fBOM);
+  Result := SaveXmlssToEXML(fBook, FFile, GetPageNumbers, GetPageTitles, fConv, fCharSet, fBOM);
 end;
 
 initialization

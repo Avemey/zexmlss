@@ -820,46 +820,18 @@ function ZEGetColByA1(AA: string; StartZero: boolean = true): integer;
 var
   i: integer;
   num, t, kol, s: integer;
-
 begin
   result := -1;
   num := 0;
-  t := 0;
   AA := UpperCase(AA);
   kol := length(AA);
   s := 1;
   for i := kol downto 1 do
   begin
-    case AA[i] of
-      'A': t :=  0;
-      'B': t :=  1;
-      'C': t :=  2;
-      'D': t :=  3;
-      'E': t :=  4;
-      'F': t :=  5;
-      'G': t :=  6;
-      'H': t :=  7;
-      'I': t :=  8;
-      'J': t :=  9;
-      'K': t := 10;
-      'L': t := 11;
-      'M': t := 12;
-      'N': t := 13;
-      'O': t := 14;
-      'P': t := 15;
-      'Q': t := 16;
-      'R': t := 17;
-      'S': t := 18;
-      'T': t := 19;
-      'U': t := 20;
-      'V': t := 21;
-      'W': t := 22;
-      'X': t := 23;
-      'Y': t := 24;
-      'Z': t := 25;
-      else
-        exit;
-    end;
+    {- Repeated Warnings so I cleaned this up }
+    t := Word(AA[i]) - Word('A');
+    if (t<0) or (t>25) then Exit;
+
     num := num + (t + 1) * s;
     s := s * 26;
     if (s < 0) or (num < 0) then
