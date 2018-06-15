@@ -48,21 +48,226 @@ procedure CellStyleTo(const CellStyle: TCellStyle; var XStyle: TZStyle; ignorebg
 procedure ZStyleToCellStyle(const ZZStyle: TZStyle; CellStyle: TCellStyle; StyleCopy: integer);
 
 //Копирует данные из TZColorStringGrid-а на страницу TZEXMLSS
+/// <summary>
+///   Copy data from Grid to XMLSS page. <br />
+/// </summary>
+/// <param name="XMLSS">
+///   Storage
+/// </param>
+/// <param name="PageNum">
+///   page number
+/// </param>
+/// <param name="Grid">
+///   the stringgrid needed to copy data
+/// </param>
+/// <param name="ToCol">
+///   column number for insertion
+/// </param>
+/// <param name="ToRow">
+///   row number for insertion
+/// </param>
+/// <param name="BCol">
+///   grid's left top cell's column
+/// </param>
+/// <param name="BRow">
+///   grid's left top cell's row.
+/// </param>
+/// <param name="ECol">
+///   grid's right bottom cell's column.
+/// </param>
+/// <param name="ERow">
+///   grid's right bottom cell's row.
+/// </param>
+/// <param name="ignorebgcolor">
+///   if true, then ignore cell's background color.
+/// </param>
+/// <param name="_border">
+///   specifies how to copy cell's borders (1 - cells with borders, 0 - cells without borders).
+/// </param>
+/// <returns>
+///   True if copied successful.
+/// </returns>
 function GridToXmlSS(var XMLSS: TZEXMLSS; const PageNum: integer;
                      var Grid: TZColorStringGrid; ToCol: integer; ToRow: integer;
                          BCol, BRow, ECol, ERow: integer; ignorebgcolor: boolean; _border: byte): boolean; overload;
 
 //Копирует данные из страницы TZEXMLSS в TZColorStringGrid
+/// <summary>
+///   Copy data from TZEXMLSS to TStringGrid.
+/// </summary>
+/// <param name="Grid">
+///   stringgrid to insert cells into
+/// </param>
+/// <param name="XMLSS">
+///   storage
+/// </param>
+/// <param name="PageNum">
+///   page number
+/// </param>
+/// <param name="ToCol">
+///   column number for insertion
+/// </param>
+/// <param name="ToRow">
+///   row number for insertion
+/// </param>
+/// <param name="BCol">
+///   XMLSS's left top cell's column
+/// </param>
+/// <param name="BRow">
+///   XMLSS's left top cell's row
+/// </param>
+/// <param name="ECol">
+///   XMLSS's right bottom cell's column
+/// </param>
+/// <param name="ERow">
+///   XMLSS's right bottom cell's row.
+/// </param>
+/// <param name="InsertMode">
+///   specifies how to insert or add cells to the StringGrid
+///   <list type="table">
+///     <listheader>
+///       <term>Value</term>
+///       <description>Description</description>
+///     </listheader>
+///     <item>
+///       <term>0</term>
+///       <description>cells not shifted</description>
+///     </item>
+///     <item>
+///       <term>1</term>
+///       <description>cells shifted to the right in the stringgrid</description>
+///     </item>
+///     <item>
+///       <term>2</term>
+///       <description>cells shifted to the down in the stringgrid</description>
+///     </item>
+///     <item>
+///       <term>3</term>
+///       <description>cells shifted to the right and down in the stringgrid</description>
+///     </item>
+///   </list>
+/// </param>
+/// <param name="StyleCopy">
+///   specifies how copy style (0 - do not copy style, if StyleCopy and 16 = 16 - copy cell's size)
+/// </param>
+/// <returns>
+///   True if copied successful.
+/// </returns>
 function XmlSSToGrid(var Grid: TZColorStringGrid; var XMLSS: TZEXMLSS; const PageNum: integer;
                          ToCol: integer; ToRow: integer; BCol, BRow, ECol, ERow: integer; InsertMode: byte; StyleCopy: integer = 1023): boolean; overload;
 {$ENDIF}
 
 //Копирует данные из TStringGrid-а на страницу TZEXMLSS
+/// <summary>
+///   Copy data from Grid to XMLSS page. <br />
+/// </summary>
+/// <param name="XMLSS">
+///   Storage
+/// </param>
+/// <param name="PageNum">
+///   page number
+/// </param>
+/// <param name="Grid">
+///   the stringgrid needed to copy data
+/// </param>
+/// <param name="ToCol">
+///   column number for insertion
+/// </param>
+/// <param name="ToRow">
+///   row number for insertion
+/// </param>
+/// <param name="BCol">
+///   grid's left top cell's column
+/// </param>
+/// <param name="BRow">
+///   grid's left top cell's row.
+/// </param>
+/// <param name="ECol">
+///   grid's right bottom cell's column.
+/// </param>
+/// <param name="ERow">
+///   grid's right bottom cell's row.
+/// </param>
+/// <param name="ignorebgcolor">
+///   if true, then ignore cell's background color.
+/// </param>
+/// <param name="_border">
+///   specifies how to copy cell's borders (1 - cells with borders, 0 - cells without borders).
+/// </param>
+/// <returns>
+///   True if copied successful.
+/// </returns>
 function GridToXmlSS(var XMLSS: TZEXMLSS; const PageNum: integer;
                      var Grid: TStringGrid; ToCol: integer; ToRow: integer;
                          BCol, BRow, ECol, ERow: integer; ignorebgcolor: boolean; _border: byte): boolean; overload;
 
 //Копирует данные из страницы TZEXMLSS в TStringGrid
+/// <summary>
+///   Copy data from TZEXMLSS to TStringGrid.
+/// </summary>
+/// <param name="Grid">
+///   stringgrid to insert cells into
+/// </param>
+/// <param name="XMLSS">
+///   storage
+/// </param>
+/// <param name="PageNum">
+///   page number
+/// </param>
+/// <param name="ToCol">
+///   column number for insertion
+/// </param>
+/// <param name="ToRow">
+///   row number for insertion
+/// </param>
+/// <param name="BCol">
+///   XMLSS's left top cell's column
+/// </param>
+/// <param name="BRow">
+///   XMLSS's left top cell's row
+/// </param>
+/// <param name="ECol">
+///   XMLSS's right bottom cell's column
+/// </param>
+/// <param name="ERow">
+///   XMLSS's right bottom cell's row.
+/// </param>
+/// <param name="InsertMode">
+///   specifies how to insert or add cells to the StringGrid
+///   <list type="table">
+///     <listheader>
+///       <term>Value</term>
+///       <description>Description</description>
+///     </listheader>
+///     <item>
+///       <term>0</term>
+///       <description>cells not shifted</description>
+///     </item>
+///     <item>
+///       <term>1</term>
+///       <description>cells shifted to the right in the stringgrid</description>
+///     </item>
+///     <item>
+///       <term>2</term>
+///       <description>cells shifted to the down in the stringgrid</description>
+///     </item>
+///     <item>
+///       <term>3</term>
+///       <description>cells shifted to the right and down in the stringgrid</description>
+///     </item>
+///   </list>
+/// </param>
+/// <param name="StyleCopy">
+///   specifies how copy style: <br /><br />0 - do not copy style <br />StyleCopy and 1 = 1 - copy BGColor <br />StyleCopy and 2 = 2 - copy Vertical Alignment <br />StyleCopy and
+///   4 = 4 - copy Horizontal Alignment <br />StyleCopy and 8 = 8 - copy Font <br />StyleCopy and 16 = 16 - copy cell's size <br />StyleCopy and 32 = 32 - copy WordWrap <br />
+///   StyleCopy and 64 = 64 - copy Merge Area <br />StyleCopy and 128 = 128 - delete merged cells in place of insert before insertion <br />StyleCopy and 256 = 256 - set
+///   Borderstyle to sqNone in place of insert <br />StyleCopy and 512 = 512 - if cell's text do not fit in cell then cell's height will resize <br />StyleCopy and 1024 = 1024 -
+///   if cell's text do not fit in cell then cell's width will resize <br />StyleCopy and 2048 = 2048 - set default style of XMLSS to added cells on shift-place instead of the
+///   default style of the grid <br />
+/// </param>
+/// <returns>
+///   True if copied successful.
+/// </returns>
 function XmlSSToGrid(var Grid: TStringGrid; var XMLSS: TZEXMLSS; const PageNum: integer;
                          ToCol: integer; ToRow: integer; BCol, BRow, ECol, ERow: integer; InsertMode: byte; StyleCopy: integer = 511): boolean; overload;
 
@@ -73,35 +278,125 @@ function SaveXmlssToHtml(var XMLSS: TZEXMLSS; const PageNum: integer; Title: str
                          TextConverter: TAnsiToCPConverter; CodePageName: string): integer; overload;
 
 //Сохраняет в поток в формате Excel XML SpreadSheet
+/// <summary>
+///   Save to the Stream in Excel XML SpreadSheet format.
+/// </summary>
+/// <param name="XMLSS">
+///   storage
+/// </param>
+/// <param name="SheetsNumbers">
+///   array with needed numbers of sheets (if array is empty then all sheets will be saved). SheetsNames
+/// </param>
+/// <param name="SheetsNames">
+///   array with titles of sheets (elements count in SheetsName must be equal to elements count in SheetsNumbers).
+/// </param>
+/// <param name="TextConverter">
+///   text converter from local encoding to needed encoding (for example, AnsiToUtf8 - convert to UTF-8 encoding
+/// </param>
+/// <param name="CodePageName">
+///   name of codepage
+/// </param>
+/// <param name="BOM">
+///   Byte Order Mark. <br />Return 0 if saved successful.
+/// </param>
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 
 //Сохраняет в поток в формате Excel XML SpreadSheet
+/// <summary>
+///   Save to the Stream in Excel XML SpreadSheet format.
+/// </summary>
+/// <param name="XMLSS">
+///   storage
+/// </param>
+/// <param name="SheetsNumbers">
+///   array with needed numbers of sheets (if array is empty then all sheets will be saved). SheetsNames
+/// </param>
+/// <param name="SheetsNames">
+///   array with titles of sheets (elements count in SheetsName must be equal to elements count in SheetsNumbers).
+/// </param>
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string): integer; overload;
 
 //Сохраняет в поток в формате Excel XML SpreadSheet
+/// <summary>
+///   Save to the Stream in Excel XML SpreadSheet format.
+/// </summary>
+/// <param name="XMLSS">
+///   storage
+/// </param>
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream): integer; overload;
 
 //Сохраняет в файл в формате Excel XML SpreadSheet
+/// <summary>
+///   Save to the file FileName in Excel XML SpreadSheet format
+/// </summary>
+/// <param name="XMLSS">
+///   storage
+/// </param>
+/// <param name="SheetsNumbers">
+///   array with needed numbers of sheets (if array is empty then all sheets will be saved). SheetsNames
+/// </param>
+/// <param name="SheetsNames">
+///   array with titles of sheets (elements count in SheetsName must be equal to elements count in SheetsNumbers).
+/// </param>
+/// <param name="TextConverter">
+///   text converter from local encoding to needed encoding (for example, AnsiToUtf8 - convert to UTF-8 encoding
+/// </param>
+/// <param name="CodePageName">
+///   name of codepage
+/// </param>
+/// <param name="BOM">
+///   Byte Order Mark. <br />Return 0 if saved successful.
+/// </param>
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 
 //Сохраняет в файл в формате Excel XML SpreadSheet
+/// <summary>
+///   Save to the file FileName in Excel XML SpreadSheet format
+/// </summary>
+/// <param name="XMLSS">
+///   storage
+/// </param>
+/// <param name="SheetsNumbers">
+///   array with needed numbers of sheets (if array is empty then all sheets will be saved). SheetsNames
+/// </param>
+/// <param name="SheetsNames">
+///   array with titles of sheets (elements count in SheetsName must be equal to elements count in SheetsNumbers).
+/// </param>
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string): integer; overload;
 
 //Сохраняет в файл в формате Excel XML SpreadSheet
+/// <summary>
+///   Save to the file FileName in Excel XML SpreadSheet format
+/// </summary>
+/// <param name="XMLSS">
+///   storage
+/// </param>
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
 
 //Читает из потока Excel XML SpreadSheet (EXMLSS)
 //      XMLSS: TZEXMLSS                 - хранилище
 //      Stream: TStream                 - поток
+/// <summary>
+///   Read Excel XML SpreadSheet from Stream to XMLSS. <br />
+/// </summary>
+/// <returns>
+///   0 if read successful.
+/// </returns>
 function ReadEXMLSS(var XMLSS: TZEXMLSS; Stream: TStream): integer; overload;
 
 //Читает из файла Excel XML SpreadSheet (EXMLSS)
 //      XMLSS: TZEXMLSS                 - хранилище
 //      FileName: string                - имя файла
+/// <summary>
+///   Read Excel XML SpreadSheet from file FileName to XMLSS. <br />
+/// </summary>
+/// <returns>
+///   0 if read successful.
+/// </returns>
 function ReadEXMLSS(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
 
 // needed for uniform save routines: zeSave*

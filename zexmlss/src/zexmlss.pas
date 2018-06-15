@@ -44,27 +44,45 @@ const
 
 type
   //тип данных €чейки
+  /// <summary>
+  ///   Data type of cell
+  /// </summary>
   TZCellType = (ZENumber, ZEDateTime, ZEBoolean, ZEString, ZEError, ZEGeneral);
       const ZEAnsiString = ZEString deprecated {$IFDEF USE_DEPRECATED_STRING}'use ZEString'{$ENDIF}; // backward compatibility
 type
   //—тиль начертани€ линий рамки €чейки
+  /// <summary>
+  ///   Style lines of the cell border
+  /// </summary>
   TZBorderType = (ZENone, ZEContinuous, ZEHair, ZEDot, ZEDash, ZEDashDot, ZEDashDotDot, ZESlantDashDot, ZEDouble);
 
   //√оризонтальное выравнивание
+  /// <summary>
+  ///   Horizontal alignment
+  /// </summary>
   TZHorizontalAlignment = (ZHAutomatic, ZHLeft, ZHCenter, ZHRight, ZHFill, ZHJustify, ZHCenterAcrossSelection, ZHDistributed, ZHJustifyDistributed);
 
   //вертикальное выравнивание в €чейке
   TZVerticalAlignment = (ZVAutomatic, ZVTop, ZVBottom, ZVCenter, ZVJustify, ZVDistributed, ZVJustifyDistributed);
 
   //Ўаблон заливки €чейки
+  /// <summary>
+  ///   Fill pattern of the cell
+  /// </summary>
   TZCellPattern = (ZPNone, ZPSolid, ZPGray75, ZPGray50, ZPGray25, ZPGray125, ZPGray0625, ZPHorzStripe, ZPVertStripe,
                   ZPReverseDiagStripe, ZPDiagStripe, ZPDiagCross, ZPThickDiagCross, ZPThinHorzStripe, ZPThinVertStripe,
                   ZPThinReverseDiagStripe, ZPThinDiagStripe, ZPThinHorzCross, ZPThinDiagCross);
 
   //«акрепление строк/столбцов
+  /// <summary>
+  ///   Vertical/horizontal split/freeze mode.
+  /// </summary>
   TZSplitMode = (ZSplitNone, ZSplitFrozen, ZSplitSplit);
 
   //€чейка
+  /// <summary>
+  ///   Inherited from TPersistent. It's a cell of spreadsheet.
+  /// </summary>
   TZCell = class(TPersistent)
   private
     FFormula: string;
@@ -89,15 +107,45 @@ type
     constructor Create();virtual;
     procedure Assign(Source: TPersistent); override;
     procedure Clear();
+    /// <summary>
+    ///   Always show comment. <br />False by default.
+    /// </summary>
     property AlwaysShowComment: boolean read FAlwaysShowComment write FAlwaysShowComment default false;
+    /// <summary>
+    ///   Comment text.
+    /// </summary>
     property Comment: string read FComment write FComment;      //примечание
+    /// <summary>
+    ///   Author of comment.
+    /// </summary>
     property CommentAuthor: string read FCommentAuthor write FCommentAuthor;// автор примечани€
+    /// <summary>
+    ///   Cell style number. <br />-1 by default.
+    /// </summary>
     property CellStyle: integer read FCellStyle write FCellStyle default -1;
+    /// <summary>
+    ///   Cell type. <br />ZEString by default.
+    /// </summary>
     property CellType: TZCellType read FCellType write FCellType default ZEString; //тип данных €чейки
+    /// <summary>
+    ///   Specifies the value of this cell to show on screen.
+    /// </summary>
     property Data: string read FData write FData;              //отображаемое содержимое €чейки
+    /// <summary>
+    ///   Formula in R1C1 style.
+    /// </summary>
     property Formula: string read FFormula write FFormula;     //формула в стиле R1C1
+    /// <summary>
+    ///   Specifies the URL to link this cell.
+    /// </summary>
     property HRef: string read FHref write FHref;              //гиперссылка
+    /// <summary>
+    ///   Displays the caption of URL to show on screen.
+    /// </summary>
     property HRefScreenTip: string read FHRefScreenTip write FHRefScreenTip; //подпись гиперссылки
+    /// <summary>
+    ///   Show comment. <br />False by default.
+    /// </summary>
     property ShowComment: boolean read FShowComment write FShowComment default false;
 
     property AsDouble: double read GetDataAsDouble write SetDataAsDouble;
@@ -107,6 +155,9 @@ type
   end;
 
   //стиль линии границы
+  /// <summary>
+  ///   Border's style.
+  /// </summary>
   TZBorderStyle = class (TPersistent)
   private
     FLineStyle: TZBorderType;
@@ -118,10 +169,22 @@ type
   public
     constructor Create();virtual;
     procedure Assign(Source: TPersistent); override;
+    /// <returns>
+    ///   True, when border equal to Source.
+    /// </returns>
     function IsEqual(Source: TPersistent): boolean; virtual;
   published
+    /// <summary>
+    ///   Line style. <br />ZENone by default.
+    /// </summary>
     property LineStyle: TZBorderType read FLineStyle write SetLineStyle default ZENone;
+    /// <summary>
+    ///   Specifies the thickness of this border (0-3). <br />0 by default.
+    /// </summary>
     property Weight: byte read FWeight write SetWeight default 0;
+    /// <summary>
+    ///   Specifies the color of this border. <br />ClBlack by default.
+    /// </summary>
     property Color: TColor read FColor write SetColor default ClBlack;
   end;
 
@@ -132,6 +195,9 @@ type
   //   3 - Bottom         нижн€€ граница
   //   4 - DiagonalLeft   диагон€ль от верхнего левого угла до нижнего правого
   //   5 - DiagonalRight  диагон€ль от нижнего левого угла до правого верхнего
+  /// <summary>
+  ///   Borders of cell.
+  /// </summary>
   TZBorder = class (TPersistent)
   private
     FBorder: array [0..5] of TZBorderStyle;
@@ -141,14 +207,39 @@ type
     constructor Create(); virtual;
     destructor Destroy(); override;
     procedure Assign(Source: TPersistent);override;
+    /// <summary>
+    ///   Set border where num: <br /><br />0 - Left border <br />1 - Top border <br />2 - Right border <br />3 - Bottom border <br />4 - DiagonalLeft (diagonal from upper left to
+    ///   lower right) <br />5 - DiagonalRight (diagonal from lower left to upper right) <br />
+    /// </summary>
     property Border[Num: integer]: TZBorderStyle read GetBorder write SetBorder; default;
+    /// <returns>
+    ///   True when borders equal Source.
+    /// </returns>
     function IsEqual(Source: TPersistent): boolean; virtual;
   published
+    /// <summary>
+    ///   Left border.
+    /// </summary>
     property Left         : TZBorderStyle index 0 read GetBorder write SetBorder;
+    /// <summary>
+    ///   Top border.
+    /// </summary>
     property Top          : TZBorderStyle index 1 read GetBorder write SetBorder;
+    /// <summary>
+    ///   Right border.
+    /// </summary>
     property Right        : TZBorderStyle index 2 read GetBorder write SetBorder;
+    /// <summary>
+    ///   Bottom border.
+    /// </summary>
     property Bottom       : TZBorderStyle index 3 read GetBorder write SetBorder;
+    /// <summary>
+    ///   Diagonal from upper left to lower right.
+    /// </summary>
     property DiagonalLeft : TZBorderStyle index 4 read GetBorder write SetBorder;
+    /// <summary>
+    ///   Diagonal from lower left to upper right.
+    /// </summary>
     property DiagonalRight: TZBorderStyle index 5 read GetBorder write SetBorder;
   end;
 
@@ -188,6 +279,9 @@ type
 
   //выравнивание
         //ReadingOrder - имхо, не нужно ^_^
+  /// <summary>
+  ///   Specifies how text is aligned within the cell.
+  /// </summary>
   TZAlignment = class (TPersistent)
   private
     FHorizontal: TZHorizontalAlignment; //горизонтальное выравнивание
@@ -210,18 +304,45 @@ type
   public
     constructor Create(); virtual;
     procedure Assign(Source: TPersistent); override;
+    /// <returns>
+    ///   True when all properties equal to Source's properties.
+    /// </returns>
     function IsEqual(Source: TPersistent): boolean; virtual;
   published
+    /// <summary>
+    ///   Specifies how text is aligned by horizontally within the cell. <br />ZHAutomatic by default.
+    /// </summary>
     property Horizontal: TZHorizontalAlignment read FHorizontal write SetHorizontal default ZHAutomatic;
+    /// <summary>
+    ///   Specifies how far the cell's text is indented. <br />0 by default.
+    /// </summary>
     property Indent: integer read FIndent write SetIndent default 0;
+    /// <summary>
+    ///   Specifies the rotation of the text within the cell (from -90 to 90). <br />0 by default.
+    /// </summary>
     property Rotate: TZCellTextRotate read FRotate write SetRotate;
+    /// <summary>
+    ///   If True then the text size will shrunk so to all of the text fits within the cell. <br />False by default.
+    /// </summary>
     property ShrinkToFit: boolean read FShrinkToFit write SetShrinkToFit default false;
+    /// <summary>
+    ///   Specifies how text is aligned by vertically within the cell. <br />ZVAutomatic by default.
+    /// </summary>
     property Vertical: TZVerticalAlignment read FVertical write SetVertical default ZVAutomatic;
+    /// <summary>
+    ///   If True each letter is drawn horizontally, one above the other. <br />False by default.
+    /// </summary>
     property VerticalText: boolean read FVerticalText write SetVerticalText default false;
+    /// <summary>
+    ///   Specifies whether the text in cell should wrap at the cell boundary. <br />False by default.
+    /// </summary>
     property WrapText: boolean read FWrapText write SetWrapText default false;
   end;
 
   //стиль €чейки
+  /// <summary>
+  ///   Cell style.
+  /// </summary>
   TZStyle = class (TPersistent)
   private
     FBorder: TZBorder;
@@ -245,20 +366,53 @@ type
     constructor Create(); virtual;
     destructor Destroy(); override;
     procedure Assign(Source: TPersistent); override;
+    /// <summary>
+    ///   True when style equal Source.
+    /// </summary>
     function IsEqual(Source: TPersistent): boolean; virtual;
   published
+    /// <summary>
+    ///   Cell font.
+    /// </summary>
     property Font: TFont read FFont write SetFont;
+    /// <summary>
+    ///   Cell borders.
+    /// </summary>
     property Border:TZBorder read FBorder write SetBorder;
+    /// <summary>
+    ///   Specifies how text is aligned within the cell.
+    /// </summary>
     property Alignment: TZAlignment read FAlignment write SetAlignment;
+    /// <summary>
+    ///   Background color of the cell. <br />clWindow by default.
+    /// </summary>
     property BGColor: TColor read FBGColor write SetBGColor default clWindow;
+    /// <summary>
+    ///   Color of fill pattern. <br />clWindow by default.
+    /// </summary>
     property PatternColor: TColor read FPatternColor write SetPatternColor default clWindow;
+    /// <summary>
+    ///   Indicates whether or not this cell is protected. <br />True by default.
+    /// </summary>
     property Protect: boolean read FProtect write FProtect default true;
+    /// <summary>
+    ///   Indicates whether or not this cell's formula should be hidden when sheet protection is enabled. <br />False by default.
+    /// </summary>
     property HideFormula: boolean read FHideFormula write FHideFormula default false;
+    /// <summary>
+    ///   Fill pattern of the cell. <br />ZPNone by default.
+    /// </summary>
     property CellPattern: TZCellPattern read FCellPattern write SetCellPattern default ZPNone;
+    /// <summary>
+    ///   Defines the number format that should be in cells referencing this style.
+    /// </summary>
     property NumberFormat: string read FNumberFormat write SetNumberFormat;
   end;
 
   //стили
+  /// <summary>
+  ///   Contains styles of the document.
+  /// </summary>
   TZStyles = class (TPersistent)
   private
     FDefaultStyle: TZStyle;
@@ -272,14 +426,37 @@ type
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
+    /// <summary>
+    ///   Add a Style. <br />Style - style, CheckMatch - checks the coincidence of this style with introduced in earlier styles. <br />Return number of added (or, if CheckMatch =
+    ///   True, previously introduced) style.
+    /// </summary>
     function Add(const Style: TZStyle; CheckMatch: boolean = false): integer;
     procedure Assign(Source: TPersistent); override;
+    /// <summary>
+    ///   Delete all styles.
+    /// </summary>
     procedure Clear(); virtual;
+    /// <summary>
+    ///   Delete style num, styles with a larger number are shifting. num - style number. <br />Return: <br />0 - if successfully deleted <br />-1 - can not delete style
+    /// </summary>
     function DeleteStyle(num: integer):integer; virtual;
+    /// <summary>
+    ///   Find number to match the Style introduced in earlier styles. <br />Return: <br />-2 - if style not found <br />-1 - if style = DefaultStyle <br />0..Count-1 - Style
+    ///   number
+    /// </summary>
     function Find(const Style: TZStyle): integer;
+    /// <summary>
+    ///   Style num (-1 - DefaultStyle).
+    /// </summary>
     property Items[num: integer]: TZStyle read GetStyle write SetStyle; default;
+    /// <summary>
+    ///   Count styles in the document.
+    /// </summary>
     property Count: integer read FCount write SetCount;
   published
+    /// <summary>
+    ///   Default style ( = Items[-1]).
+    /// </summary>
     property DefaultStyle: TZStyle read FDefaultStyle write SetDefaultStyle;
   end;
 
@@ -295,11 +472,31 @@ type
   public
     constructor Create(ASheet: TZSheet);virtual;
     destructor Destroy();override;
+    /// <summary>
+    ///   Adds a merged cell enclosed into rectangle Rct. <br />Return: <br />0 - The merged cell was successfully added <br />1 - Specified merged cell is outside the boundary of
+    ///   sheet <br />2 - Specified merged cell overlaps (included) in the previously entered areas <br />3 - Area of one cell does not add <br />4 - Attempt to merge fixed and
+    ///   not fixed cells
+    /// </summary>
     function AddRect(Rct:TRect): byte;
+    /// <summary>
+    ///   Adds a merged cell enclosed into rectangle (x1, y1, x2, y2). (x1, y1) - left top cell, (x2, y2) - right bottom cell. <br />Return is similar to AddRect(Rct: TRect).
+    /// </summary>
     function AddRectXY(x1,y1,x2,y2: integer): byte;
+    /// <summary>
+    ///   Delete merged cell num. <br />Return True if the cell is successfully deleted.
+    /// </summary>
     function DeleteItem(num: integer): boolean;
+    /// <summary>
+    ///   Returns the number of merged cell, in which the cell [ACol, ARow] is top left. If returns a negative value - there is no such area.
+    /// </summary>
     function InLeftTopCorner(ACol, ARow: integer): integer;
+    /// <summary>
+    ///   Returns the number of merged cell that includes cell [ACol, ARow]. If returns a negative value - cell [ACol, ARow] is not contained in the Merged area.
+    /// </summary>
     function InMergeRange(ACol, ARow: integer): integer;
+    /// <summary>
+    ///   Removes all merged cells.
+    /// </summary>
     procedure Clear();
     property Count: integer read FCount;
     property Items[Num: Integer]: TRect read GetItem; default;
@@ -310,6 +507,9 @@ type
   TZEXMLSS = class;
 
   //общие настройки Row / Column
+  /// <summary>
+  ///   Common options for columns and rows. Ancestor for TZColOptions and TZRowOptions.
+  /// </summary>
   TZRowColOptions = class (TPersistent)
   private
     FSheet: TZSheet;
@@ -330,34 +530,73 @@ type
   public
     constructor Create(ASheet: TZSheet); virtual;
     procedure Assign(Source: TPersistent); override;
+    /// <summary>
+    ///   True specifies that column or row is hidden. <br />False (not hidden) by default.
+    /// </summary>
     property Hidden: boolean read FHidden write FHidden default false;
+    /// <summary>
+    ///   Specifies a style for column or row. <br />-1 by default.
+    /// </summary>
     property StyleID: integer read FStyleID write FStyleID default -1;
+    /// <summary>
+    ///   Page break after column or row. <br />False (no break) by default.
+    /// </summary>
     property Breaked: boolean read FBreaked write FBreaked default false;
   end;
 
   //Columns
+  /// <summary>
+  ///   Column options.
+  /// </summary>
   TZColOptions = class (TZRowColOptions)
   protected
     function  GetSizePix(): integer; override;
     procedure SetSizePix(Value: integer); override;
   public
     constructor Create(ASheet: TZSheet); override;
+    /// <summary>
+    ///   If True, it means that this column should be autosized.
+    /// </summary>
     property AutoFitWidth: boolean read GetAuto write SetAuto;
+    /// <summary>
+    ///   Column width in points.
+    /// </summary>
     property Width: real read GetSizePoint write SetSizePoint;
+    /// <summary>
+    ///   Column width in mm.
+    /// </summary>
     property WidthMM: real read GetSizeMM write SetSizeMM;
+    /// <summary>
+    ///   Column width in pixels.
+    /// </summary>
     property WidthPix: integer read GetSizePix write SetSizePix;
   end;
 
   //Rows
+  /// <summary>
+  ///   Row options.
+  /// </summary>
   TZRowOptions = class (TZRowColOptions)
   protected
     function  GetSizePix(): integer; override;
     procedure SetSizePix(Value: integer); override;
   public
     constructor Create(ASheet: TZSheet); override;
+    /// <summary>
+    ///   If True, it means that this row should be autosized.
+    /// </summary>
     property AutoFitHeight: boolean read GetAuto write SetAuto;
+    /// <summary>
+    ///   Row height in points (1 point = 1/72" = 0.3528 mm).
+    /// </summary>
     property Height: real read GetSizePoint write SetSizePoint;
+    /// <summary>
+    ///   Row height in mm.
+    /// </summary>
     property HeightMM: real read GetSizeMM write SetSizeMM;
+    /// <summary>
+    ///   Row height in pixels.
+    /// </summary>
     property HeightPix: integer read GetSizePix write SetSizePix;
   end;
 
@@ -393,6 +632,9 @@ type
   end;
 
   //Footer/Header
+  /// <summary>
+  ///   Footer or header.
+  /// </summary>
   TZSheetFooterHeader = class (TPersistent)
   private
     FDataLeft: string;
@@ -404,13 +646,28 @@ type
     procedure Assign(Source: TPersistent); override;
     function IsEqual(Source: TPersistent): boolean; virtual;
   published
+    /// <summary>
+    ///   Left text.
+    /// </summary>
     property DataLeft: string read FDataLeft write FDataLeft;
+    /// <summary>
+    ///   Center text.
+    /// </summary>
     property Data: string read FData write FData;
+    /// <summary>
+    ///   Right text.
+    /// </summary>
     property DataRight: string read FDataRight write FDataRight;
+    /// <summary>
+    ///   Set to true for display footer or header.
+    /// </summary>
     property IsDisplay: boolean read FIsDisplay write FIsDisplay;
   end;
 
   //Header/Footer margins
+  /// <summary>
+  ///   Footer or header margins.
+  /// </summary>
   TZHeaderFooterMargins = class (TPersistent)
   private
     FMarginTopBottom: word;       //Bottom or top margin
@@ -425,14 +682,32 @@ type
     procedure Assign(Source: TPersistent); override;
     function IsEqual(Source: TPersistent): boolean; virtual;
   published
+    /// <summary>
+    ///   Bottom / top margin of the footer / header in mm. <br />13 by default.
+    /// </summary>
     property MarginTopBottom: word read FMarginTopBottom write FMarginTopBottom default 13;
+    /// <summary>
+    ///   Left margin in mm. <br />0 by default.
+    /// </summary>
     property MarginLeft: word read FMarginLeft write FMarginLeft default 0;
+    /// <summary>
+    ///   Right margin in mm. <br />0 by default.
+    /// </summary>
     property MarginRight: word read FMarginRight write FMarginRight default 0;
+    /// <summary>
+    ///   Height of footer / header in mm. <br />7 by default.
+    /// </summary>
     property Height: word read FHeight write FHeight default 7;
+    /// <summary>
+    ///   Automatically fit height. <br />true by default.
+    /// </summary>
     property UseAutoFitHeight: boolean read FUseAutoFitHeight write FUseAutoFitHeight default true;
   end;
 
   //WorkSheetOptions
+  /// <summary>
+  ///   Inherited from TPersistent. Sheet options.
+  /// </summary>
   TZSheetOptions = class (TPersistent)
   private
     // достали дюймы! Ѕудем измер€ть в ћћ!
@@ -486,40 +761,145 @@ type
     destructor Destroy(); override;
     procedure Assign(Source: TPersistent); override;
   published
+    /// <summary>
+    ///   Column number with active cell. <br />0 by default.
+    /// </summary>
     property ActiveCol: word read FActiveCol write FActiveCol default 0;
+    /// <summary>
+    ///   Row number with active cell. <br />0 by default.
+    /// </summary>
     property ActiveRow: word read FActiveRow write FActiveRow default 0;
+    /// <summary>
+    ///   Specifies the bottom margin on the page in millimeters. <br />25 mm by default.
+    /// </summary>
     property MarginBottom: word read FMarginBottom write FMarginBottom default 25;
+    /// <summary>
+    ///   Specifies the left margin on the page in millimeters. <br />20 mm by default.
+    /// </summary>
     property MarginLeft: word read FMarginLeft write FMarginLeft default 20;
+    /// <summary>
+    ///   Specifies the top margin on the page in millimeters. <br />25 mm by default.
+    /// </summary>
     property MarginTop: word read FMarginTop write FMarginTop default 25;
+    /// <summary>
+    ///   Specifies the right margin on the page in millimeters. <br />20 mm by default.
+    /// </summary>
     property MarginRight: word read FMarginRight write FMarginRight default 20;
+    /// <summary>
+    ///   Paper Size (Paper size table). <br />9 (A4) by default.
+    /// </summary>
     property PaperSize: byte read FPaperSize write FPaperSize default 9; // A4
+    /// <summary>
+    ///   Paper width in mm. Used only when PaperSize = 0!
+    /// </summary>
     property PaperWidth: integer read FPaperWidth write FPaperWidth default 0;    //User defined paper width in mm.
                                                                                   // used only for PaperSize = 0!
+    /// <summary>
+    ///   Paper height in mm. Used only when PaperSize = 0!
+    /// </summary>
     property PaperHeight: integer read FPaperHeight write FPaperHeight default 0; //User defined paper height in mm.
                                                                                   // used only for PaperSize = 0!
+    /// <summary>
+    ///   Specifies the orientation of the page (True - Portrait, False - Landscape). <br />True by default.
+    /// </summary>
     property PortraitOrientation: boolean read FPortraitOrientation write FPortraitOrientation default true;
+    /// <summary>
+    ///   If True, the document should be centered horizontally on the page. <br />False by default.
+    /// </summary>
     property CenterHorizontal: boolean read FCenterHorizontal write FCenterHorizontal default false;
+    /// <summary>
+    ///   If True, the document should be centered vertically on the page. <br />False by default.
+    /// </summary>
     property CenterVertical: boolean read FCenterVertical write FCenterVertical default false;
+    /// <summary>
+    ///   Specifies the starting page number for print. <br />1 by default.
+    /// </summary>
     property StartPageNumber: integer read FStartPageNumber write FStartPageNumber default 1;
-    property HeaderMargin: word read GetHeaderMargin write SetHeaderMargin default 13; //deprecated!
-    property FooterMargin: word read GetFooterMargin write SetFooterMargin default 13; //deprecated!
+    /// <summary>
+    ///   The size of header in millimeters. <br />13 mm by default. <br />
+    /// </summary>
+    /// <remarks>
+    ///   deprecated 'Use HeaderMargins.Height!'
+    /// </remarks>
+    property HeaderMargin: word read GetHeaderMargin write SetHeaderMargin default 13;
+    /// <summary>
+    ///   The size of footer in millimeters. <br />13 mm by default. <br />
+    /// </summary>
+    /// <remarks>
+    ///   deprecated 'Use FooterMargins.Height!'
+    /// </remarks>
+    property FooterMargin: word read GetFooterMargin write SetFooterMargin default 13;
+    /// <summary>
+    ///   Sizes and margins for header in mm.
+    /// </summary>
     property HeaderMargins: TZHeaderFooterMargins read FHeaderMargins;
+    /// <summary>
+    ///   Sizes and margins for footer in mm.
+    /// </summary>
     property FooterMargins: TZHeaderFooterMargins read FFooterMargins;
+    /// <summary>
+    ///   f set in true means that footers on even and odd pages are equals. <br />True by default.
+    /// </summary>
     property IsEvenFooterEqual: boolean read FIsEvenFooterEqual write FIsEvenFooterEqual default true;
+    /// <summary>
+    ///   If set in true means that headers on even and odd pages are equals. <br />True by default.
+    /// </summary>
     property IsEvenHeaderEqual: boolean read FIsEvenHeaderEqual write FIsEvenHeaderEqual default true;
-    property HeaderData: string read GetHeaderData write SetHeaderData; //deprecated
-    property FooterData: string read GetFooterData write SetFooterData; //deprecated
+    /// <summary>
+    ///   Specifies the data for the header. <br />
+    /// </summary>
+    /// <remarks>
+    ///   deprecated 'Use Header.Data!';
+    /// </remarks>
+    property HeaderData: string read GetHeaderData write SetHeaderData;
+    /// <summary>
+    ///   Specifies the data for the footer. <br />
+    /// </summary>
+    /// <remarks>
+    ///   deprecated 'Use Footer.Data!';
+    /// </remarks>
+    property FooterData: string read GetFooterData write SetFooterData;
     property Header: TZSheetFooterHeader read FHeader;
     property Footer: TZSheetFooterHeader read FFooter;
+    /// <summary>
+    ///   Header for even page numbers. Used only when IsEvenHeaderEqual = true.
+    /// </summary>
     property EvenHeader: TZSheetFooterHeader read FEvenHeader;
+    /// <summary>
+    ///   Footer for even page numbers. Used only when IsEvenFooterEqual = true.
+    /// </summary>
     property EvenFooter: TZSheetFooterHeader read FEvenFooter;
+    /// <summary>
+    ///   Background color for header. <br />clWindow by default.
+    /// </summary>
     property HeaderBGColor: TColor read FHeaderBGColor write FHeaderBGColor default clWindow;
+    /// <summary>
+    ///   Background color for footer. <br />clWindow by default.
+    /// </summary>
     property FooterBGColor: TColor read FFooterBGColor write FFooterBGColor default clWindow;
+    /// <summary>
+    ///   Document must be scaled to percentage value (100 - no scale). <br />100 by default.
+    /// </summary>
     property ScaleToPercent: integer read FScaleToPercent write FScaleToPercent default 100;
+    /// <summary>
+    ///   Document scaled to fit a number of pages (1 - no scale). <br />1 by default.
+    /// </summary>
     property ScaleToPages: integer read FScaleToPages write FScaleToPages default 1;
+    /// <summary>
+    ///   Vertical columns split/freeze mode. Does the same thing as LibreOffice Calc commands "Window - Freeze"/ "Window - Split" <br />ZSplitNone by default.
+    /// </summary>
     property SplitVerticalMode: TZSplitMode read FSplitVerticalMode write FSplitVerticalMode default ZSplitNone;
+    /// <summary>
+    ///   Horizontal rows split/freeze mode. <br />ZSplitNone by default.
+    /// </summary>
     property SplitHorizontalMode: TZSplitMode read FSplitHorizontalMode write FSplitHorizontalMode default ZSplitNone;
+    /// <summary>
+    ///   If SplitVerticalMode = ZSplitFrozen then count of column for freeze. If SplitVerticalMode = ZSplitSplit then size in pixels. <br />0 by default.
+    /// </summary>
     property SplitVerticalValue: integer read FSplitVerticalValue write FSplitVerticalValue;
+    /// <summary>
+    ///   If SplitHorizontalMode = ZSplitFrozen then count of rows for freeze. If SplitHorizontalMode = ZSplitSplit then size if pixels. <br />0 by default.
+    /// </summary>
     property SplitHorizontalValue: integer read FSplitHorizontalValue write FSplitHorizontalValue;
   end;
 
@@ -1046,6 +1426,9 @@ type
   {$ENDIF} //ZUSE_CHARTS
 
   //лист документа
+  /// <summary>
+  ///   nherited from TPersistent. Contains a sheet of the document.
+  /// </summary>
   TZSheet = class (TPersistent)
   private
     FStore: TZEXMLSS;
@@ -1105,28 +1488,76 @@ type
     destructor Destroy(); override;
     procedure Assign(Source: TPersistent); override;
     procedure Clear(); virtual;
+    /// <summary>
+    ///   Get or set the width (in points) of column num in the sheet.
+    /// </summary>
     property ColWidths[num: integer]: real read GetColWidth write SetColWidth;
+    /// <summary>
+    ///   Options of column num.
+    /// </summary>
     property Columns[num: integer]: TZColOptions read GetColumn write SetColumn;
+    /// <summary>
+    ///   Specifies various properties of the Row num.
+    /// </summary>
     property Rows[num: integer]: TZRowOptions read GetRow write SetRow;
+    /// <summary>
+    ///   Get or set the height (in points) of row num in the sheet.
+    /// </summary>
     property RowHeights[num: integer]: real read GetRowHeight write SetRowHeight;
+    /// <summary>
+    ///   Default column width.
+    /// </summary>
     property DefaultColWidth: real read FDefaultColwidth write SetDefaultColWidth;// default 48;
+    /// <summary>
+    ///   Default row height.
+    /// </summary>
     property DefaultRowHeight: real read FDefaultRowHeight write SetDefaultRowHeight;// default 12.75;
+    /// <summary>
+    ///   Cell at the intersection of column ACol and row ARow.
+    /// </summary>
     property Cell[ACol, ARow: integer]: TZCell read GetCell write SetCell; default;
     property AutoFilter: string read FAutoFilter write FAutoFilter;
+    /// <summary>
+    ///   Indicates whether or not this sheet is protected. <br />False by default.
+    /// </summary>
     property Protect: boolean read FProtect write FProtect default false; //защищЄн ли лист от изменени€
     property TabColor: TColor read FTabColor write FTabColor default ClWindow;
+    /// <summary>
+    ///   Sheet title.
+    /// </summary>
     property Title: string read FTitle write FTitle;
+    /// <summary>
+    ///   Specifies the number of rows in the sheet.
+    /// </summary>
     property RowCount: integer read GetRowCount write SetRowCount;
+    /// <summary>
+    ///   If True, the window displays from right to left else window displays from left to right. <br />False by default.
+    /// </summary>
     property RightToLeft: boolean read FRightToLeft write FRightToLeft default false;
+    /// <summary>
+    ///   Specifies the number of columns in the sheet.
+    /// </summary>
     property ColCount: integer read GetColCount write SetColCount;
+    /// <summary>
+    ///   Merged cells.
+    /// </summary>
     property MergeCells: TZMergeCells read FMergeCells write FMergeCells;
+    /// <summary>
+    ///   Specifies various properties of the sheet.
+    /// </summary>
     property SheetOptions: TZSheetOptions read GetSheetOptions write SetSheetOptions;
+    /// <summary>
+    ///   Indicates whether or not this sheet is selecteded.
+    /// </summary>
     property Selected: boolean read FSelected write FSelected;
 
     property RowsToRepeat: TZSheetPrintTitles read FPrintRows write SetPrintRows;
     property ColsToRepeat: TZSheetPrintTitles read FPrintCols write SetPrintCols;
 
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
+    /// <summary>
+    ///   Conditional formatting for sheet.
+    /// </summary>
     property ConditionalFormatting: TZConditionalFormatting read FConditionalFormatting write SetConditionalFormatting;
     {$ENDIF}
 
@@ -1136,6 +1567,9 @@ type
   end;
 
   //—траницы
+  /// <summary>
+  ///   Document sheets.
+  /// </summary>
   TZSheets = class (TPersistent)
   private
     FStore: TZEXMLSS;
@@ -1149,11 +1583,20 @@ type
     constructor Create(AStore: TZEXMLSS); virtual;
     destructor  Destroy(); override;
     procedure Assign(Source: TPersistent); override;
+    /// <summary>
+    ///   Number of sheets in the document.
+    /// </summary>
     property Count: integer read FCount write SetSheetCount;
+    /// <summary>
+    ///   document's sheet num.
+    /// </summary>
     property Sheet[num: integer]: TZSheet read GetSheet write SetSheet; default;
   end;
 
   //—войства документа
+  /// <summary>
+  ///   Document properties
+  /// </summary>
   TZEXMLDocumentProperties = class(TPersistent)
   private
     FAuthor      : string;
@@ -1175,11 +1618,26 @@ type
     constructor Create(); virtual;
     procedure Assign(Source: TPersistent); override;
   published
+    /// <summary>
+    ///   Author of the document.
+    /// </summary>
     property Author: string read FAuthor write SetAuthor;
+    /// <summary>
+    ///   Author of last changes in the document.
+    /// </summary>
     property LastAuthor: string read FLastAuthor write SetLastAuthor;
+    /// <summary>
+    ///   Date and time of document creation.
+    /// </summary>
     property Created: TdateTime read FCreated write FCreated;
+    /// <summary>
+    ///   Company name.
+    /// </summary>
     property Company: string read FCompany write SetCompany;
     property Version: string read FVersion write SetVersion;
+    /// <summary>
+    ///   Enabled R1C1 style in Excel. <br />False by default.
+    /// </summary>
     property ModeR1C1: boolean read FModeR1C1 write FModeR1C1 default false;
     property WindowHeight: word read FWindowHeight write FWindowHeight default 20000;
     property WindowWidth: word read FWindowWidth write FWindowWidth default 20000;
@@ -1187,6 +1645,9 @@ type
     property WindowTopY: integer read FWindowTopY write FWindowTopY default 150;
   end;
 
+  /// <summary>
+  ///   contains spreadsheet document
+  /// </summary>
   TZEXMLSS = class (TComponent)
   private
     FSheets: TZSheets;
