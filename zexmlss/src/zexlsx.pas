@@ -297,7 +297,68 @@ function ZEXSLXReadComments(var XMLSS: TZEXMLSS; var Stream: TStream): boolean;
 function ZEXLSXCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateWorkBook(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
                               const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
-function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring; const WriteHelper: TZEXLSXWriteHelper): integer;
+/// <summary>
+///   After testing the most logical place to implement 'Shared Strings' is inside this function. It is only called for XLSX.
+/// </summary>
+/// <remarks>
+///   <para>
+///     Export to XLSX Speed Test
+///   </para>
+///   <para>
+///     <b>Tests for CR, LF, essentially no Shared String entries since this data contains no CRLFs</b>
+///   </para>
+///   <list type="table">
+///     <listheader>
+///       <term>Rows</term>
+///       <description>Exported in - String entries</description>
+///     </listheader>
+///     <item>
+///       <term>177,376</term>
+///       <description>32:780 - 3,370,144</description>
+///     </item>
+///     <item>
+///       <term>354,752</term>
+///       <description>1:04:035 - 6,740,288</description>
+///     </item>
+///     <item>
+///       <term>546,968</term>
+///       <description>1:37:422 - 10,392,392</description>
+///     </item>
+///   </list>
+///   <para>
+///     <br /><br /><b>All strings as Shared Strings</b>
+///   </para>
+///   <list type="table">
+///     <listheader>
+///       <term>Rows</term>
+///       <description>Exported in - Shared String entries</description>
+///     </listheader>
+///     <item>
+///       <term>177,376</term>
+///       <description>51:761 - 3,370,144</description>
+///     </item>
+///     <item>
+///       <term>354,752</term>
+///       <description>1:38:068 - 6,740,288</description>
+///     </item>
+///     <item>
+///       <term>546,968</term>
+///       <description>2:17:712 - 10,392,392</description>
+///     </item>
+///     <item>
+///       <term />
+///       <description><note type="note">
+///           Files are larger, so at least some of that speed is used up for zipping
+///         </note>
+///       </description>
+///     </item>
+///   </list>
+///   <note type="note">
+///     After conversion speed was within a couple hundred milliseconds of the now Shared Strings tests.
+///   </note>
+/// </remarks>
+function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; var ASharedStrings: TStringDynArray; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM:
+    ansistring; const WriteHelper: TZEXLSXWriteHelper): integer;
 function ZEXLSXCreateContentTypes(var XMLSS: TZEXMLSS; Stream: TStream; PageCount: integer; CommentCount: integer; const PagesComments: TIntegerDynArray;
                                   TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring;
                                   const WriteHelper: TZEXLSXWriteHelper): integer;
@@ -5303,12 +5364,12 @@ end; //ZEXLSXCreateContentTypes
 //  const WriteHelper: TZEXLSXWriteHelper - additional data
 //RETURN
 //      integer
-function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter;
-                                     CodePageName: String; BOM: ansistring; const WriteHelper: TZEXLSXWriteHelper): integer;
+function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; var ASharedStrings: TStringDynArray; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM:
+    ansistring; const WriteHelper: TZEXLSXWriteHelper): integer;
 var
   _xml: TZsspXMLWriterH;    //писатель
   _sheet: TZSheet;
-
+const CR = #13; LF = #10;
   {
   procedure _AddSelection(const _Cell, _Pane: string);
   begin
@@ -5587,13 +5648,20 @@ var
           s := '0';
         _xml.Attributes.Add('s', s, false);
 
+        /// <remarks>
+        ///   Only XLSX gets here, lets remap all string with CR or LF to SharedStrings
+        /// </remarks>
         case _sheet.Cell[j, i].CellType of
           ZENumber: s := 'n';
           ZEDateTime: s := 'd'; //??
           ZEBoolean: s := 'b';
-          ZEString: s := 'str';
+          ZEString: begin
+            if (_sheet.Cell[j, i].Data.IndexOfAny([CR,LF]) > -1 ) then begin
+              _sheet.Cell[j, i].Data := ASharedStrings.Add(_sheet.Cell[j, i].Data).ToString;
+              s := 's'; // works
+            end else s := 'str';
+          end;
           ZEError: s := 'e';
-          zeSharedString: s := 's'; // works
         end;
         
         // если тип ячейки ZEGeneral, то атрибут опускаем
@@ -6763,7 +6831,7 @@ begin
 
     {- Write out the content of Shared Strings: <si><t>Value</t></si> }
     _xml.Attributes.Clear();
-    for i := Low(SharedStrings) to High(SharedStrings) do begin
+    for i := 0 to Pred(count) do begin
       _xml.WriteTagNode('si', false, False, false);
         _xml.WriteTag('t', SharedStrings[i]);
       _xml.WriteEndTagNode();
@@ -6900,6 +6968,9 @@ function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; PathName: string; const SheetsNu
                          BOM: ansistring = '';
                          AllowUnzippedFolder: boolean = false;
                          ZipGenerator: CZxZipGens = nil): integer;
+{$REGION 'History'}
+//  16-Jun-2018 - Implemented Shared Strings
+{$ENDREGION}
 var
   _pages: TIntegerDynArray;      //номера страниц
   _names: TStringDynArray;      //названия страниц
@@ -6911,7 +6982,7 @@ var
   _WriteHelper: TZEXLSXWriteHelper;
 
   azg: TZxZipGen; // Actual Zip Generator
-
+  LSharedStrings: TStringDynArray;
 begin
   Result := 0;
   Stream := nil;
@@ -6956,12 +7027,6 @@ begin
     azg.SealStream(Stream);   Stream := nil;
 //    FreeAndNil(Stream);
 
-    //sharedStrings.xml
-    Stream := azg.NewStream(path_xl + 'sharedStrings.xml');
-    ZEXLSXCreateSharedStrings(XMLSS, Stream, XMLSS.SharedStrings, TextConverter, CodePageName, BOM);
-    azg.SealStream(Stream);    Stream := nil;
-//    FreeAndNil(Stream);
-
     // _rels/.rels
     path_relsmain := {PathName + PathDelim +} '_rels' + PathDelim;
 //    if (not DirectoryExists(path_relsmain)) then
@@ -6989,7 +7054,7 @@ begin
     begin
       _commentArray[i] := 0;
       Stream := azg.NewStream(path_sheets + 'sheet' + IntToStr(i + 1) + '.xml');
-      ZEXLSXCreateSheet(XMLSS, Stream, _pages[i], TextConverter, CodePageName, BOM, _WriteHelper);
+      ZEXLSXCreateSheet(XMLSS, Stream, _pages[i], LSharedStrings, TextConverter, CodePageName, BOM, _WriteHelper);
       if (_WriteHelper.isHaveComments) then
         _commentArray[i] := 1;
       azg.SealStream(Stream);   Stream := nil;
@@ -7008,6 +7073,11 @@ begin
         //создать файл с комментариями
       end;  
     end; //for i
+
+    {- sharedStrings.xml: moved here to allow conversion to Shared Strings }
+    Stream := azg.NewStream(path_xl + 'sharedStrings.xml');
+    ZEXLSXCreateSharedStrings(XMLSS, Stream, LSharedStrings, TextConverter, CodePageName, BOM);
+    azg.SealStream(Stream);    Stream := nil;
 
     //workbook.xml - список листов
     Stream := azg.NewStream(path_xl + 'workbook.xml');
@@ -7059,6 +7129,9 @@ end;
 //      integer
 function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
+{$REGION 'History'}
+//  16-Jun-2018 - Implemented Shared Strings
+{$ENDREGION}
 var
   _pages: TIntegerDynArray;      //номера страниц
   _names: TStringDynArray;      //названия страниц
@@ -7068,7 +7141,7 @@ var
   path_xl, path_sheets, path_relsmain, path_relsw, path_docprops: string;
   _commentArray: TIntegerDynArray;
   s: string;
-
+  LSharedStrings : TStringDynArray;
 begin
   Result := 0;
   Stream := nil;
@@ -7098,11 +7171,6 @@ begin
     ZEXLSXCreateStyles(XMLSS, Stream, TextConverter, CodePageName, BOM);
     FreeAndNil(Stream);
 
-    //sharedStrings.xml
-    Stream := TFileStream.Create(path_xl + 'sharedStrings.xml', fmCreate);
-    ZEXLSXCreateSharedStrings(XMLSS, Stream, XMLSS.SharedStrings, TextConverter, CodePageName, BOM);
-    FreeAndNil(Stream);
-
     // _rels/.rels
     path_relsmain := PathName + PathDelim + '_rels' + PathDelim;
     if (not DirectoryExists(path_relsmain)) then
@@ -7130,7 +7198,7 @@ begin
     begin
       _commentArray[i] := 0;
       Stream := TFileStream.Create(path_sheets + 'sheet' + IntToStr(i + 1) + '.xml', fmCreate);
-      ZEXLSXCreateSheet(XMLSS, Stream, _pages[i], TextConverter, CodePageName, BOM, _WriteHelper);
+      ZEXLSXCreateSheet(XMLSS, Stream, _pages[i], LSharedStrings, TextConverter, CodePageName, BOM, _WriteHelper);
       FreeAndNil(Stream);
 
       if (_WriteHelper.HyperLinksCount > 0) then
@@ -7150,6 +7218,11 @@ begin
         //создать файл с комментариями
       end;  
     end; //for i
+
+    {- sharedStrings.xml: moved here to allow conversion to Shared Strings }
+    Stream := TFileStream.Create(path_xl + 'sharedStrings.xml', fmCreate);
+    ZEXLSXCreateSharedStrings(XMLSS, Stream, LSharedStrings, TextConverter, CodePageName, BOM);
+    FreeAndNil(Stream);
 
     //workbook.xml - список листов
     Stream := TFileStream.Create(path_xl + 'workbook.xml', fmCreate);
@@ -7288,11 +7361,6 @@ begin
     ZEXLSXCreateStyles(XMLSS, Stream[StreamCount - 1], TextConverter, CodePageName, BOM);
     _AddFile(path_xl + 'styles.xml');
 
-    //sharedStrings.xml
-    _AddStream();
-    ZEXLSXCreateSharedStrings(XMLSS, Stream[StreamCount - 1], TextConverter, CodePageName, BOM);
-    _AddFile(path_xl + 'sharedStrings.xml');
-
     // _rels/.rels
     path_relsmain := '_rels/';
     _AddStream();
@@ -7330,6 +7398,11 @@ begin
         //создать файл с комментариями
       end;
     end; //for i
+
+    {- sharedStrings.xml: moved here to allow conversion to Shared Strings }
+    _AddStream();
+    ZEXLSXCreateSharedStrings(XMLSS, Stream[StreamCount - 1], TextConverter, CodePageName, BOM);
+    _AddFile(path_xl + 'sharedStrings.xml');
 
     //workbook.xml - список листов
     _AddStream();

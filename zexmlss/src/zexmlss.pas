@@ -47,7 +47,7 @@ type
   /// <summary>
   ///   Data type of cell
   /// </summary>
-  TZCellType = (ZENumber, ZEDateTime, ZEBoolean, ZEString, ZEError, ZEGeneral, zeSharedString);
+  TZCellType = (ZENumber, ZEDateTime, ZEBoolean, ZEString, ZEError, ZEGeneral);
       const ZEAnsiString = ZEString deprecated {$IFDEF USE_DEPRECATED_STRING}'use ZEString'{$ENDIF}; // backward compatibility
 type
   //Стиль начертания линий рамки ячейки
@@ -101,21 +101,6 @@ type
     function GetDataAsInteger: integer;
 
     function GetDataAsDateTime(): TDateTime;
-    /// <summary>
-    ///   Only for XLSX exports will fail for XML
-    /// </summary>
-    /// <remarks>
-    ///   Generates a Shared String table which fixed multi line display for XLSX
-    /// </remarks>
-    /// <example>
-    ///   <code lang="Delphi">{- SharedString only with XLSX Eports }
-    /// if string(Filename).EndsWith('.xlsx', true)
-    ///    and (Value.IndexOfAny([#13,#10]) &gt; -1) then begin
-    ///   CellStyle := MemoStyle;
-    ///   AsSharedString := Value
-    /// end else AsString := Value;</code>
-    /// </example>
-    procedure SetAsSharedString(const Value: string);
     procedure SetDataAsDateTime(const Value: TDateTime);
     procedure SetDataAsString(const Value: string);
   public
@@ -166,7 +151,6 @@ type
     property AsDouble: double read GetDataAsDouble write SetDataAsDouble;
     property AsInteger: integer read GetDataAsInteger write SetDataAsInteger;
     property AsDateTime: TDateTime read GetDataAsDateTime write SetDataAsDateTime;
-    property AsSharedString: string write SetAsSharedString;
     property AsString: string read FData write SetDataAsString;
   end;
 
@@ -1678,14 +1662,6 @@ type
     function  GetDefaultSheetOptions(): TZSheetOptions;
     procedure SetDefaultSheetOptions(Value: TZSheetOptions);
   public
-    class var
-      /// <summary>
-      ///   Used for 'xlsx' exports to load Shared Strings.
-      /// </summary>
-      /// <remarks>
-      ///   Destroy will clear it to conserver memory. <br />To make it an instance variable I would need to add a pointer to EVERY cell.. This will do and stay frugal.
-      /// </remarks>
-      SharedStrings: TStringDynArray;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy();override;
     procedure Assign(Source: TPersistent); override;
@@ -3357,12 +3333,6 @@ begin
   FShowComment := false;
 end;
 
-procedure TZCell.SetAsSharedString(const Value: string);
-begin
-  FData := TZEXMLSS.SharedStrings.Add(Value).ToString;
-  CellType := zeSharedString;
-end;
-
 ////::::::::::::: TZMergeCells :::::::::::::::::////
 
 constructor TZMergeCells.Create(ASheet: TZSheet);
@@ -4393,7 +4363,6 @@ begin
   FreeAndNil(FDocumentProperties);
   FreeAndNil(FStyles);
   FreeAndNil(FSheets);
-  SetLength(SharedStrings, 0);
   inherited Destroy();
 end;
 
