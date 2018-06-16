@@ -1,4 +1,4 @@
-//****************************************************************
+п»ї//****************************************************************
 // Routines for formulas.
 // Author:  Ruslan V. Neborak
 // e-mail:  avemey@tut.by
@@ -46,14 +46,14 @@ uses
 
 const
   //ZE_RTA = ZE R1C1 to A1
-  ZE_RTA_ODF            =   1;  //преобразовывать для ODF (=[.A1] + [.B1])
-  ZE_RTA_ODF_PREFIX     =   2;  //добавлять префикс для ODF, если первый символ в формуле '=' (of:=[.A1] + [.B1])
-  ZE_RTA_NO_ABSOLUTE    =   4;  //все абсолютные ссылки заменять на относительные (R1C1 => A1) (относительные не меняет)
-  ZE_RTA_ONLY_ABSOLUTE  =   8;  //все относительные ссылки заменять на абсолютные (R[1]C[1] => $C$3) (абсолютные не меняет)
-  ZE_RTA_ODF_NO_BRACKET = $10;  //Для ODF, но не добавлять квадратные скобки, разделитель лист/ячейка - точка ".".
+  ZE_RTA_ODF            =   1;  //РїСЂРµРѕР±СЂР°Р·РѕРІС‹РІР°С‚СЊ РґР»СЏ ODF (=[.A1] + [.B1])
+  ZE_RTA_ODF_PREFIX     =   2;  //РґРѕР±Р°РІР»СЏС‚СЊ РїСЂРµС„РёРєСЃ РґР»СЏ ODF, РµСЃР»Рё РїРµСЂРІС‹Р№ СЃРёРјРІРѕР» РІ С„РѕСЂРјСѓР»Рµ '=' (of:=[.A1] + [.B1])
+  ZE_RTA_NO_ABSOLUTE    =   4;  //РІСЃРµ Р°Р±СЃРѕР»СЋС‚РЅС‹Рµ СЃСЃС‹Р»РєРё Р·Р°РјРµРЅСЏС‚СЊ РЅР° РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅС‹Рµ (R1C1 => A1) (РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅС‹Рµ РЅРµ РјРµРЅСЏРµС‚)
+  ZE_RTA_ONLY_ABSOLUTE  =   8;  //РІСЃРµ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅС‹Рµ СЃСЃС‹Р»РєРё Р·Р°РјРµРЅСЏС‚СЊ РЅР° Р°Р±СЃРѕР»СЋС‚РЅС‹Рµ (R[1]C[1] => $C$3) (Р°Р±СЃРѕР»СЋС‚РЅС‹Рµ РЅРµ РјРµРЅСЏРµС‚)
+  ZE_RTA_ODF_NO_BRACKET = $10;  //Р”Р»СЏ ODF, РЅРѕ РЅРµ РґРѕР±Р°РІР»СЏС‚СЊ РєРІР°РґСЂР°С‚РЅС‹Рµ СЃРєРѕР±РєРё, СЂР°Р·РґРµР»РёС‚РµР»СЊ Р»РёСЃС‚/СЏС‡РµР№РєР° - С‚РѕС‡РєР° ".".
 
   //ZE_ATR = ZE A1 to R1C1
-  ZE_ATR_DEL_PREFIX     =   1;  //Удалять все символы до первого '='
+  ZE_ATR_DEL_PREFIX     =   1;  //РЈРґР°Р»СЏС‚СЊ РІСЃРµ СЃРёРјРІРѕР»С‹ РґРѕ РїРµСЂРІРѕРіРѕ '='
 
 function ZEGetA1byCol(ColNum: integer; StartZero: boolean = true): string;
 function ZEGetColByA1(AA: string; StartZero: boolean = true): integer;
@@ -68,14 +68,14 @@ implementation
 const
   ZE_STR_ARRAY: array [0..25] of char = ('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
 
-//Получает номер строки и столбца по строковому значению (для A1 стилей)
+//РџРѕР»СѓС‡Р°РµС‚ РЅРѕРјРµСЂ СЃС‚СЂРѕРєРё Рё СЃС‚РѕР»Р±С†Р° РїРѕ СЃС‚СЂРѕРєРѕРІРѕРјСѓ Р·РЅР°С‡РµРЅРёСЋ (РґР»СЏ A1 СЃС‚РёР»РµР№)
 //INPUT
-//  const cell: string      - номер ячейки в A1 стиле
-//  out column: integer     - возвращаемый номер столбца
-//  out row: integer        - возвращаемый номер строки
-//      StartZero: boolean  - признак нумерации с нуля
+//  const cell: string      - РЅРѕРјРµСЂ СЏС‡РµР№РєРё РІ A1 СЃС‚РёР»Рµ
+//  out column: integer     - РІРѕР·РІСЂР°С‰Р°РµРјС‹Р№ РЅРѕРјРµСЂ СЃС‚РѕР»Р±С†Р°
+//  out row: integer        - РІРѕР·РІСЂР°С‰Р°РµРјС‹Р№ РЅРѕРјРµСЂ СЃС‚СЂРѕРєРё
+//      StartZero: boolean  - РїСЂРёР·РЅР°Рє РЅСѓРјРµСЂР°С†РёРё СЃ РЅСѓР»СЏ
 //RETURN
-//      boolean - true - координаты успешно определены
+//      boolean - true - РєРѕРѕСЂРґРёРЅР°С‚С‹ СѓСЃРїРµС€РЅРѕ РѕРїСЂРµРґРµР»РµРЅС‹
 function ZEGetCellCoords(const cell: string; out column, row: integer; StartZero: boolean = true): boolean;
 var
   i: integer;
@@ -126,16 +126,16 @@ begin
   result := _isOk;
 end; //ZEGetCellCoords
 
-//Попытка преобразовать номер ячейки из R1C1 в A1 стиль
-//если не удалось распознать номер ячейки, то возвратит обратно тот же текст
+//РџРѕРїС‹С‚РєР° РїСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ РЅРѕРјРµСЂ СЏС‡РµР№РєРё РёР· R1C1 РІ A1 СЃС‚РёР»СЊ
+//РµСЃР»Рё РЅРµ СѓРґР°Р»РѕСЃСЊ СЂР°СЃРїРѕР·РЅР°С‚СЊ РЅРѕРјРµСЂ СЏС‡РµР№РєРё, С‚Рѕ РІРѕР·РІСЂР°С‚РёС‚ РѕР±СЂР°С‚РЅРѕ С‚РѕС‚ Р¶Рµ С‚РµРєСЃС‚
 //INPUT
-//  const st: string        - предположительно номер ячеки (диапазон)
-//      CurCol: integer     - номер столбца ячейки
-//      CurRow: integer     - номер строки ячейки
-//      options: integer    - параметры преобразования
-//      StartZero: boolean  - признак нумерации с нуля
+//  const st: string        - РїСЂРµРґРїРѕР»РѕР¶РёС‚РµР»СЊРЅРѕ РЅРѕРјРµСЂ СЏС‡РµРєРё (РґРёР°РїР°Р·РѕРЅ)
+//      CurCol: integer     - РЅРѕРјРµСЂ СЃС‚РѕР»Р±С†Р° СЏС‡РµР№РєРё
+//      CurRow: integer     - РЅРѕРјРµСЂ СЃС‚СЂРѕРєРё СЏС‡РµР№РєРё
+//      options: integer    - РїР°СЂР°РјРµС‚СЂС‹ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ
+//      StartZero: boolean  - РїСЂРёР·РЅР°Рє РЅСѓРјРµСЂР°С†РёРё СЃ РЅСѓР»СЏ
 //RETURN
-//      string - номер ячейки в стиле A1
+//      string - РЅРѕРјРµСЂ СЏС‡РµР№РєРё РІ СЃС‚РёР»Рµ A1
 function ReturnA1(const st: string; CurCol, CurRow: integer; options: integer; StartZero: boolean = true): string;
 var
   s: string;
@@ -157,7 +157,7 @@ var
   _num: integer;
   _use_bracket: boolean;
 
-  //Возвращает строку
+  //Р’РѕР·РІСЂР°С‰Р°РµС‚ СЃС‚СЂРѕРєСѓ
   procedure _getR(num: integer);
   begin
     if (isSq or (num = 0)) then
@@ -174,7 +174,7 @@ var
     inc(_num);
   end; //_getR
 
-  //Возвращает столбец
+  //Р’РѕР·РІСЂР°С‰Р°РµС‚ СЃС‚РѕР»Р±РµС†
   procedure _getC(num: integer);
   begin
     if (isSq or (num = 0)) then
@@ -189,9 +189,9 @@ var
       _c := '$' + _c;
     isNumber := false;
     inc(_num);
-  end; //_getС
+  end; //_getРЎ
 
-  //Проверяет символ
+  //РџСЂРѕРІРµСЂСЏРµС‚ СЃРёРјРІРѕР»
   procedure _checksymbol(ch: char);
   begin
     if (isApos) then
@@ -231,7 +231,7 @@ var
         end;
       end else //if (isNumber)
       begin
-        //если адрес: RC (без чисел - нули)
+        //РµСЃР»Рё Р°РґСЂРµСЃ: RC (Р±РµР· С‡РёСЃРµР» - РЅСѓР»Рё)
         {$IFDEF DELPHI_UNICODE}
         if (isR and CharInSet(ch, ['C', 'c'])) then
         {$ELSE}
@@ -256,11 +256,11 @@ var
           s := s + ch;
           isApos := not isApos;
         end;
-      '[': {хм..};
+      '[': {С…Рј..};
       ']': isSq := true;
       'R', 'r':
         begin
-          //R - ok, CR - что-то не то
+          //R - ok, CR - С‡С‚Рѕ-С‚Рѕ РЅРµ С‚Рѕ
           if (isR or isC) then
             isOk := false;
           isR := true;
@@ -286,7 +286,7 @@ var
             if (not isNumber) then
               isNumber := true;
         end;
-      '!':  //разделитель страницы
+      '!':  //СЂР°Р·РґРµР»РёС‚РµР»СЊ СЃС‚СЂР°РЅРёС†С‹
         begin
           retTxt := retTxt + s;
           if (isODF) then //ODF
@@ -302,7 +302,7 @@ var
           s := s + ch
         else
           if (isNotLast) then
-            isOk := false; //O_o - вроде как не ячейка, выходим и возвращаем всё как есть
+            isOk := false; //O_o - РІСЂРѕРґРµ РєР°Рє РЅРµ СЏС‡РµР№РєР°, РІС‹С…РѕРґРёРј Рё РІРѕР·РІСЂР°С‰Р°РµРј РІСЃС‘ РєР°Рє РµСЃС‚СЊ
     end; //case
   end; //_checksymbol
 
@@ -339,7 +339,7 @@ begin
       break;
   end;
   isNotLast := false;
-  //нужно подумать, что делать, если было не 2 преобразования
+  //РЅСѓР¶РЅРѕ РїРѕРґСѓРјР°С‚СЊ, С‡С‚Рѕ РґРµР»Р°С‚СЊ, РµСЃР»Рё Р±С‹Р»Рѕ РЅРµ 2 РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ
   if ((kol <= 0) or (_num = 0)) then
     isOk := false;
   _checksymbol(';');
@@ -358,17 +358,17 @@ begin
   end;
 end; //ReturnA1
 
-//Переводит формулу из стиля R1C1 в стиль A1
+//РџРµСЂРµРІРѕРґРёС‚ С„РѕСЂРјСѓР»Сѓ РёР· СЃС‚РёР»СЏ R1C1 РІ СЃС‚РёР»СЊ A1
 //INPUT
-//  const formula: string - формула в стиле R1C1
-//      CurRow: integer   - номер строки ячейки
-//      CurCol: integer   - номер столбца ячейки
-//      options: integer  - настройки преобразования (ZE_RTA_ODF и ZE_RTA_ODF_PREFIX)
-//                              options and ZE_RTA_ODF = ZE_RTA_ODF - преобразовывать для ODF (=[.A1] + [.B1])
-//                              options and ZE_RTA_ODF_PREFIX = ZE_RTA_ODF_PREFIX - добавлять префикс для ODF, если первый символ в формуле '=' (of:=[.A1] + [.B1])
-//      StartZero: boolean- при true счёт строки/ячейки начинается с 0.
+//  const formula: string - С„РѕСЂРјСѓР»Р° РІ СЃС‚РёР»Рµ R1C1
+//      CurRow: integer   - РЅРѕРјРµСЂ СЃС‚СЂРѕРєРё СЏС‡РµР№РєРё
+//      CurCol: integer   - РЅРѕРјРµСЂ СЃС‚РѕР»Р±С†Р° СЏС‡РµР№РєРё
+//      options: integer  - РЅР°СЃС‚СЂРѕР№РєРё РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ (ZE_RTA_ODF Рё ZE_RTA_ODF_PREFIX)
+//                              options and ZE_RTA_ODF = ZE_RTA_ODF - РїСЂРµРѕР±СЂР°Р·РѕРІС‹РІР°С‚СЊ РґР»СЏ ODF (=[.A1] + [.B1])
+//                              options and ZE_RTA_ODF_PREFIX = ZE_RTA_ODF_PREFIX - РґРѕР±Р°РІР»СЏС‚СЊ РїСЂРµС„РёРєСЃ РґР»СЏ ODF, РµСЃР»Рё РїРµСЂРІС‹Р№ СЃРёРјРІРѕР» РІ С„РѕСЂРјСѓР»Рµ '=' (of:=[.A1] + [.B1])
+//      StartZero: boolean- РїСЂРё true СЃС‡С‘С‚ СЃС‚СЂРѕРєРё/СЏС‡РµР№РєРё РЅР°С‡РёРЅР°РµС‚СЃСЏ СЃ 0.
 //RETURN
-//      string  - текст формулы в стиле R1C1
+//      string  - С‚РµРєСЃС‚ С„РѕСЂРјСѓР»С‹ РІ СЃС‚РёР»Рµ R1C1
 function ZER1C1ToA1(const formula: string; CurCol, CurRow: integer; options: integer; StartZero: boolean = true): string;
 var
   kol: integer;
@@ -397,7 +397,7 @@ var
             begin
               if (s > '') then
               begin
-                //O_o Странно
+                //O_o РЎС‚СЂР°РЅРЅРѕ
                 retFormula := retFormula + ReturnA1(s, CurCol, CurRow, options, StartZero);
                 s := '';
               end;
@@ -424,7 +424,7 @@ var
           if (not (isQuote or isApos)) then
             isSq := false;
         end;
-      ':', ';', ' ', '-', '%', '^', '*', '/', '+', '&', '<', '>', '(', ')', '=': //разделители
+      ':', ';', ' ', '-', '%', '^', '*', '/', '+', '&', '<', '>', '(', ')', '=': //СЂР°Р·РґРµР»РёС‚РµР»Рё
         begin
           if (isApos or isQuote or isSq) then
             s := s + ch
@@ -466,16 +466,16 @@ begin
         result := 'of:' + result;
 end; //ZER1C1ToA1
 
-//Попытка преобразовать номер ячейки из A1 в R1C1 стиль
-//если не удалось распознать номер ячейки, то возвратит обратно тот же текст
+//РџРѕРїС‹С‚РєР° РїСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ РЅРѕРјРµСЂ СЏС‡РµР№РєРё РёР· A1 РІ R1C1 СЃС‚РёР»СЊ
+//РµСЃР»Рё РЅРµ СѓРґР°Р»РѕСЃСЊ СЂР°СЃРїРѕР·РЅР°С‚СЊ РЅРѕРјРµСЂ СЏС‡РµР№РєРё, С‚Рѕ РІРѕР·РІСЂР°С‚РёС‚ РѕР±СЂР°С‚РЅРѕ С‚РѕС‚ Р¶Рµ С‚РµРєСЃС‚
 //INPUT
-//  const st: string        - предположительно номер ячеки (диапазон)
-//      CurCol: integer     - номер столбца ячейки
-//      CurRow: integer     - номер строки ячейки
-//      options: integer    - настройки
-//      StartZero: boolean  - признак нумерации с нуля
+//  const st: string        - РїСЂРµРґРїРѕР»РѕР¶РёС‚РµР»СЊРЅРѕ РЅРѕРјРµСЂ СЏС‡РµРєРё (РґРёР°РїР°Р·РѕРЅ)
+//      CurCol: integer     - РЅРѕРјРµСЂ СЃС‚РѕР»Р±С†Р° СЏС‡РµР№РєРё
+//      CurRow: integer     - РЅРѕРјРµСЂ СЃС‚СЂРѕРєРё СЏС‡РµР№РєРё
+//      options: integer    - РЅР°СЃС‚СЂРѕР№РєРё
+//      StartZero: boolean  - РїСЂРёР·РЅР°Рє РЅСѓРјРµСЂР°С†РёРё СЃ РЅСѓР»СЏ
 //RETURN
-//      string - номер ячейки в стиле R1C1
+//      string - РЅРѕРјРµСЂ СЏС‡РµР№РєРё РІ СЃС‚РёР»Рµ R1C1
 function ReturnR1C1(const st: string; CurCol, CurRow: integer; StartZero: boolean = true): string;
 var
   i: integer;
@@ -493,11 +493,11 @@ var
 
   procedure _GetColumn();
   begin
-    //попробовать преобразовать
+    //РїРѕРїСЂРѕР±РѕРІР°С‚СЊ РїСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ
     num := ZEGetColByA1(s, false);
-    if (num >= 0) then //распознался вроде нормально
+    if (num >= 0) then //СЂР°СЃРїРѕР·РЅР°Р»СЃСЏ РІСЂРѕРґРµ РЅРѕСЂРјР°Р»СЊРЅРѕ
     begin
-      if (num > 25000) then //сколько там колонок возможно?
+      if (num > 25000) then //СЃРєРѕР»СЊРєРѕ С‚Р°Рј РєРѕР»РѕРЅРѕРє РІРѕР·РјРѕР¶РЅРѕ?
         result := result + sa + s
       else
       begin
@@ -513,7 +513,7 @@ var
             column := 'C';
         end;
       end;
-    end else //что-то не то
+    end else //С‡С‚Рѕ-С‚Рѕ РЅРµ С‚Рѕ
       result := result + sa + s;
     if (isAbsolute > 0) then
       dec(isAbsolute);
@@ -533,7 +533,7 @@ var
       begin
         if (_startNumber) then
         begin
-          if (TryStrToInt(s, t)) then //удалось получить число
+          if (TryStrToInt(s, t)) then //СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ С‡РёСЃР»Рѕ
           begin
             if (isAbsolute > 0) then
               result := result + 'R' + s + column
@@ -566,7 +566,7 @@ var
           end;
           isApos := not isApos;
         end;
-      '.': //разделитель для листа (OpenOffice/LibreOffice)
+      '.': //СЂР°Р·РґРµР»РёС‚РµР»СЊ РґР»СЏ Р»РёСЃС‚Р° (OpenOffice/LibreOffice)
         begin
            if (isApos) then
             s := s + ch
@@ -577,7 +577,7 @@ var
             s := '';
           end;
         end;
-      '!': //разделитель для листа (excel)
+      '!': //СЂР°Р·РґРµР»РёС‚РµР»СЊ РґР»СЏ Р»РёСЃС‚Р° (excel)
         begin
           if (isApos) then
             s := s + ch
@@ -621,7 +621,7 @@ var
              s := s + ch
            else
            begin
-             if ((not _startNumber) and (not isC)) then //первая цифирка
+             if ((not _startNumber) and (not isC)) then //РїРµСЂРІР°СЏ С†РёС„РёСЂРєР°
              begin
                _GetColumn();
                s := '';
@@ -636,7 +636,7 @@ var
     end; //case
   end; // _CheckSymbol
 
-  //Проверяет, с какого символа в строке начать
+  //РџСЂРѕРІРµСЂСЏРµС‚, СЃ РєР°РєРѕРіРѕ СЃРёРјРІРѕР»Р° РІ СЃС‚СЂРѕРєРµ РЅР°С‡Р°С‚СЊ
   procedure FindStartNumber(out num: integer);
   var
     i: integer;
@@ -694,15 +694,15 @@ begin
     result := result + s; 
 end; //ReturnR1C1
 
-//Переводит формулу из стиля A1 в стиль R1C1
+//РџРµСЂРµРІРѕРґРёС‚ С„РѕСЂРјСѓР»Сѓ РёР· СЃС‚РёР»СЏ A1 РІ СЃС‚РёР»СЊ R1C1
 //INPUT
-//  const formula: string - формула в стиле A1
-//      CurRow: integer   - номер строки ячейки
-//      CurCol: integer   - номер столбца ячейки
-//      options: integer  - настройки преобразования
-//      StartZero: boolean- при true счёт строки/ячейки начинается с 0.
+//  const formula: string - С„РѕСЂРјСѓР»Р° РІ СЃС‚РёР»Рµ A1
+//      CurRow: integer   - РЅРѕРјРµСЂ СЃС‚СЂРѕРєРё СЏС‡РµР№РєРё
+//      CurCol: integer   - РЅРѕРјРµСЂ СЃС‚РѕР»Р±С†Р° СЏС‡РµР№РєРё
+//      options: integer  - РЅР°СЃС‚СЂРѕР№РєРё РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ
+//      StartZero: boolean- РїСЂРё true СЃС‡С‘С‚ СЃС‚СЂРѕРєРё/СЏС‡РµР№РєРё РЅР°С‡РёРЅР°РµС‚СЃСЏ СЃ 0.
 //RETURN
-//      string  - текст формулы в стиле R1C1
+//      string  - С‚РµРєСЃС‚ С„РѕСЂРјСѓР»С‹ РІ СЃС‚РёР»Рµ R1C1
 function ZEA1ToR1C1(const formula: string; CurCol, CurRow: integer; options: integer; StartZero: boolean = true): string;
 var
   i, l: integer;
@@ -713,9 +713,9 @@ var
   isNotLast: boolean;
   start_num: integer;
 
-  //Проверить символ
+  //РџСЂРѕРІРµСЂРёС‚СЊ СЃРёРјРІРѕР»
   //INPUT
-  //  const ch: char - символ для проверки
+  //  const ch: char - СЃРёРјРІРѕР» РґР»СЏ РїСЂРѕРІРµСЂРєРё
   procedure _CheckSymbol(const ch: char);
   begin
     case ch of
@@ -733,7 +733,7 @@ var
             begin
               if (s > '') then
               begin
-                //O_o Странно
+                //O_o РЎС‚СЂР°РЅРЅРѕ
                 retFormula := retFormula + ReturnR1C1(s, CurCol, CurRow, StartZero);
                 s := '';
               end;
@@ -748,7 +748,7 @@ var
           if (not isQuote) then
             isApos := not isApos;
         end; 
-      ':', ';', ' ', '-', '%', '^', '*', '/', '+', '&', '<', '>', '(', ')', ']', '[', '=': //разделители
+      ':', ';', ' ', '-', '%', '^', '*', '/', '+', '&', '<', '>', '(', ')', ']', '[', '=': //СЂР°Р·РґРµР»РёС‚РµР»Рё
         begin
           if (isQuote or isApos) then
             s := s + ch
@@ -810,12 +810,12 @@ begin
   result := retFormula;
 end; //ZEA1ToR1C1
 
-//Возвращает номер столбца по буквенному обозначению
+//Р’РѕР·РІСЂР°С‰Р°РµС‚ РЅРѕРјРµСЂ СЃС‚РѕР»Р±С†Р° РїРѕ Р±СѓРєРІРµРЅРЅРѕРјСѓ РѕР±РѕР·РЅР°С‡РµРЅРёСЋ
 //INPUT
-//  const AA: string      - буквенное обозначение столбца
-//      StartZero: boolean  - если true, то счёт начинает с нуля (т.е. A = 0), в противном случае с 1.
+//  const AA: string      - Р±СѓРєРІРµРЅРЅРѕРµ РѕР±РѕР·РЅР°С‡РµРЅРёРµ СЃС‚РѕР»Р±С†Р°
+//      StartZero: boolean  - РµСЃР»Рё true, С‚Рѕ СЃС‡С‘С‚ РЅР°С‡РёРЅР°РµС‚ СЃ РЅСѓР»СЏ (С‚.Рµ. A = 0), РІ РїСЂРѕС‚РёРІРЅРѕРј СЃР»СѓС‡Р°Рµ СЃ 1.
 //RETURN
-//      integer -   -1 - не удалось преобразовать
+//      integer -   -1 - РЅРµ СѓРґР°Р»РѕСЃСЊ РїСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ
 function ZEGetColByA1(AA: string; StartZero: boolean = true): integer;
 var
   i: integer;
@@ -842,10 +842,10 @@ begin
     result := result - 1;
 end; //ZEGetColByAA
 
-//Возвращает буквенное обозначение столбца для АА стиля
+//Р’РѕР·РІСЂР°С‰Р°РµС‚ Р±СѓРєРІРµРЅРЅРѕРµ РѕР±РѕР·РЅР°С‡РµРЅРёРµ СЃС‚РѕР»Р±С†Р° РґР»СЏ РђРђ СЃС‚РёР»СЏ
 //INPUT
-//      ColNum: integer     - номер столбца
-//      StartZero: boolean  - если true, то счёт начинается с 0, в противном случае - с 1.
+//      ColNum: integer     - РЅРѕРјРµСЂ СЃС‚РѕР»Р±С†Р°
+//      StartZero: boolean  - РµСЃР»Рё true, С‚Рѕ СЃС‡С‘С‚ РЅР°С‡РёРЅР°РµС‚СЃСЏ СЃ 0, РІ РїСЂРѕС‚РёРІРЅРѕРј СЃР»СѓС‡Р°Рµ - СЃ 1.
 function ZEGetA1byCol(ColNum: integer; StartZero: boolean = true): string;
 var
   t, n: integer;
@@ -861,7 +861,7 @@ begin
   begin
     n := t mod 26;
     t := (t div 26) - 1;
-    //ХЗ как там с кодировками будет
+    //РҐР— РєР°Рє С‚Р°Рј СЃ РєРѕРґРёСЂРѕРІРєР°РјРё Р±СѓРґРµС‚
     s := s + ZE_STR_ARRAY[n];
   end;
   for t := length(s) downto 1 do

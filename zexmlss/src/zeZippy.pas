@@ -1,4 +1,4 @@
-unit zeZippy;
+ï»¿unit zeZippy;
 (* Simplistic interface for creating simplistic Zip files.
    Bridge object template for avemey.com components.
 
@@ -20,7 +20,7 @@ type
     { $IF FPC_FULLVERSION < 20501} //FPC 2.5.1
       { $DEFINE USE_INTERNAL_SL}
     { $IFEND}
-    //äåëüôå íå ïîíðàâèëîñü FPC_FULLVERSION =_="
+    //Ð´ÐµÐ»ÑŒÑ„Ðµ Ð½Ðµ Ð¿Ð¾Ð½Ñ€Ð°Ð²Ð¸Ð»Ð¾ÑÑŒ FPC_FULLVERSION =_="
     {$I zezippyfpc.inc}
 {$ENDIF}
 {$IfNDef FPC} {$IfNDef Unicode }
@@ -112,32 +112,32 @@ implementation uses TypInfo, Contnrs, System.Types; // inlining
 
 resourcestring
 //   EZxCannotOverwriteZip    = 'Cannot remove outdated file %s';
-   EZxCannotOverwriteZip    = 'Íåâîçìîæíî óäàëèòü ñòàðûé ôàéë %s';
+   EZxCannotOverwriteZip    = 'ÐÐµÐ²Ð¾Ð·Ð¼Ð¾Ð¶Ð½Ð¾ ÑƒÐ´Ð°Ð»Ð¸Ñ‚ÑŒ ÑÑ‚Ð°Ñ€Ñ‹Ð¹ Ñ„Ð°Ð¹Ð» %s';
 //   EZxWrongZipState         = 'Zip generator state is %s while %s is required for further processing.';
-   EZxWrongZipState         = 'Ñæàòèå Zip: òåêóùèé ðåæèì "%s", äëÿ ïðîäîëæåíèÿ ðàáîòû òðåáóåòñÿ ðåæèì "%s".';
+   EZxWrongZipState         = 'Ð¡Ð¶Ð°Ñ‚Ð¸Ðµ Zip: Ñ‚ÐµÐºÑƒÑ‰Ð¸Ð¹ Ñ€ÐµÐ¶Ð¸Ð¼ "%s", Ð´Ð»Ñ Ð¿Ñ€Ð¾Ð´Ð¾Ð»Ð¶ÐµÐ½Ð¸Ñ Ñ€Ð°Ð±Ð¾Ñ‚Ñ‹ Ñ‚Ñ€ÐµÐ±ÑƒÐµÑ‚ÑÑ Ñ€ÐµÐ¶Ð¸Ð¼ "%s".';
 //   EZxAmbiguousFreeing      = 'Zip file should be either saved or destroyed before freeing';
-   EZxAmbiguousFreeing      = 'Ñæàòèå Zip: ôàéë ÷àñòè÷íî çàïîëíåí, íóæíî èëè ñîõðàíèòü, èëè îòìåíèòü.';
+   EZxAmbiguousFreeing      = 'Ð¡Ð¶Ð°Ñ‚Ð¸Ðµ Zip: Ñ„Ð°Ð¹Ð» Ñ‡Ð°ÑÑ‚Ð¸Ñ‡Ð½Ð¾ Ð·Ð°Ð¿Ð¾Ð»Ð½ÐµÐ½, Ð½ÑƒÐ¶Ð½Ð¾ Ð¸Ð»Ð¸ ÑÐ¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ, Ð¸Ð»Ð¸ Ð¾Ñ‚Ð¼ÐµÐ½Ð¸Ñ‚ÑŒ.';
 //   EZxIncompleteDatastreams = 'All data streams should be sealed before saving Zip to disk.';
-   EZxIncompleteDatastreams = 'Ñæàòèå Zip: íåëüçÿ ñîõðàíèòü ôàéë - åñòü íåïîäòâåðæä¸ííûå äàííûå.';
+   EZxIncompleteDatastreams = 'Ð¡Ð¶Ð°Ñ‚Ð¸Ðµ Zip: Ð½ÐµÐ»ÑŒÐ·Ñ ÑÐ¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ Ñ„Ð°Ð¹Ð» - ÐµÑÑ‚ÑŒ Ð½ÐµÐ¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´Ñ‘Ð½Ð½Ñ‹Ðµ Ð´Ð°Ð½Ð½Ñ‹Ðµ.';
 //   EZxSealNil               = 'Given data is nil.';
 //   EZxSealAlient            = 'Given data (%s) does not belong to this zip generator.';
-   EZxSealNil               = 'Ñæàòèå Zip: ïåðåäàííû íåçàïîëíåííûe äàííûå (NIL).';
-   EZxSealAlien             = 'Ñæàòèå Zip: ïåðåäàííû äàííûå (%s) íå ïðèíàäëåæàùèå ñîçäàâàåìîìó ôàéëó.';
+   EZxSealNil               = 'Ð¡Ð¶Ð°Ñ‚Ð¸Ðµ Zip: Ð¿ÐµÑ€ÐµÐ´Ð°Ð½Ð½Ñ‹ Ð½ÐµÐ·Ð°Ð¿Ð¾Ð»Ð½ÐµÐ½Ð½Ñ‹e Ð´Ð°Ð½Ð½Ñ‹Ðµ (NIL).';
+   EZxSealAlien             = 'Ð¡Ð¶Ð°Ñ‚Ð¸Ðµ Zip: Ð¿ÐµÑ€ÐµÐ´Ð°Ð½Ð½Ñ‹ Ð´Ð°Ð½Ð½Ñ‹Ðµ (%s) Ð½Ðµ Ð¿Ñ€Ð¸Ð½Ð°Ð´Ð»ÐµÐ¶Ð°Ñ‰Ð¸Ðµ ÑÐ¾Ð·Ð´Ð°Ð²Ð°ÐµÐ¼Ð¾Ð¼Ñƒ Ñ„Ð°Ð¹Ð»Ñƒ.';
 
 //   EZxFoldersNotAccepted    = 'Zip generator accepts files, not directories: '{+name};
 //   EZxStreamMustHaveFName   = 'Internal file should have a name.';
 //   EZxStreamAlreaydAdded    = 'File >>%s<< already was added to zip generator.';
-   EZxFoldersNotAccepted    = 'Ñæàòèå Zip: íåëüçÿ ñîõðàíèòü ïàïêó âìåñòî ôàéëà:'{+name};
-   EZxStreamMustHaveFName   = 'Ñæàòèå Zip: íåëüçÿ ñîõðàíèòü áåçûìÿííûé ôàéë';
-   EZxStreamAlreaydAdded    = 'Ñæàòèå Zip: íåëüçÿ ñîõðàíèòü äâà ôàéëà ñ îäèíàêîâûì èìåíåì'#13#10#9'%s';
+   EZxFoldersNotAccepted    = 'Ð¡Ð¶Ð°Ñ‚Ð¸Ðµ Zip: Ð½ÐµÐ»ÑŒÐ·Ñ ÑÐ¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ Ð¿Ð°Ð¿ÐºÑƒ Ð²Ð¼ÐµÑÑ‚Ð¾ Ñ„Ð°Ð¹Ð»Ð°:'{+name};
+   EZxStreamMustHaveFName   = 'Ð¡Ð¶Ð°Ñ‚Ð¸Ðµ Zip: Ð½ÐµÐ»ÑŒÐ·Ñ ÑÐ¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ Ð±ÐµÐ·Ñ‹Ð¼ÑÐ½Ð½Ñ‹Ð¹ Ñ„Ð°Ð¹Ð»';
+   EZxStreamAlreaydAdded    = 'Ð¡Ð¶Ð°Ñ‚Ð¸Ðµ Zip: Ð½ÐµÐ»ÑŒÐ·Ñ ÑÐ¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ Ð´Ð²Ð° Ñ„Ð°Ð¹Ð»Ð° Ñ Ð¾Ð´Ð¸Ð½Ð°ÐºÐ¾Ð²Ñ‹Ð¼ Ð¸Ð¼ÐµÐ½ÐµÐ¼'#13#10#9'%s';
 
 //   EZxFolderCreationFailed  = 'Cannot create folder: ';
-   EZxFolderCreationFailed  = 'Íåâîçìîæíî ñîçäàòü ïàïêó: ';
+   EZxFolderCreationFailed  = 'ÐÐµÐ²Ð¾Ð·Ð¼Ð¾Ð¶Ð½Ð¾ ÑÐ¾Ð·Ð´Ð°Ñ‚ÑŒ Ð¿Ð°Ð¿ÐºÑƒ: ';
 
 //   EZxRegisterNonZip        = 'Registering: not a zip generator ' {+ ClassName};
 //   EZxRegisteredNonZip      = 'Retrieving: not a zip generator ' {+ ClassName};
-   EZxRegisterNonZip        = 'Ñæàòèå Zip: íåëüçÿ ñîçäàâaòü Zip ñ ïîìîùüþ ' {+ ClassName};
-   EZxRegisteredNonZip      = 'Ñæàòèå Zip: íåëüçÿ ñîçäàâaòü Zip ñ ïîìîùüþ ' {+ ClassName};
+   EZxRegisterNonZip        = 'Ð¡Ð¶Ð°Ñ‚Ð¸Ðµ Zip: Ð½ÐµÐ»ÑŒÐ·Ñ ÑÐ¾Ð·Ð´Ð°Ð²aÑ‚ÑŒ Zip Ñ Ð¿Ð¾Ð¼Ð¾Ñ‰ÑŒÑŽ ' {+ ClassName};
+   EZxRegisteredNonZip      = 'Ð¡Ð¶Ð°Ñ‚Ð¸Ðµ Zip: Ð½ÐµÐ»ÑŒÐ·Ñ ÑÐ¾Ð·Ð´Ð°Ð²aÑ‚ÑŒ Zip Ñ Ð¿Ð¾Ð¼Ð¾Ñ‰ÑŒÑŽ ' {+ ClassName};
 { TZxZipGen }
 
 procedure TZxZipGen.AfterConstruction;

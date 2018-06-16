@@ -1,4 +1,4 @@
-//****************************************************************
+﻿//****************************************************************
 // Routines for translate number formats from ods/xlsx/excel xml
 //  to internal (ods like) number format and back etc.
 // Author:  Ruslan V. Neborak

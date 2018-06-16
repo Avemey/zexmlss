@@ -1,4 +1,4 @@
-//****************************************************************
+п»ї//****************************************************************
 // Common routines for saving and loading data
 // Author:  Ruslan V. Neborak
 // e-mail:  avemey@tut.by
@@ -31,35 +31,35 @@ const
 //  TZESaveIntArray = array of integer; // Since Delphi 7 and FPC 2005 - TIntegerDynArray
 //  TZESaveStrArray = array of string;  // Since Delphi 7 and FPC 2005 - TStringDynArray
 
-//Попытка преобразовать строку в число
+//РџРѕРїС‹С‚РєР° РїСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ СЃС‚СЂРѕРєСѓ РІ С‡РёСЃР»Рѕ
 function ZEIsTryStrToFloat(const st: string; out retValue: double): boolean;
 function ZETryStrToFloat(const st: string; valueIfError: double = 0): double; overload;
 function ZETryStrToFloat(const st: string; out isOk: boolean; valueIfError: double = 0): double; overload;
 
-//Попытка преобразовать строку в boolean
+//РџРѕРїС‹С‚РєР° РїСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ СЃС‚СЂРѕРєСѓ РІ boolean
 function ZETryStrToBoolean(const st: string; valueIfError: boolean = false): boolean;
 
-//заменяет все запятые на точки
+//Р·Р°РјРµРЅСЏРµС‚ РІСЃРµ Р·Р°РїСЏС‚С‹Рµ РЅР° С‚РѕС‡РєРё
 function ZEFloatSeparator(st: string): string;
 
 //BOM<?xml version="1.0" encoding="CodePageName"?>
 procedure ZEWriteHeaderCommon(xml: TZsspXMLWriterH; const CodePageName: string; const BOM: ansistring);
 
-//Проверяет заголовки страниц, при необходимости корректирует
+//РџСЂРѕРІРµСЂСЏРµС‚ Р·Р°РіРѕР»РѕРІРєРё СЃС‚СЂР°РЅРёС†, РїСЂРё РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё РєРѕСЂСЂРµРєС‚РёСЂСѓРµС‚
 function ZECheckTablesTitle(var XMLSS: TZEXMLSS; const SheetsNumbers:array of integer;
                             const SheetsNames: array of string; out _pages: TIntegerDynArray;
                             out _names: TStringDynArray; out retCount: integer): boolean;
 
-//Очищает массивы
+//РћС‡РёС‰Р°РµС‚ РјР°СЃСЃРёРІС‹
 procedure ZESClearArrays(var _pages: TIntegerDynArray;  var _names: TStringDynArray);
 
-//Переводит строку в boolean
+//РџРµСЂРµРІРѕРґРёС‚ СЃС‚СЂРѕРєСѓ РІ boolean
 function ZEStrToBoolean(const val: string): boolean;
 
-//Проверяет, есть ли папка такая. Если путь не заканчивается на разделитель директории - добавляет в конец.
+//РџСЂРѕРІРµСЂСЏРµС‚, РµСЃС‚СЊ Р»Рё РїР°РїРєР° С‚Р°РєР°СЏ. Р•СЃР»Рё РїСѓС‚СЊ РЅРµ Р·Р°РєР°РЅС‡РёРІР°РµС‚СЃСЏ РЅР° СЂР°Р·РґРµР»РёС‚РµР»СЊ РґРёСЂРµРєС‚РѕСЂРёРё - РґРѕР±Р°РІР»СЏРµС‚ РІ РєРѕРЅРµС†.
 function ZE_CheckDirExist(var DirName: string): boolean;
 
-//Заменяет в строке последовательности на спецсимволы
+//Р—Р°РјРµРЅСЏРµС‚ РІ СЃС‚СЂРѕРєРµ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚Рё РЅР° СЃРїРµС†СЃРёРјРІРѕР»С‹
 function ZEReplaceEntity(const st: string): string;
 
 // despite formal angle datatype declaration in default "range check off" mode
@@ -153,11 +153,11 @@ begin
 end;
 
 
-//Заменяет в строке последовательности на спецсимволы
+//Р—Р°РјРµРЅСЏРµС‚ РІ СЃС‚СЂРѕРєРµ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚Рё РЅР° СЃРїРµС†СЃРёРјРІРѕР»С‹
 //INPUT
-//  const st: string - входящая строка
+//  const st: string - РІС…РѕРґСЏС‰Р°СЏ СЃС‚СЂРѕРєР°
 //RETURN
-//      string - обработанная строка
+//      string - РѕР±СЂР°Р±РѕС‚Р°РЅРЅР°СЏ СЃС‚СЂРѕРєР°
 function ZEReplaceEntity(const st: string): string;
 var
   s, s1: string;
@@ -236,9 +236,9 @@ begin
 end; //ZEReplaceEntity
 
 
-//Проверяет, есть ли папка такая. Если путь не заканчивается на разделитель директории - добавляет в конец.
+//РџСЂРѕРІРµСЂСЏРµС‚, РµСЃС‚СЊ Р»Рё РїР°РїРєР° С‚Р°РєР°СЏ. Р•СЃР»Рё РїСѓС‚СЊ РЅРµ Р·Р°РєР°РЅС‡РёРІР°РµС‚СЃСЏ РЅР° СЂР°Р·РґРµР»РёС‚РµР»СЊ РґРёСЂРµРєС‚РѕСЂРёРё - РґРѕР±Р°РІР»СЏРµС‚ РІ РєРѕРЅРµС†.
 //INPUT
-//  var DirName: string - путь
+//  var DirName: string - РїСѓС‚СЊ
 //RETURN
 //      boolean - true - OK
 function ZE_CheckDirExist(var DirName: string): boolean;
@@ -258,9 +258,9 @@ begin
     result := false;
 end; //__CheckDirExist
 
-//Переводит строку в boolean
+//РџРµСЂРµРІРѕРґРёС‚ СЃС‚СЂРѕРєСѓ РІ boolean
 //INPUT
-//  const val: string - переводимая строка
+//  const val: string - РїРµСЂРµРІРѕРґРёРјР°СЏ СЃС‚СЂРѕРєР°
 function ZEStrToBoolean(const val: string): boolean;
 begin
   if (val = '1' ) or (UpperCase(val)='TRUE')  then
@@ -269,9 +269,9 @@ begin
     result := false;
 end;
 
-//Попытка преобразовать строку в boolean
-//  const st: string        - строка для распознавания
-//    valueIfError: boolean - значение, которое подставляется при ошибке преобразования
+//РџРѕРїС‹С‚РєР° РїСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ СЃС‚СЂРѕРєСѓ РІ boolean
+//  const st: string        - СЃС‚СЂРѕРєР° РґР»СЏ СЂР°СЃРїРѕР·РЅР°РІР°РЅРёСЏ
+//    valueIfError: boolean - Р·РЅР°С‡РµРЅРёРµ, РєРѕС‚РѕСЂРѕРµ РїРѕРґСЃС‚Р°РІР»СЏРµС‚СЃСЏ РїСЂРё РѕС€РёР±РєРµ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ
 function ZETryStrToBoolean(const st: string; valueIfError: boolean = false): boolean;
 begin
   result := valueIfError;
@@ -297,11 +297,11 @@ begin
   retValue := ZETryStrToFloat(st, Result);
 end;
 
-//Попытка преобразовать строку в число
+//РџРѕРїС‹С‚РєР° РїСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ СЃС‚СЂРѕРєСѓ РІ С‡РёСЃР»Рѕ
 //INPUT
-//  const st: string        - строка
-//  out isOk: boolean       - если true - ошибки небыло
-//    valueIfError: double  - значение, которое подставляется при ошибке преобразования
+//  const st: string        - СЃС‚СЂРѕРєР°
+//  out isOk: boolean       - РµСЃР»Рё true - РѕС€РёР±РєРё РЅРµР±С‹Р»Рѕ
+//    valueIfError: double  - Р·РЅР°С‡РµРЅРёРµ, РєРѕС‚РѕСЂРѕРµ РїРѕРґСЃС‚Р°РІР»СЏРµС‚СЃСЏ РїСЂРё РѕС€РёР±РєРµ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ
 function ZETryStrToFloat(const st: string; out isOk: boolean; valueIfError: double = 0): double;
 var
   s: string;
@@ -333,10 +333,10 @@ begin
   end;
 end; //ZETryStrToFloat
 
-//Попытка преобразовать строку в число
+//РџРѕРїС‹С‚РєР° РїСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ СЃС‚СЂРѕРєСѓ РІ С‡РёСЃР»Рѕ
 //INPUT
-//  const st: string        - строка
-//    valueIfError: double  - значение, которое подставляется при ошибке преобразования
+//  const st: string        - СЃС‚СЂРѕРєР°
+//    valueIfError: double  - Р·РЅР°С‡РµРЅРёРµ, РєРѕС‚РѕСЂРѕРµ РїРѕРґСЃС‚Р°РІР»СЏРµС‚СЃСЏ РїСЂРё РѕС€РёР±РєРµ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ
 function ZETryStrToFloat(const st: string; valueIfError: double = 0): double;
 var
   s: string;
@@ -368,7 +368,7 @@ begin
   end;
 end; //ZETryStrToFloat
 
-//заменяет все запятые на точки
+//Р·Р°РјРµРЅСЏРµС‚ РІСЃРµ Р·Р°РїСЏС‚С‹Рµ РЅР° С‚РѕС‡РєРё
 function ZEFloatSeparator(st: string): string;
 var
   k: integer;
@@ -393,8 +393,8 @@ end;
 
 //BOM<?xml version="1.0" encoding="CodePageName"?>
 //INPUT
-//    xml: TZsspXMLWriterH      - писатель
-//  const CodePageName: string  - имя кодировки
+//    xml: TZsspXMLWriterH      - РїРёСЃР°С‚РµР»СЊ
+//  const CodePageName: string  - РёРјСЏ РєРѕРґРёСЂРѕРІРєРё
 //  const BOM: ansistring       - BOM
 procedure ZEWriteHeaderCommon(xml: TZsspXMLWriterH; const CodePageName: string; const BOM: ansistring);
 begin
@@ -409,7 +409,7 @@ begin
   end;
 end;
 
-//Очищает массивы
+//РћС‡РёС‰Р°РµС‚ РјР°СЃСЃРёРІС‹
 procedure ZESClearArrays(var _pages: TIntegerDynArray;  var _names: TStringDynArray);
 begin
   SetLength(_pages, 0);
@@ -421,11 +421,11 @@ end;
 resourcestring
   DefaultSheetName = 'Sheet';
 
-//делает уникальную строку, добавляя к строке '(num)'
-//топорно, но работает
+//РґРµР»Р°РµС‚ СѓРЅРёРєР°Р»СЊРЅСѓСЋ СЃС‚СЂРѕРєСѓ, РґРѕР±Р°РІР»СЏСЏ Рє СЃС‚СЂРѕРєРµ '(num)'
+//С‚РѕРїРѕСЂРЅРѕ, РЅРѕ СЂР°Р±РѕС‚Р°РµС‚
 //INPUT
-//  var st: string - строка
-//      n: integer - номер
+//  var st: string - СЃС‚СЂРѕРєР°
+//      n: integer - РЅРѕРјРµСЂ
 procedure ZECorrectStrForSave(var st: string; n: integer);
 var
   l, i, m, num: integer;
@@ -462,9 +462,9 @@ begin
   end;
 end; //ZECorrectStrForSave
 
-//делаем уникальные значения массивов
+//РґРµР»Р°РµРј СѓРЅРёРєР°Р»СЊРЅС‹Рµ Р·РЅР°С‡РµРЅРёСЏ РјР°СЃСЃРёРІРѕРІ
 //INPUT
-//  var mas: array of string - массив со значениями
+//  var mas: array of string - РјР°СЃСЃРёРІ СЃРѕ Р·РЅР°С‡РµРЅРёСЏРјРё
 procedure ZECorrectTitles(var mas: array of string);
 var
   i, num, k, _kol: integer;
@@ -490,7 +490,7 @@ begin
   end;
 end; //CorrectTitles
 
-//Проверяет заголовки страниц, при необходимости корректирует
+//РџСЂРѕРІРµСЂСЏРµС‚ Р·Р°РіРѕР»РѕРІРєРё СЃС‚СЂР°РЅРёС†, РїСЂРё РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё РєРѕСЂСЂРµРєС‚РёСЂСѓРµС‚
 //INPUT
 //  var XMLSS: TZEXMLSS
 //  const SheetsNumbers:array of integer
@@ -499,8 +499,8 @@ end; //CorrectTitles
 //  var _names: TStringDynArray
 //  var retCount: integer
 //RETURN
-//      boolean - true - всё нормально, можно продолжать дальше
-//                false - что-то не то подсунули, дальше продолжать нельзя
+//      boolean - true - РІСЃС‘ РЅРѕСЂРјР°Р»СЊРЅРѕ, РјРѕР¶РЅРѕ РїСЂРѕРґРѕР»Р¶Р°С‚СЊ РґР°Р»СЊС€Рµ
+//                false - С‡С‚Рѕ-С‚Рѕ РЅРµ С‚Рѕ РїРѕРґСЃСѓРЅСѓР»Рё, РґР°Р»СЊС€Рµ РїСЂРѕРґРѕР»Р¶Р°С‚СЊ РЅРµР»СЊР·СЏ
 function ZECheckTablesTitle(var XMLSS: TZEXMLSS; const SheetsNumbers:array of integer;
                             const SheetsNames: array of string; out _pages: TIntegerDynArray;
                             out _names: TStringDynArray; out retCount: integer): boolean;
@@ -536,7 +536,7 @@ begin
   t1 :=  Low(SheetsNumbers);
   t2 := High(SheetsNumbers);
   retCount := 0;
-  //если пришёл пустой массив SheetsNumbers - берём все страницы из Sheets
+  //РµСЃР»Рё РїСЂРёС€С‘Р» РїСѓСЃС‚РѕР№ РјР°СЃСЃРёРІ SheetsNumbers - Р±РµСЂС‘Рј РІСЃРµ СЃС‚СЂР°РЅРёС†С‹ РёР· Sheets
   if t1 = t2 + 1 then
   begin
     retCount := XMLSS.Sheets.Count;
@@ -545,7 +545,7 @@ begin
       _pages[i] := i;
   end else
   begin
-    //иначе берём страницы из массива SheetsNumbers
+    //РёРЅР°С‡Рµ Р±РµСЂС‘Рј СЃС‚СЂР°РЅРёС†С‹ РёР· РјР°СЃСЃРёРІР° SheetsNumbers
     for i := t1 to t2 do
     begin
       if (SheetsNumbers[i] >= 0) and (SheetsNumbers[i] < XMLSS.Sheets.Count) then
@@ -560,7 +560,7 @@ begin
   if (retCount <= 0) then
     exit;
 
-  //названия страниц
+  //РЅР°Р·РІР°РЅРёСЏ СЃС‚СЂР°РЅРёС†
 //  t1 :=  Low(SheetsNames); // we anyway assume later that Low(_names) == t1 - then let us just skip this.
   t2 := High(SheetsNames);
   setlength(_names, retCount);

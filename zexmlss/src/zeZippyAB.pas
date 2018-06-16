@@ -1,4 +1,4 @@
-//****************************************************************
+﻿//****************************************************************
 // Simplistic interface for creating simplistic Zip files.
 //   Bridge object for zexmlss components.
 //   This one bridges to TurboPower Abbrevia
