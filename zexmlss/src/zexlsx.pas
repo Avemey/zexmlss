@@ -5590,7 +5590,7 @@ const CR = #13; LF = #10;
 
   procedure WriteXLSXSheetData();
   var
-    i, j, n, ix: integer;
+    i, j, n: integer;
     b: boolean;
     s: string;
     _r: TRect;
@@ -5662,9 +5662,14 @@ const CR = #13; LF = #10;
             ///   10 minutes in so no exact time.
             /// </remarks>
             if (_sheet.Cell[j, i].Data.IndexOfAny([CR,LF]) > -1 ) then begin
-              ix := Length(ASharedStrings);
-              ASharedStrings := ASharedStrings + [_sheet.Cell[j, i].Data];
-              _sheet.Cell[j, i].Data := IntToStr(ix);
+               /// <remarks>
+               ///   The inline helper code is 11 seconds faster (for 3,370,144 strings)
+               ///   in Berlin than the actual code written inline:
+               ///     ix := Length(ASharedStrings);
+               ///     ASharedStrings := Insert(_sheet.Cell[j, i].Data, ASharedStrings, ix);
+               ///     _sheet.Cell[j, i].Data := IntToStr(ix);
+               /// </remarks>
+              _sheet.Cell[j, i].Data := ASharedStrings.Add(_sheet.Cell[j, i].Data).ToString;
               s := 's'; // works
             end else s := 'str';
           end;

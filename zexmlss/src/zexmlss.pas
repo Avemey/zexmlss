@@ -1682,6 +1682,14 @@ type
     property VertPixelSize: real read FVertPixelSize write SetVertPixelSize;  //размер пикселя по вертикали
   end;
 
+  TStringDynArrayHelper = record helper for TStringDynArray
+    /// <summary>
+    ///   Returns the Index of the String
+    /// </summary>
+    function Add(const AValue: string): integer; inline;
+  end;
+
+
 procedure Register();
 
 //Проверяет строку на правильность, если что-то не правильно - правит
@@ -6211,5 +6219,11 @@ GetDeviceCaps(hdc, VERTSIZE) / GetDeviceCaps(hdc, VERTRES); //вертикаль
 }
 
 { TStringDynArrayHelper }
+
+function TStringDynArrayHelper.Add(const AValue: string): integer;
+begin
+  Result := Length(Self);
+  Insert(AValue, self, Result);
+end;
 
 end.
