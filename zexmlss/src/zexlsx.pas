@@ -5656,6 +5656,12 @@ const CR = #13; LF = #10;
           ZEDateTime: s := 'd'; //??
           ZEBoolean: s := 'b';
           ZEString: begin
+            /// <remarks>
+            ///   I did test this in an attempt to generate only unique strings
+            ///   by scanning the array. This matched the speed of the 3rd Party
+            ///   Export I came here to replace, I reset the app about
+            ///   10 minutes in so no exact time.
+            /// </remarks>
             if (_sheet.Cell[j, i].Data.IndexOfAny([CR,LF]) > -1 ) then begin
               _sheet.Cell[j, i].Data := ASharedStrings.Add(_sheet.Cell[j, i].Data).ToString;
               s := 's'; // works
