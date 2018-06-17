@@ -5590,13 +5590,12 @@ const CR = #13; LF = #10;
 
   procedure WriteXLSXSheetData();
   var
-    i, j, n: integer;
+    i, j, n, ix: integer;
     b: boolean;
     s: string;
     _r: TRect;
     k1, k2, k: integer;
     _in_merge_not_top: boolean; //if cell in merge area, but not top left
-    
   begin
     _xml.Attributes.Clear();
     _xml.WriteTagNode('sheetData', true, true, true);
@@ -5663,7 +5662,9 @@ const CR = #13; LF = #10;
             ///   10 minutes in so no exact time.
             /// </remarks>
             if (_sheet.Cell[j, i].Data.IndexOfAny([CR,LF]) > -1 ) then begin
-              _sheet.Cell[j, i].Data := ASharedStrings.Add(_sheet.Cell[j, i].Data).ToString;
+              ix := Length(ASharedStrings);
+              ASharedStrings := ASharedStrings + [_sheet.Cell[j, i].Data];
+              _sheet.Cell[j, i].Data := IntToStr(ix);
               s := 's'; // works
             end else s := 'str';
           end;
