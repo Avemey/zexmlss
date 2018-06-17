@@ -1686,7 +1686,7 @@ type
     /// <summary>
     ///   Returns the Index of the String
     /// </summary>
-    function Add(const AValue: string): integer;
+    function Add(const AValue: string): integer; inline;
   end;
 
 
