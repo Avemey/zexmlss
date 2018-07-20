@@ -159,17 +159,8 @@
                     <VersionInfoKeys Name="Comments"/>
                 </VersionInfoKeys>
                 <Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dclemacsedit240.bpl">Embarcadero Editor Emacs Enhancements</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dcldbx240.bpl">Embarcadero dbExpress Components</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dclbindcompdbx240.bpl">LiveBindings Expression Components DbExpress</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\DataExplorerDBXPluginInt240.bpl">DBExpress InterBase Data Explorer Integration</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dclmcn240.bpl">Embarcadero DataSnap Connection Components</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dcldbxcds240.bpl">Embarcadero SimpleDataset Component (DBX)</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\DataExplorerDBXPlugin240.bpl">DBExpress Data Explorer Integration</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\gitide240.bpl">Embarcadero Git Integration</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\hgide240.bpl">Embarcadero Mercurial Integration</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dcloffice2k240.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dclofficexp240.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dcloffice2k250.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dclofficexp250.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
                 </Excluded_Packages>
             </Delphi.Personality>
             <Platforms>
