@@ -1,4 +1,4 @@
-(* Simplistic interface for uniform workbook saving
+﻿(* Simplistic interface for uniform workbook saving
    Bridge object template for different avemey.com
       export routines.
 
@@ -31,6 +31,7 @@ begin
    'Office Open XML*OOXML*OpenXML*ECMA-376*ISO/IEC 29500*ISO 29500', '*');
 end;
 
+{$WARNINGS OFF}  // Ansi warning
 function TZxXlsxSaver.DoSave: integer;
 begin
   Result := ExportXmlssToXLSX(

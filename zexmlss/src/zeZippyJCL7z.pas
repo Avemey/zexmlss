@@ -1,4 +1,4 @@
-unit zeZippyJCL7z;
+﻿unit zeZippyJCL7z;
 
 (* Simplistic interface for creating simplistic Zip files.
    Bridge object for avemey.com components.

@@ -1,4 +1,5 @@
 {$DEFINE UNKNOWN_COMPILER}
+{$WARN IMPLICIT_STRING_CAST OFF}                    // Only care on Loss
 
 {$IFDEF FPC} //KO: FPC
   {$UNDEF UNKNOWN_COMPILER}
@@ -109,5 +110,14 @@
 {$IFDEF VER200} // RAD Studio 2009
   {$UNDEF Z_USE_FORMAT_SETTINGS} //There are no FormatSettings in D2009!!!!
 {$ENDIF VER200}
+
+{ Embarcadero Delphi 24 XE10.1 (Berlin) }
+{$IFDEF VER310} {$DEFINE XE10_1} {$DEFINE BERLIN}{$ENDIF}
+{$IF CompilerVersion >= 31}   // Define the Plus (XP_UP) and Pre (PRE_XP) versions
+  {$DEFINE XE10_1_UP} {$DEFINE BERLIN_UP}
+  {$DEFINE TARRAY_HELPERFIXED}  // starting in Berlin these are handled correctly, prior to that all TArray<T> used a single Helper for all Ts
+{$ELSE}
+  {$DEFINE PRE_XE10_1} {$DEFINE PRE_BERLIN}
+{$IFEND}
 
 { $DEFINE DELPHI_UNICODE}

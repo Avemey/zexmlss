@@ -1,12 +1,12 @@
-//****************************************************************
+п»ї//****************************************************************
 // zexmlssutils  (Z Excel XML SpreadSheet Utils)
-// Различные дополнительные утилитки для ZEXMLSS
-// Накалякано в Мозыре в 2009 году
-// Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
-// e-mail: avemey(мяу)tut(точка)by
+// Р Р°Р·Р»РёС‡РЅС‹Рµ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹Рµ СѓС‚РёР»РёС‚РєРё РґР»СЏ ZEXMLSS
+// РќР°РєР°Р»СЏРєР°РЅРѕ РІ РњРѕР·С‹СЂРµ РІ 2009 РіРѕРґСѓ
+// РђРІС‚РѕСЂ:  РќРµР±РѕСЂР°Рє Р СѓСЃР»Р°РЅ Р’Р»Р°РґРёРјРёСЂРѕРІРёС‡ (Ruslan V. Neborak)
+// e-mail: avemey(РјСЏСѓ)tut(С‚РѕС‡РєР°)by
 // URL:    http://avemey.com
 // Ver:    0.0.11
-// Лицензия: zlib
+// Р›РёС†РµРЅР·РёСЏ: zlib
 // Last update: 2016.09.10
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
@@ -19,6 +19,7 @@ interface
 
 {$I zexml.inc}
 {$I compver.inc}
+{$DEFINE NOZCOLORSTRINGGRID} // not using that
 
 {$IFDEF FPC}
   {$mode objfpc}{$H+}
@@ -40,28 +41,233 @@ uses
 
 {$IFNDEF NOZCOLORSTRINGGRID}
 
-//Копирует стиль из TCellStyle в TZCellStyle
+//РљРѕРїРёСЂСѓРµС‚ СЃС‚РёР»СЊ РёР· TCellStyle РІ TZCellStyle
 procedure CellStyleTo(const CellStyle: TCellStyle; var XStyle: TZStyle; ignorebgcolor: boolean; _border: byte);
 
-//Копирует стиль из TZStyle в TCellStyle
+//РљРѕРїРёСЂСѓРµС‚ СЃС‚РёР»СЊ РёР· TZStyle РІ TCellStyle
 procedure ZStyleToCellStyle(const ZZStyle: TZStyle; CellStyle: TCellStyle; StyleCopy: integer);
 
-//Копирует данные из TZColorStringGrid-а на страницу TZEXMLSS
+//РљРѕРїРёСЂСѓРµС‚ РґР°РЅРЅС‹Рµ РёР· TZColorStringGrid-Р° РЅР° СЃС‚СЂР°РЅРёС†Сѓ TZEXMLSS
+/// <summary>
+///   Copy data from Grid to XMLSS page. <br />
+/// </summary>
+/// <param name="XMLSS">
+///   Storage
+/// </param>
+/// <param name="PageNum">
+///   page number
+/// </param>
+/// <param name="Grid">
+///   the stringgrid needed to copy data
+/// </param>
+/// <param name="ToCol">
+///   column number for insertion
+/// </param>
+/// <param name="ToRow">
+///   row number for insertion
+/// </param>
+/// <param name="BCol">
+///   grid's left top cell's column
+/// </param>
+/// <param name="BRow">
+///   grid's left top cell's row.
+/// </param>
+/// <param name="ECol">
+///   grid's right bottom cell's column.
+/// </param>
+/// <param name="ERow">
+///   grid's right bottom cell's row.
+/// </param>
+/// <param name="ignorebgcolor">
+///   if true, then ignore cell's background color.
+/// </param>
+/// <param name="_border">
+///   specifies how to copy cell's borders (1 - cells with borders, 0 - cells without borders).
+/// </param>
+/// <returns>
+///   True if copied successful.
+/// </returns>
 function GridToXmlSS(var XMLSS: TZEXMLSS; const PageNum: integer;
                      var Grid: TZColorStringGrid; ToCol: integer; ToRow: integer;
                          BCol, BRow, ECol, ERow: integer; ignorebgcolor: boolean; _border: byte): boolean; overload;
 
-//Копирует данные из страницы TZEXMLSS в TZColorStringGrid
+//РљРѕРїРёСЂСѓРµС‚ РґР°РЅРЅС‹Рµ РёР· СЃС‚СЂР°РЅРёС†С‹ TZEXMLSS РІ TZColorStringGrid
+/// <summary>
+///   Copy data from TZEXMLSS to TStringGrid.
+/// </summary>
+/// <param name="Grid">
+///   stringgrid to insert cells into
+/// </param>
+/// <param name="XMLSS">
+///   storage
+/// </param>
+/// <param name="PageNum">
+///   page number
+/// </param>
+/// <param name="ToCol">
+///   column number for insertion
+/// </param>
+/// <param name="ToRow">
+///   row number for insertion
+/// </param>
+/// <param name="BCol">
+///   XMLSS's left top cell's column
+/// </param>
+/// <param name="BRow">
+///   XMLSS's left top cell's row
+/// </param>
+/// <param name="ECol">
+///   XMLSS's right bottom cell's column
+/// </param>
+/// <param name="ERow">
+///   XMLSS's right bottom cell's row.
+/// </param>
+/// <param name="InsertMode">
+///   specifies how to insert or add cells to the StringGrid
+///   <list type="table">
+///     <listheader>
+///       <term>Value</term>
+///       <description>Description</description>
+///     </listheader>
+///     <item>
+///       <term>0</term>
+///       <description>cells not shifted</description>
+///     </item>
+///     <item>
+///       <term>1</term>
+///       <description>cells shifted to the right in the stringgrid</description>
+///     </item>
+///     <item>
+///       <term>2</term>
+///       <description>cells shifted to the down in the stringgrid</description>
+///     </item>
+///     <item>
+///       <term>3</term>
+///       <description>cells shifted to the right and down in the stringgrid</description>
+///     </item>
+///   </list>
+/// </param>
+/// <param name="StyleCopy">
+///   specifies how copy style (0 - do not copy style, if StyleCopy and 16 = 16 - copy cell's size)
+/// </param>
+/// <returns>
+///   True if copied successful.
+/// </returns>
 function XmlSSToGrid(var Grid: TZColorStringGrid; var XMLSS: TZEXMLSS; const PageNum: integer;
                          ToCol: integer; ToRow: integer; BCol, BRow, ECol, ERow: integer; InsertMode: byte; StyleCopy: integer = 1023): boolean; overload;
 {$ENDIF}
 
-//Копирует данные из TStringGrid-а на страницу TZEXMLSS
+//РљРѕРїРёСЂСѓРµС‚ РґР°РЅРЅС‹Рµ РёР· TStringGrid-Р° РЅР° СЃС‚СЂР°РЅРёС†Сѓ TZEXMLSS
+/// <summary>
+///   Copy data from Grid to XMLSS page. <br />
+/// </summary>
+/// <param name="XMLSS">
+///   Storage
+/// </param>
+/// <param name="PageNum">
+///   page number
+/// </param>
+/// <param name="Grid">
+///   the stringgrid needed to copy data
+/// </param>
+/// <param name="ToCol">
+///   column number for insertion
+/// </param>
+/// <param name="ToRow">
+///   row number for insertion
+/// </param>
+/// <param name="BCol">
+///   grid's left top cell's column
+/// </param>
+/// <param name="BRow">
+///   grid's left top cell's row.
+/// </param>
+/// <param name="ECol">
+///   grid's right bottom cell's column.
+/// </param>
+/// <param name="ERow">
+///   grid's right bottom cell's row.
+/// </param>
+/// <param name="ignorebgcolor">
+///   if true, then ignore cell's background color.
+/// </param>
+/// <param name="_border">
+///   specifies how to copy cell's borders (1 - cells with borders, 0 - cells without borders).
+/// </param>
+/// <returns>
+///   True if copied successful.
+/// </returns>
 function GridToXmlSS(var XMLSS: TZEXMLSS; const PageNum: integer;
                      var Grid: TStringGrid; ToCol: integer; ToRow: integer;
                          BCol, BRow, ECol, ERow: integer; ignorebgcolor: boolean; _border: byte): boolean; overload;
 
-//Копирует данные из страницы TZEXMLSS в TStringGrid
+//РљРѕРїРёСЂСѓРµС‚ РґР°РЅРЅС‹Рµ РёР· СЃС‚СЂР°РЅРёС†С‹ TZEXMLSS РІ TStringGrid
+/// <summary>
+///   Copy data from TZEXMLSS to TStringGrid.
+/// </summary>
+/// <param name="Grid">
+///   stringgrid to insert cells into
+/// </param>
+/// <param name="XMLSS">
+///   storage
+/// </param>
+/// <param name="PageNum">
+///   page number
+/// </param>
+/// <param name="ToCol">
+///   column number for insertion
+/// </param>
+/// <param name="ToRow">
+///   row number for insertion
+/// </param>
+/// <param name="BCol">
+///   XMLSS's left top cell's column
+/// </param>
+/// <param name="BRow">
+///   XMLSS's left top cell's row
+/// </param>
+/// <param name="ECol">
+///   XMLSS's right bottom cell's column
+/// </param>
+/// <param name="ERow">
+///   XMLSS's right bottom cell's row.
+/// </param>
+/// <param name="InsertMode">
+///   specifies how to insert or add cells to the StringGrid
+///   <list type="table">
+///     <listheader>
+///       <term>Value</term>
+///       <description>Description</description>
+///     </listheader>
+///     <item>
+///       <term>0</term>
+///       <description>cells not shifted</description>
+///     </item>
+///     <item>
+///       <term>1</term>
+///       <description>cells shifted to the right in the stringgrid</description>
+///     </item>
+///     <item>
+///       <term>2</term>
+///       <description>cells shifted to the down in the stringgrid</description>
+///     </item>
+///     <item>
+///       <term>3</term>
+///       <description>cells shifted to the right and down in the stringgrid</description>
+///     </item>
+///   </list>
+/// </param>
+/// <param name="StyleCopy">
+///   specifies how copy style: <br /><br />0 - do not copy style <br />StyleCopy and 1 = 1 - copy BGColor <br />StyleCopy and 2 = 2 - copy Vertical Alignment <br />StyleCopy and
+///   4 = 4 - copy Horizontal Alignment <br />StyleCopy and 8 = 8 - copy Font <br />StyleCopy and 16 = 16 - copy cell's size <br />StyleCopy and 32 = 32 - copy WordWrap <br />
+///   StyleCopy and 64 = 64 - copy Merge Area <br />StyleCopy and 128 = 128 - delete merged cells in place of insert before insertion <br />StyleCopy and 256 = 256 - set
+///   Borderstyle to sqNone in place of insert <br />StyleCopy and 512 = 512 - if cell's text do not fit in cell then cell's height will resize <br />StyleCopy and 1024 = 1024 -
+///   if cell's text do not fit in cell then cell's width will resize <br />StyleCopy and 2048 = 2048 - set default style of XMLSS to added cells on shift-place instead of the
+///   default style of the grid <br />
+/// </param>
+/// <returns>
+///   True if copied successful.
+/// </returns>
 function XmlSSToGrid(var Grid: TStringGrid; var XMLSS: TZEXMLSS; const PageNum: integer;
                          ToCol: integer; ToRow: integer; BCol, BRow, ECol, ERow: integer; InsertMode: byte; StyleCopy: integer = 511): boolean; overload;
 
@@ -71,36 +277,126 @@ function SaveXmlssToHtml(var XMLSS: TZEXMLSS; const PageNum: integer; Title: str
 function SaveXmlssToHtml(var XMLSS: TZEXMLSS; const PageNum: integer; Title: string; FileName: string;
                          TextConverter: TAnsiToCPConverter; CodePageName: string): integer; overload;
 
-//Сохраняет в поток в формате Excel XML SpreadSheet
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ РїРѕС‚РѕРє РІ С„РѕСЂРјР°С‚Рµ Excel XML SpreadSheet
+/// <summary>
+///   Save to the Stream in Excel XML SpreadSheet format.
+/// </summary>
+/// <param name="XMLSS">
+///   storage
+/// </param>
+/// <param name="SheetsNumbers">
+///   array with needed numbers of sheets (if array is empty then all sheets will be saved). SheetsNames
+/// </param>
+/// <param name="SheetsNames">
+///   array with titles of sheets (elements count in SheetsName must be equal to elements count in SheetsNumbers).
+/// </param>
+/// <param name="TextConverter">
+///   text converter from local encoding to needed encoding (for example, AnsiToUtf8 - convert to UTF-8 encoding
+/// </param>
+/// <param name="CodePageName">
+///   name of codepage
+/// </param>
+/// <param name="BOM">
+///   Byte Order Mark. <br />Return 0 if saved successful.
+/// </param>
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 
-//Сохраняет в поток в формате Excel XML SpreadSheet
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ РїРѕС‚РѕРє РІ С„РѕСЂРјР°С‚Рµ Excel XML SpreadSheet
+/// <summary>
+///   Save to the Stream in Excel XML SpreadSheet format.
+/// </summary>
+/// <param name="XMLSS">
+///   storage
+/// </param>
+/// <param name="SheetsNumbers">
+///   array with needed numbers of sheets (if array is empty then all sheets will be saved). SheetsNames
+/// </param>
+/// <param name="SheetsNames">
+///   array with titles of sheets (elements count in SheetsName must be equal to elements count in SheetsNumbers).
+/// </param>
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string): integer; overload;
 
-//Сохраняет в поток в формате Excel XML SpreadSheet
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ РїРѕС‚РѕРє РІ С„РѕСЂРјР°С‚Рµ Excel XML SpreadSheet
+/// <summary>
+///   Save to the Stream in Excel XML SpreadSheet format.
+/// </summary>
+/// <param name="XMLSS">
+///   storage
+/// </param>
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream): integer; overload;
 
-//Сохраняет в файл в формате Excel XML SpreadSheet
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ С„Р°Р№Р» РІ С„РѕСЂРјР°С‚Рµ Excel XML SpreadSheet
+/// <summary>
+///   Save to the file FileName in Excel XML SpreadSheet format
+/// </summary>
+/// <param name="XMLSS">
+///   storage
+/// </param>
+/// <param name="SheetsNumbers">
+///   array with needed numbers of sheets (if array is empty then all sheets will be saved). SheetsNames
+/// </param>
+/// <param name="SheetsNames">
+///   array with titles of sheets (elements count in SheetsName must be equal to elements count in SheetsNumbers).
+/// </param>
+/// <param name="TextConverter">
+///   text converter from local encoding to needed encoding (for example, AnsiToUtf8 - convert to UTF-8 encoding
+/// </param>
+/// <param name="CodePageName">
+///   name of codepage
+/// </param>
+/// <param name="BOM">
+///   Byte Order Mark. <br />Return 0 if saved successful.
+/// </param>
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 
-//Сохраняет в файл в формате Excel XML SpreadSheet
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ С„Р°Р№Р» РІ С„РѕСЂРјР°С‚Рµ Excel XML SpreadSheet
+/// <summary>
+///   Save to the file FileName in Excel XML SpreadSheet format
+/// </summary>
+/// <param name="XMLSS">
+///   storage
+/// </param>
+/// <param name="SheetsNumbers">
+///   array with needed numbers of sheets (if array is empty then all sheets will be saved). SheetsNames
+/// </param>
+/// <param name="SheetsNames">
+///   array with titles of sheets (elements count in SheetsName must be equal to elements count in SheetsNumbers).
+/// </param>
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string): integer; overload;
 
-//Сохраняет в файл в формате Excel XML SpreadSheet
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ С„Р°Р№Р» РІ С„РѕСЂРјР°С‚Рµ Excel XML SpreadSheet
+/// <summary>
+///   Save to the file FileName in Excel XML SpreadSheet format
+/// </summary>
+/// <param name="XMLSS">
+///   storage
+/// </param>
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
 
-//Читает из потока Excel XML SpreadSheet (EXMLSS)
-//      XMLSS: TZEXMLSS                 - хранилище
-//      Stream: TStream                 - поток
+//Р§РёС‚Р°РµС‚ РёР· РїРѕС‚РѕРєР° Excel XML SpreadSheet (EXMLSS)
+//      XMLSS: TZEXMLSS                 - С…СЂР°РЅРёР»РёС‰Рµ
+//      Stream: TStream                 - РїРѕС‚РѕРє
+/// <summary>
+///   Read Excel XML SpreadSheet from Stream to XMLSS. <br />
+/// </summary>
+/// <returns>
+///   0 if read successful.
+/// </returns>
 function ReadEXMLSS(var XMLSS: TZEXMLSS; Stream: TStream): integer; overload;
 
-//Читает из файла Excel XML SpreadSheet (EXMLSS)
-//      XMLSS: TZEXMLSS                 - хранилище
-//      FileName: string                - имя файла
+//Р§РёС‚Р°РµС‚ РёР· С„Р°Р№Р»Р° Excel XML SpreadSheet (EXMLSS)
+//      XMLSS: TZEXMLSS                 - С…СЂР°РЅРёР»РёС‰Рµ
+//      FileName: string                - РёРјСЏ С„Р°Р№Р»Р°
+/// <summary>
+///   Read Excel XML SpreadSheet from file FileName to XMLSS. <br />
+/// </summary>
+/// <returns>
+///   0 if read successful.
+/// </returns>
 function ReadEXMLSS(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
 
 // needed for uniform save routines: zeSave*
@@ -116,7 +412,7 @@ uses
   StrUtils,  // stock SplitString(string, string) implementation
   AnsiStrings  // AnsiString targeted overloaded versions of Pos, Trim, etc
 {$EndIf}
-  ;
+  , System.UITypes; // inlining
 
 {$IFDEF DELPHI_UNICODE}
   {$DEFINE USE_STRUTILS_SPLIT_STRING}
@@ -198,16 +494,16 @@ end;
 
 {$IFNDEF NOZCOLORSTRINGGRID}
 
-// Переводит TCellStyle в TZCellStyle
+// РџРµСЂРµРІРѕРґРёС‚ TCellStyle РІ TZCellStyle
 //
-//      CellStyle: TCellStyle   - стиль ячейки из TZColorStringGrid-а
-//      XStyle: TZStyle         - итоговый стиль
-//      ignorebgcolor: boolean  - игнорировать ли цвет фона ячейки
-//                                true - игнорировать
-//      _border: integer        - обработка рамки ячейки
-//              1 - все в рамках
-//              0 - все без рамок
-//              2 - все с рамками, кроме стиля sgNone
+//      CellStyle: TCellStyle   - СЃС‚РёР»СЊ СЏС‡РµР№РєРё РёР· TZColorStringGrid-Р°
+//      XStyle: TZStyle         - РёС‚РѕРіРѕРІС‹Р№ СЃС‚РёР»СЊ
+//      ignorebgcolor: boolean  - РёРіРЅРѕСЂРёСЂРѕРІР°С‚СЊ Р»Рё С†РІРµС‚ С„РѕРЅР° СЏС‡РµР№РєРё
+//                                true - РёРіРЅРѕСЂРёСЂРѕРІР°С‚СЊ
+//      _border: integer        - РѕР±СЂР°Р±РѕС‚РєР° СЂР°РјРєРё СЏС‡РµР№РєРё
+//              1 - РІСЃРµ РІ СЂР°РјРєР°С…
+//              0 - РІСЃРµ Р±РµР· СЂР°РјРѕРє
+//              2 - РІСЃРµ СЃ СЂР°РјРєР°РјРё, РєСЂРѕРјРµ СЃС‚РёР»СЏ sgNone
 procedure CellStyleTo(const CellStyle: TCellStyle; var XStyle: TZStyle; ignorebgcolor: boolean; _border: byte);
 var
   i: integer;
@@ -254,7 +550,7 @@ begin
 end;
 {$ENDIF}
 
-//Проверка на возможность получения данных из грида
+//РџСЂРѕРІРµСЂРєР° РЅР° РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊ РїРѕР»СѓС‡РµРЅРёСЏ РґР°РЅРЅС‹С… РёР· РіСЂРёРґР°
 function GridCheck(var XMLSS: TZEXMLSS; const PageNum: integer;
                        GridIsNil: boolean; ToCol: integer; ToRow: integer;
                        BCol, BRow, ECol, ERow: integer): boolean;
@@ -292,24 +588,24 @@ begin
   end;
 end;
 
-//Копирует данные из TZColorStringGrid-а на страницу TZEXMLSS
+//РљРѕРїРёСЂСѓРµС‚ РґР°РЅРЅС‹Рµ РёР· TZColorStringGrid-Р° РЅР° СЃС‚СЂР°РЅРёС†Сѓ TZEXMLSS
 //Input:
-//      XMLSS: TZEXMLSS - Хранилище
-//      PageNum: integer - Номер страници
-//      Grid: TObject - грид, из которого нужно брать данные
-//      ToCol: integer - номер столбца для вставки
-//      ToRow: integer - номер строки для вставки
-//      BCol: integer - верхняя левая колонка грида
-//      BRow: integer - верхняя левая строка грида
-//      ECol: integer - нижняя правая колонка грида
-//      ERow: integer - нижняя правая строка грида
-//      ignorebgcolor: boolean - игнорировать ли цвет фона ячейки
-//      _border: byte - обработка рамки ячейки
-//              1 - все в рамках
-//              0 - все без рамок
-//              2 - все с рамками, кроме стиля sgNone (только для TZColorStringGrid)
+//      XMLSS: TZEXMLSS - РҐСЂР°РЅРёР»РёС‰Рµ
+//      PageNum: integer - РќРѕРјРµСЂ СЃС‚СЂР°РЅРёС†Рё
+//      Grid: TObject - РіСЂРёРґ, РёР· РєРѕС‚РѕСЂРѕРіРѕ РЅСѓР¶РЅРѕ Р±СЂР°С‚СЊ РґР°РЅРЅС‹Рµ
+//      ToCol: integer - РЅРѕРјРµСЂ СЃС‚РѕР»Р±С†Р° РґР»СЏ РІСЃС‚Р°РІРєРё
+//      ToRow: integer - РЅРѕРјРµСЂ СЃС‚СЂРѕРєРё РґР»СЏ РІСЃС‚Р°РІРєРё
+//      BCol: integer - РІРµСЂС…РЅСЏСЏ Р»РµРІР°СЏ РєРѕР»РѕРЅРєР° РіСЂРёРґР°
+//      BRow: integer - РІРµСЂС…РЅСЏСЏ Р»РµРІР°СЏ СЃС‚СЂРѕРєР° РіСЂРёРґР°
+//      ECol: integer - РЅРёР¶РЅСЏСЏ РїСЂР°РІР°СЏ РєРѕР»РѕРЅРєР° РіСЂРёРґР°
+//      ERow: integer - РЅРёР¶РЅСЏСЏ РїСЂР°РІР°СЏ СЃС‚СЂРѕРєР° РіСЂРёРґР°
+//      ignorebgcolor: boolean - РёРіРЅРѕСЂРёСЂРѕРІР°С‚СЊ Р»Рё С†РІРµС‚ С„РѕРЅР° СЏС‡РµР№РєРё
+//      _border: byte - РѕР±СЂР°Р±РѕС‚РєР° СЂР°РјРєРё СЏС‡РµР№РєРё
+//              1 - РІСЃРµ РІ СЂР°РјРєР°С…
+//              0 - РІСЃРµ Р±РµР· СЂР°РјРѕРє
+//              2 - РІСЃРµ СЃ СЂР°РјРєР°РјРё, РєСЂРѕРјРµ СЃС‚РёР»СЏ sgNone (С‚РѕР»СЊРєРѕ РґР»СЏ TZColorStringGrid)
 //Result:
-//      true - копирование удалось
+//      true - РєРѕРїРёСЂРѕРІР°РЅРёРµ СѓРґР°Р»РѕСЃСЊ
 function MainGridToXmlSS(var XMLSS: TZEXMLSS; const PageNum: integer;
                      var Grid: TObject; ToCol: integer; ToRow: integer;
                          BCol, BRow, ECol, ERow: integer; ignorebgcolor: boolean; _border: byte): boolean;
@@ -391,7 +687,7 @@ begin
       end;
       for i := 1 to 3 do
         tmpstyle.Border[i].Assign(tmpstyle.Border[0]);
-      //номер стиля
+      //РЅРѕРјРµСЂ СЃС‚РёР»СЏ
       t.Left := XMLSS.Styles.Add(tmpstyle, true);
       for i := BCol to ECol do
       begin
@@ -412,23 +708,23 @@ begin
   FreeAndNil(tmpstyle);
 end;
 
-//Копирует данные из TStringGrid-а на страницу TZEXMLSS
+//РљРѕРїРёСЂСѓРµС‚ РґР°РЅРЅС‹Рµ РёР· TStringGrid-Р° РЅР° СЃС‚СЂР°РЅРёС†Сѓ TZEXMLSS
 //Input:
-//      XMLSS: TZEXMLSS - Хранилище
-//      PageNum: integer - Номер страници
-//      Grid: TStringGrid - грид, из которого нужно брать данные
-//      ToCol: integer - номер столбца для вставки
-//      ToRow: integer - номер строки для вставки
-//      BCol: integer - верхняя левая колонка грида
-//      BRow: integer - верхняя левая строка грида
-//      ECol: integer - нижняя правая колонка грида
-//      ERow: integer - нижняя правая строка грида
-//      ignorebgcolor: boolean - игнорировать ли цвет фона ячейки
-//      _border: byte - обработка рамки ячейки
-//              1 - все в рамках
-//              0 - все без рамок
+//      XMLSS: TZEXMLSS - РҐСЂР°РЅРёР»РёС‰Рµ
+//      PageNum: integer - РќРѕРјРµСЂ СЃС‚СЂР°РЅРёС†Рё
+//      Grid: TStringGrid - РіСЂРёРґ, РёР· РєРѕС‚РѕСЂРѕРіРѕ РЅСѓР¶РЅРѕ Р±СЂР°С‚СЊ РґР°РЅРЅС‹Рµ
+//      ToCol: integer - РЅРѕРјРµСЂ СЃС‚РѕР»Р±С†Р° РґР»СЏ РІСЃС‚Р°РІРєРё
+//      ToRow: integer - РЅРѕРјРµСЂ СЃС‚СЂРѕРєРё РґР»СЏ РІСЃС‚Р°РІРєРё
+//      BCol: integer - РІРµСЂС…РЅСЏСЏ Р»РµРІР°СЏ РєРѕР»РѕРЅРєР° РіСЂРёРґР°
+//      BRow: integer - РІРµСЂС…РЅСЏСЏ Р»РµРІР°СЏ СЃС‚СЂРѕРєР° РіСЂРёРґР°
+//      ECol: integer - РЅРёР¶РЅСЏСЏ РїСЂР°РІР°СЏ РєРѕР»РѕРЅРєР° РіСЂРёРґР°
+//      ERow: integer - РЅРёР¶РЅСЏСЏ РїСЂР°РІР°СЏ СЃС‚СЂРѕРєР° РіСЂРёРґР°
+//      ignorebgcolor: boolean - РёРіРЅРѕСЂРёСЂРѕРІР°С‚СЊ Р»Рё С†РІРµС‚ С„РѕРЅР° СЏС‡РµР№РєРё
+//      _border: byte - РѕР±СЂР°Р±РѕС‚РєР° СЂР°РјРєРё СЏС‡РµР№РєРё
+//              1 - РІСЃРµ РІ СЂР°РјРєР°С…
+//              0 - РІСЃРµ Р±РµР· СЂР°РјРѕРє
 //Result:
-//      true - копирование удалось
+//      true - РєРѕРїРёСЂРѕРІР°РЅРёРµ СѓРґР°Р»РѕСЃСЊ
 function GridToXmlSS(var XMLSS: TZEXMLSS; const PageNum: integer;
                      var Grid: TStringGrid; ToCol: integer; ToRow: integer;
                          BCol, BRow, ECol, ERow: integer; ignorebgcolor: boolean; _border: byte): boolean; overload;
@@ -439,24 +735,24 @@ end;
 
 {$IFNDEF NOZCOLORSTRINGGRID}
 
-//Копирует данные из TZColorStringGrid-а на страницу TZEXMLSS
+//РљРѕРїРёСЂСѓРµС‚ РґР°РЅРЅС‹Рµ РёР· TZColorStringGrid-Р° РЅР° СЃС‚СЂР°РЅРёС†Сѓ TZEXMLSS
 //Input:
-//      XMLSS: TZEXMLSS - Хранилище
-//      PageNum: integer - Номер страници
-//      Grid: TZColorStringGrid - грид, из которого нужно брать данные
-//      ToCol: integer - номер столбца для вставки
-//      ToRow: integer - номер строки для вставки
-//      BCol: integer - верхняя левая колонка грида
-//      BRow: integer - верхняя левая строка грида
-//      ECol: integer - нижняя правая колонка грида
-//      ERow: integer - нижняя правая строка грида
-//      ignorebgcolor: boolean - игнорировать ли цвет фона ячейки
-//      _border: byte - обработка рамки ячейки
-//              1 - все в рамках
-//              0 - все без рамок
-//              2 - все с рамками, кроме стиля sgNone
+//      XMLSS: TZEXMLSS - РҐСЂР°РЅРёР»РёС‰Рµ
+//      PageNum: integer - РќРѕРјРµСЂ СЃС‚СЂР°РЅРёС†Рё
+//      Grid: TZColorStringGrid - РіСЂРёРґ, РёР· РєРѕС‚РѕСЂРѕРіРѕ РЅСѓР¶РЅРѕ Р±СЂР°С‚СЊ РґР°РЅРЅС‹Рµ
+//      ToCol: integer - РЅРѕРјРµСЂ СЃС‚РѕР»Р±С†Р° РґР»СЏ РІСЃС‚Р°РІРєРё
+//      ToRow: integer - РЅРѕРјРµСЂ СЃС‚СЂРѕРєРё РґР»СЏ РІСЃС‚Р°РІРєРё
+//      BCol: integer - РІРµСЂС…РЅСЏСЏ Р»РµРІР°СЏ РєРѕР»РѕРЅРєР° РіСЂРёРґР°
+//      BRow: integer - РІРµСЂС…РЅСЏСЏ Р»РµРІР°СЏ СЃС‚СЂРѕРєР° РіСЂРёРґР°
+//      ECol: integer - РЅРёР¶РЅСЏСЏ РїСЂР°РІР°СЏ РєРѕР»РѕРЅРєР° РіСЂРёРґР°
+//      ERow: integer - РЅРёР¶РЅСЏСЏ РїСЂР°РІР°СЏ СЃС‚СЂРѕРєР° РіСЂРёРґР°
+//      ignorebgcolor: boolean - РёРіРЅРѕСЂРёСЂРѕРІР°С‚СЊ Р»Рё С†РІРµС‚ С„РѕРЅР° СЏС‡РµР№РєРё
+//      _border: byte - РѕР±СЂР°Р±РѕС‚РєР° СЂР°РјРєРё СЏС‡РµР№РєРё
+//              1 - РІСЃРµ РІ СЂР°РјРєР°С…
+//              0 - РІСЃРµ Р±РµР· СЂР°РјРѕРє
+//              2 - РІСЃРµ СЃ СЂР°РјРєР°РјРё, РєСЂРѕРјРµ СЃС‚РёР»СЏ sgNone
 //Result:
-//      true - копирование удалось
+//      true - РєРѕРїРёСЂРѕРІР°РЅРёРµ СѓРґР°Р»РѕСЃСЊ
 function GridToXmlSS(var XMLSS: TZEXMLSS; const PageNum: integer;
                      var Grid: TZColorStringGrid; ToCol: integer; ToRow: integer;
                          BCol, BRow, ECol, ERow: integer; ignorebgcolor: boolean; _border: byte): boolean; overload;
@@ -465,15 +761,15 @@ begin
                          ECol, ERow, ignorebgcolor, _border);
 end;
 
-//Копирует стиль из TZStyle в TCellStyle
-//      ZZStyle: TZStyle - стиль XMLSS
-//      var CellStyle: TCellStyle - стиль TZColorStringGrid-а
-//      StyleCopy: integer - что копировать
-//              0 - ничего из стиля не копируется
-//              StyleCopy and  1 =  1 - копируется BGColor
-//              StyleCopy and  2 =  2 - копируется Vertical Alignment
-//              StyleCopy and  4 =  4 - копируется Horizontal Alignment
-//              StyleCopy and  8 =  8 - копируется Font
+//РљРѕРїРёСЂСѓРµС‚ СЃС‚РёР»СЊ РёР· TZStyle РІ TCellStyle
+//      ZZStyle: TZStyle - СЃС‚РёР»СЊ XMLSS
+//      var CellStyle: TCellStyle - СЃС‚РёР»СЊ TZColorStringGrid-Р°
+//      StyleCopy: integer - С‡С‚Рѕ РєРѕРїРёСЂРѕРІР°С‚СЊ
+//              0 - РЅРёС‡РµРіРѕ РёР· СЃС‚РёР»СЏ РЅРµ РєРѕРїРёСЂСѓРµС‚СЃСЏ
+//              StyleCopy and  1 =  1 - РєРѕРїРёСЂСѓРµС‚СЃСЏ BGColor
+//              StyleCopy and  2 =  2 - РєРѕРїРёСЂСѓРµС‚СЃСЏ Vertical Alignment
+//              StyleCopy and  4 =  4 - РєРѕРїРёСЂСѓРµС‚СЃСЏ Horizontal Alignment
+//              StyleCopy and  8 =  8 - РєРѕРїРёСЂСѓРµС‚СЃСЏ Font
 //              StyleCopy and 32 = 32 - WordWrap
 procedure ZStyleToCellStyle(const ZZStyle: TZStyle; CellStyle: TCellStyle; StyleCopy: integer);
 begin
@@ -499,40 +795,40 @@ begin
     CellStyle.WordWrap := ZZStyle.Alignment.WrapText;
 end;
 
-//Копирует данные из страницы TZEXMLSS в TZColorStringGrid
+//РљРѕРїРёСЂСѓРµС‚ РґР°РЅРЅС‹Рµ РёР· СЃС‚СЂР°РЅРёС†С‹ TZEXMLSS РІ TZColorStringGrid
 //Input:
-//      Grid: TZColorStringGrid - грид
-//      XMLSS: TZEXMLSS - Хранилище
-//      PageNum: integer - Номер страници
-//      ToCol: integer - номер столбца для вставки
-//      ToRow: integer - номер строки для вставки
-//      BCol: integer - верхняя левая колонка хранилища
-//      BRow: integer - верхняя левая строка хранилища
-//      ECol: integer - нижняя правая колонка хранилища
-//      ERow: integer - нижняя правая строка хранилища
-//      InsertMode: byte - добавлять или заменять ячейки
-//                      0 - ячейки в гриде не смещаются
-//                      1 - ячейки в гриде смещаются вправо на размер добавляемой области
-//                      2 - ячейки в гриде смещаются вниз на размер добавляемой области
-//                      3 - ячейки в гриде смещаются вправо и вниз на размер добавляемой области
-//      StyleCopy: integer - копирует стиль
-//              0 - ничего из стиля не копируется
-//              StyleCopy and   1  =    1 - копируется BGColor
-//              StyleCopy and   2  =    2 - копируется Vertical Alignment
-//              StyleCopy and   4  =    4 - копируется Horizontal Alignment
-//              StyleCopy and   8  =    8 - копируется Font
-//              StyleCopy and  16  =   16 - копируется Размер ячейки
+//      Grid: TZColorStringGrid - РіСЂРёРґ
+//      XMLSS: TZEXMLSS - РҐСЂР°РЅРёР»РёС‰Рµ
+//      PageNum: integer - РќРѕРјРµСЂ СЃС‚СЂР°РЅРёС†Рё
+//      ToCol: integer - РЅРѕРјРµСЂ СЃС‚РѕР»Р±С†Р° РґР»СЏ РІСЃС‚Р°РІРєРё
+//      ToRow: integer - РЅРѕРјРµСЂ СЃС‚СЂРѕРєРё РґР»СЏ РІСЃС‚Р°РІРєРё
+//      BCol: integer - РІРµСЂС…РЅСЏСЏ Р»РµРІР°СЏ РєРѕР»РѕРЅРєР° С…СЂР°РЅРёР»РёС‰Р°
+//      BRow: integer - РІРµСЂС…РЅСЏСЏ Р»РµРІР°СЏ СЃС‚СЂРѕРєР° С…СЂР°РЅРёР»РёС‰Р°
+//      ECol: integer - РЅРёР¶РЅСЏСЏ РїСЂР°РІР°СЏ РєРѕР»РѕРЅРєР° С…СЂР°РЅРёР»РёС‰Р°
+//      ERow: integer - РЅРёР¶РЅСЏСЏ РїСЂР°РІР°СЏ СЃС‚СЂРѕРєР° С…СЂР°РЅРёР»РёС‰Р°
+//      InsertMode: byte - РґРѕР±Р°РІР»СЏС‚СЊ РёР»Рё Р·Р°РјРµРЅСЏС‚СЊ СЏС‡РµР№РєРё
+//                      0 - СЏС‡РµР№РєРё РІ РіСЂРёРґРµ РЅРµ СЃРјРµС‰Р°СЋС‚СЃСЏ
+//                      1 - СЏС‡РµР№РєРё РІ РіСЂРёРґРµ СЃРјРµС‰Р°СЋС‚СЃСЏ РІРїСЂР°РІРѕ РЅР° СЂР°Р·РјРµСЂ РґРѕР±Р°РІР»СЏРµРјРѕР№ РѕР±Р»Р°СЃС‚Рё
+//                      2 - СЏС‡РµР№РєРё РІ РіСЂРёРґРµ СЃРјРµС‰Р°СЋС‚СЃСЏ РІРЅРёР· РЅР° СЂР°Р·РјРµСЂ РґРѕР±Р°РІР»СЏРµРјРѕР№ РѕР±Р»Р°СЃС‚Рё
+//                      3 - СЏС‡РµР№РєРё РІ РіСЂРёРґРµ СЃРјРµС‰Р°СЋС‚СЃСЏ РІРїСЂР°РІРѕ Рё РІРЅРёР· РЅР° СЂР°Р·РјРµСЂ РґРѕР±Р°РІР»СЏРµРјРѕР№ РѕР±Р»Р°СЃС‚Рё
+//      StyleCopy: integer - РєРѕРїРёСЂСѓРµС‚ СЃС‚РёР»СЊ
+//              0 - РЅРёС‡РµРіРѕ РёР· СЃС‚РёР»СЏ РЅРµ РєРѕРїРёСЂСѓРµС‚СЃСЏ
+//              StyleCopy and   1  =    1 - РєРѕРїРёСЂСѓРµС‚СЃСЏ BGColor
+//              StyleCopy and   2  =    2 - РєРѕРїРёСЂСѓРµС‚СЃСЏ Vertical Alignment
+//              StyleCopy and   4  =    4 - РєРѕРїРёСЂСѓРµС‚СЃСЏ Horizontal Alignment
+//              StyleCopy and   8  =    8 - РєРѕРїРёСЂСѓРµС‚СЃСЏ Font
+//              StyleCopy and  16  =   16 - РєРѕРїРёСЂСѓРµС‚СЃСЏ Р Р°Р·РјРµСЂ СЏС‡РµР№РєРё
 //              StyleCopy and  32  =   32 - WordWrap
-//              StyleCopy and  64  =   64 - копируется Merge Area
-//              StyleCopy and  128 =  128 - удалять объединённые ячейки на месте вставки
-//              StyleCopy and  256 =  256 - установить на месте вставки BorderCellStyle = sqNone
-//              StyleCopy and  512 =  512 - Увеличивать высоту ячейки, если текст не помещается
-//              StyleCopy and 1024 = 1024 - Увеличивать длину ячейки, если текст не помещается
-//              StyleCopy and 2048 = 2048 - устанавливать default-стиль из XMLSS для
-//                                          добавленных на место сдвига ячеек вместо
-//                                          default-стиля из грида
+//              StyleCopy and  64  =   64 - РєРѕРїРёСЂСѓРµС‚СЃСЏ Merge Area
+//              StyleCopy and  128 =  128 - СѓРґР°Р»СЏС‚СЊ РѕР±СЉРµРґРёРЅС‘РЅРЅС‹Рµ СЏС‡РµР№РєРё РЅР° РјРµСЃС‚Рµ РІСЃС‚Р°РІРєРё
+//              StyleCopy and  256 =  256 - СѓСЃС‚Р°РЅРѕРІРёС‚СЊ РЅР° РјРµСЃС‚Рµ РІСЃС‚Р°РІРєРё BorderCellStyle = sqNone
+//              StyleCopy and  512 =  512 - РЈРІРµР»РёС‡РёРІР°С‚СЊ РІС‹СЃРѕС‚Сѓ СЏС‡РµР№РєРё, РµСЃР»Рё С‚РµРєСЃС‚ РЅРµ РїРѕРјРµС‰Р°РµС‚СЃСЏ
+//              StyleCopy and 1024 = 1024 - РЈРІРµР»РёС‡РёРІР°С‚СЊ РґР»РёРЅСѓ СЏС‡РµР№РєРё, РµСЃР»Рё С‚РµРєСЃС‚ РЅРµ РїРѕРјРµС‰Р°РµС‚СЃСЏ
+//              StyleCopy and 2048 = 2048 - СѓСЃС‚Р°РЅР°РІР»РёРІР°С‚СЊ default-СЃС‚РёР»СЊ РёР· XMLSS РґР»СЏ
+//                                          РґРѕР±Р°РІР»РµРЅРЅС‹С… РЅР° РјРµСЃС‚Рѕ СЃРґРІРёРіР° СЏС‡РµРµРє РІРјРµСЃС‚Рѕ
+//                                          default-СЃС‚РёР»СЏ РёР· РіСЂРёРґР°
 //Result:
-//      true - копирование удалось
+//      true - РєРѕРїРёСЂРѕРІР°РЅРёРµ СѓРґР°Р»РѕСЃСЊ
 function XmlSSToGrid(var Grid: TZColorStringGrid; var XMLSS: TZEXMLSS; const PageNum: integer;
                          ToCol: integer; ToRow: integer; BCol, BRow, ECol, ERow: integer; InsertMode: byte; StyleCopy: integer = 1023): boolean; overload;
 var
@@ -569,7 +865,7 @@ var
       Grid.MergeCells.AddRectXY(a[i][0] + xx, a[i][1] + yy, a[i][2] + xx, a[i][3] + yy);
   end;
 
-  {tut} //Просмотреть в модуле zexmlss и сделать одну нормальную функцию
+  {tut} //РџСЂРѕСЃРјРѕС‚СЂРµС‚СЊ РІ РјРѕРґСѓР»Рµ zexmlss Рё СЃРґРµР»Р°С‚СЊ РѕРґРЅСѓ РЅРѕСЂРјР°Р»СЊРЅСѓСЋ С„СѓРЅРєС†РёСЋ
   function usl(rct1, rct2: TRect): boolean;
   begin
     result := (((rct1.Left >= rct2.Left) and (rct1.Left <= rct2.Right)) or
@@ -599,7 +895,7 @@ begin
   result := GridCheck(XMLSS, PageNum, Grid = nil, ToCol, ToRow, BCol, BRow, ECol, ERow);
   if not result then
     exit;
-  if StyleCopy < 0 then StyleCopy := 2047; //всё
+  if StyleCopy < 0 then StyleCopy := 2047; //РІСЃС‘
   if ToCol >= Grid.ColCount then
     Grid.ColCount := ToCol;
   if ToRow >= Grid.RowCount then
@@ -710,7 +1006,7 @@ begin
     end;
   end;
 
-    //удаление объединённых ячеек
+    //СѓРґР°Р»РµРЅРёРµ РѕР±СЉРµРґРёРЅС‘РЅРЅС‹С… СЏС‡РµРµРє
   if b1 and ((InsertMode <= 0) or (InsertMode > 3)) then
     for i := 0 to acount - 1 do
     begin
@@ -751,7 +1047,7 @@ begin
       y := ToRow + j - BRow;
       ZStyleToCellStyle(XMLSS.Styles[XMLSS.Sheets[PageNum].Cell[i, j].CellStyle],
                         Grid.CellStyle[x, y], StyleCopy);
-      Grid.Cells[x, y] := ''; //Сильно не пинать!                  
+      Grid.Cells[x, y] := ''; //РЎРёР»СЊРЅРѕ РЅРµ РїРёРЅР°С‚СЊ!                  
       Grid.Cells[x, y] := XMLSS.Sheets[PageNum].Cell[i, j].Data;
     end;
   end;
@@ -763,26 +1059,26 @@ begin
 end;
 {$ENDIF}
 
-//Копирует данные из страницы TZEXMLSS в TStringGrid
+//РљРѕРїРёСЂСѓРµС‚ РґР°РЅРЅС‹Рµ РёР· СЃС‚СЂР°РЅРёС†С‹ TZEXMLSS РІ TStringGrid
 //Input:
-//      Grid: TStringGrid - грид
-//      XMLSS: TZEXMLSS - Хранилище
-//      PageNum: integer - Номер страници
-//      ToCol: integer - номер столбца для вставки
-//      ToRow: integer - номер строки для вставки
-//      BCol: integer - верхняя левая колонка хранилища
-//      BRow: integer - верхняя левая строка хранилища
-//      ECol: integer - нижняя правая колонка хранилища
-//      ERow: integer - нижняя правая строка хранилища
-//      InsertMode: byte - добавлять или заменять ячейки
-//                      0 - ячейки в гриде не смещаются
-//                      1 - ячейки в гриде смещаются вправо на размер добавляемой области
-//                      2 - ячейки в гриде смещаются вниз на размер добавляемой области
-//                      3 - ячейки в гриде смещаются вправо и вниз на размер добавляемой области
-//      StyleCopy: integer - копирует стиль
-//              StyleCopy and 16  =  16 - копируется Размер ячейки
+//      Grid: TStringGrid - РіСЂРёРґ
+//      XMLSS: TZEXMLSS - РҐСЂР°РЅРёР»РёС‰Рµ
+//      PageNum: integer - РќРѕРјРµСЂ СЃС‚СЂР°РЅРёС†Рё
+//      ToCol: integer - РЅРѕРјРµСЂ СЃС‚РѕР»Р±С†Р° РґР»СЏ РІСЃС‚Р°РІРєРё
+//      ToRow: integer - РЅРѕРјРµСЂ СЃС‚СЂРѕРєРё РґР»СЏ РІСЃС‚Р°РІРєРё
+//      BCol: integer - РІРµСЂС…РЅСЏСЏ Р»РµРІР°СЏ РєРѕР»РѕРЅРєР° С…СЂР°РЅРёР»РёС‰Р°
+//      BRow: integer - РІРµСЂС…РЅСЏСЏ Р»РµРІР°СЏ СЃС‚СЂРѕРєР° С…СЂР°РЅРёР»РёС‰Р°
+//      ECol: integer - РЅРёР¶РЅСЏСЏ РїСЂР°РІР°СЏ РєРѕР»РѕРЅРєР° С…СЂР°РЅРёР»РёС‰Р°
+//      ERow: integer - РЅРёР¶РЅСЏСЏ РїСЂР°РІР°СЏ СЃС‚СЂРѕРєР° С…СЂР°РЅРёР»РёС‰Р°
+//      InsertMode: byte - РґРѕР±Р°РІР»СЏС‚СЊ РёР»Рё Р·Р°РјРµРЅСЏС‚СЊ СЏС‡РµР№РєРё
+//                      0 - СЏС‡РµР№РєРё РІ РіСЂРёРґРµ РЅРµ СЃРјРµС‰Р°СЋС‚СЃСЏ
+//                      1 - СЏС‡РµР№РєРё РІ РіСЂРёРґРµ СЃРјРµС‰Р°СЋС‚СЃСЏ РІРїСЂР°РІРѕ РЅР° СЂР°Р·РјРµСЂ РґРѕР±Р°РІР»СЏРµРјРѕР№ РѕР±Р»Р°СЃС‚Рё
+//                      2 - СЏС‡РµР№РєРё РІ РіСЂРёРґРµ СЃРјРµС‰Р°СЋС‚СЃСЏ РІРЅРёР· РЅР° СЂР°Р·РјРµСЂ РґРѕР±Р°РІР»СЏРµРјРѕР№ РѕР±Р»Р°СЃС‚Рё
+//                      3 - СЏС‡РµР№РєРё РІ РіСЂРёРґРµ СЃРјРµС‰Р°СЋС‚СЃСЏ РІРїСЂР°РІРѕ Рё РІРЅРёР· РЅР° СЂР°Р·РјРµСЂ РґРѕР±Р°РІР»СЏРµРјРѕР№ РѕР±Р»Р°СЃС‚Рё
+//      StyleCopy: integer - РєРѕРїРёСЂСѓРµС‚ СЃС‚РёР»СЊ
+//              StyleCopy and 16  =  16 - РєРѕРїРёСЂСѓРµС‚СЃСЏ Р Р°Р·РјРµСЂ СЏС‡РµР№РєРё
 //Result:
-//      true - копирование удалось
+//      true - РєРѕРїРёСЂРѕРІР°РЅРёРµ СѓРґР°Р»РѕСЃСЊ
 function XmlSSToGrid(var Grid: TStringGrid; var XMLSS: TZEXMLSS; const PageNum: integer;
                          ToCol: integer; ToRow: integer; BCol, BRow, ECol, ERow: integer; InsertMode: byte; StyleCopy: integer = 511): boolean; overload;
 var
@@ -802,7 +1098,7 @@ begin
   result := GridCheck(XMLSS, PageNum, Grid = nil, ToCol, ToRow, BCol, BRow, ECol, ERow);
   if not result then
     exit;
-  if StyleCopy < 0 then StyleCopy := 511; //всё
+  if StyleCopy < 0 then StyleCopy := 511; //РІСЃС‘
   if ToCol >= Grid.ColCount then
     Grid.ColCount := ToCol;
   if ToRow >= Grid.RowCount then
@@ -876,16 +1172,16 @@ begin
   end;
 end;
 
-//Сохраняет страницу TZEXMLSS в поток в формате HTML
+//РЎРѕС…СЂР°РЅСЏРµС‚ СЃС‚СЂР°РЅРёС†Сѓ TZEXMLSS РІ РїРѕС‚РѕРє РІ С„РѕСЂРјР°С‚Рµ HTML
 //Input:
-//      XMLSS: TZEXMLSS - Хранилище
-//      PageNum: integer - Номер страницы
-//      Title: string - Заголовок
-//      Stream: TStream - поток
-//      TextConverter: TAnsiToCodePageConverter - конвертер
-//      CodePageName: string - имя кодировки
+//      XMLSS: TZEXMLSS - РҐСЂР°РЅРёР»РёС‰Рµ
+//      PageNum: integer - РќРѕРјРµСЂ СЃС‚СЂР°РЅРёС†С‹
+//      Title: string - Р—Р°РіРѕР»РѕРІРѕРє
+//      Stream: TStream - РїРѕС‚РѕРє
+//      TextConverter: TAnsiToCodePageConverter - РєРѕРЅРІРµСЂС‚РµСЂ
+//      CodePageName: string - РёРјСЏ РєРѕРґРёСЂРѕРІРєРё
 //Output:
-//      0 - сохранение удалось
+//      0 - СЃРѕС…СЂР°РЅРµРЅРёРµ СѓРґР°Р»РѕСЃСЊ
 function SaveXmlssToHtml(var XMLSS: TZEXMLSS; const PageNum: integer; Title: string; Stream: TStream;
                          TextConverter: TAnsiToCPConverter; CodePageName: string): integer; overload;
 var
@@ -999,8 +1295,8 @@ begin
         begin
           NumTopLeft := XMLSS.Sheets[PageNum].MergeCells.InLeftTopCorner(j, i);
           NumArea := XMLSS.Sheets[PageNum].MergeCells.InMergeRange(j, i);
-          // если ячейка входит в объединённые области и не является
-          // верхней левой ячейков в этой области - пропускаем её
+          // РµСЃР»Рё СЏС‡РµР№РєР° РІС…РѕРґРёС‚ РІ РѕР±СЉРµРґРёРЅС‘РЅРЅС‹Рµ РѕР±Р»Р°СЃС‚Рё Рё РЅРµ СЏРІР»СЏРµС‚СЃСЏ
+          // РІРµСЂС…РЅРµР№ Р»РµРІРѕР№ СЏС‡РµР№РєРѕРІ РІ СЌС‚РѕР№ РѕР±Р»Р°СЃС‚Рё - РїСЂРѕРїСѓСЃРєР°РµРј РµС‘
           if not ((NumArea >= 0) and (NumTopLeft = -1)) then
           begin
             Attributes.Clear();
@@ -1077,16 +1373,16 @@ begin
   end;
 end;
 
-//Сохраняет страницу TZEXMLSS в файл FileName
+//РЎРѕС…СЂР°РЅСЏРµС‚ СЃС‚СЂР°РЅРёС†Сѓ TZEXMLSS РІ С„Р°Р№Р» FileName
 //Input:
-//      XMLSS: TZEXMLSS - Хранилище
-//      PageNum: integer - Номер страницы
-//      Title: string - Заголовок
-//      FileName: String - имя файла
-//      TextConverter: TAnsiToCodePageConverter - конвертер
-//      CodePageName: string - имя кодировки
+//      XMLSS: TZEXMLSS - РҐСЂР°РЅРёР»РёС‰Рµ
+//      PageNum: integer - РќРѕРјРµСЂ СЃС‚СЂР°РЅРёС†С‹
+//      Title: string - Р—Р°РіРѕР»РѕРІРѕРє
+//      FileName: String - РёРјСЏ С„Р°Р№Р»Р°
+//      TextConverter: TAnsiToCodePageConverter - РєРѕРЅРІРµСЂС‚РµСЂ
+//      CodePageName: string - РёРјСЏ РєРѕРґРёСЂРѕРІРєРё
 //Output:
-//      0 - сохранение удалось
+//      0 - СЃРѕС…СЂР°РЅРµРЅРёРµ СѓРґР°Р»РѕСЃСЊ
 function SaveXmlssToHtml(var XMLSS: TZEXMLSS; const PageNum: integer; Title: string; FileName: string;
                          TextConverter: TAnsiToCPConverter; CodePageName: string): integer; overload;
 var
@@ -1094,7 +1390,7 @@ var
 
 begin
   result := 0;
-  Stream := nil; // это чтобы варнинги не кричали
+  Stream := nil; // СЌС‚Рѕ С‡С‚РѕР±С‹ РІР°СЂРЅРёРЅРіРё РЅРµ РєСЂРёС‡Р°Р»Рё
   try
     try
       Stream := TFileStream.Create(FileName, fmCreate);
@@ -1111,27 +1407,27 @@ end;
 
 const RepeatablePrintedHeadersName = 'Print_Titles';
 
-//Сохраняет в поток в формате Excel XML SpreadSheet
-//      XMLSS: TZEXMLSS                 - хранилище
-//      Stream: TStream                 - поток
-//      SheetsNumbers: array of integer - массив номеров страниц в нужной последовательности
-//      SheetsNames: array of string    - массив названий страниц
-//              количество элементов в двух массивах должны совпадать
-//      TextConverter: TAnsiToCodePageConverter - конвертер
-//      CodePageName: string - имя кодировки
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ РїРѕС‚РѕРє РІ С„РѕСЂРјР°С‚Рµ Excel XML SpreadSheet
+//      XMLSS: TZEXMLSS                 - С…СЂР°РЅРёР»РёС‰Рµ
+//      Stream: TStream                 - РїРѕС‚РѕРє
+//      SheetsNumbers: array of integer - РјР°СЃСЃРёРІ РЅРѕРјРµСЂРѕРІ СЃС‚СЂР°РЅРёС† РІ РЅСѓР¶РЅРѕР№ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚Рё
+//      SheetsNames: array of string    - РјР°СЃСЃРёРІ РЅР°Р·РІР°РЅРёР№ СЃС‚СЂР°РЅРёС†
+//              РєРѕР»РёС‡РµСЃС‚РІРѕ СЌР»РµРјРµРЅС‚РѕРІ РІ РґРІСѓС… РјР°СЃСЃРёРІР°С… РґРѕР»Р¶РЅС‹ СЃРѕРІРїР°РґР°С‚СЊ
+//      TextConverter: TAnsiToCodePageConverter - РєРѕРЅРІРµСЂС‚РµСЂ
+//      CodePageName: string - РёРјСЏ РєРѕРґРёСЂРѕРІРєРё
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 var
   _xml: TZsspXMLWriterH;
-  _pages: TIntegerDynArray;    //номера страниц
-  _names: TStringDynArray;    //названия страниц
-  kol: integer;               //количество страниц
+  _pages: TIntegerDynArray;    //РЅРѕРјРµСЂР° СЃС‚СЂР°РЅРёС†
+  _names: TStringDynArray;    //РЅР°Р·РІР°РЅРёСЏ СЃС‚СЂР°РЅРёС†
+  kol: integer;               //РєРѕР»РёС‡РµСЃС‚РІРѕ СЃС‚СЂР°РЅРёС†
   i: integer;
   _FmtParser: TNumFormatParser;
   _DateParser: TZDateTimeODSFormatParser;
 
 
-  //заголовок xml-ины
+  //Р·Р°РіРѕР»РѕРІРѕРє xml-РёРЅС‹
   procedure WriteHeader();
   begin
     with _xml do
@@ -1153,7 +1449,7 @@ var
       WriteTag('Created', ZEDateTimeToStr(XMLSS.DocumentProperties.Created) + 'Z'{s});
       WriteTag('Company', XMLSS.DocumentProperties.Company);
 
-      WriteTag('Version', XMLSS.DocumentProperties.Version); // зачем ???
+      WriteTag('Version', XMLSS.DocumentProperties.Version); // Р·Р°С‡РµРј ???
 //      WriteTag('Version', ZELibraryVersion); // Excel 2010 writes "14.00" here despite specifications say Integer
       WriteTag('NameOfApplication', ZELibraryName);
 
@@ -1171,13 +1467,13 @@ var
     end;
   end;
 
-  //добавить целый атрибут
+  //РґРѕР±Р°РІРёС‚СЊ С†РµР»С‹Р№ Р°С‚СЂРёР±СѓС‚
   // Input:
-  //    _name: string           - имя атрибута
-  //    Value: integer          - Значение атрибута
-  //    _defvalue: integer      - Значение по-умолчанию
-  //    _defStyle: integer      - Дефолтный стиль
-  //    _def: boolean           - Является ли рассматриваемый стиль дефолтным
+  //    _name: string           - РёРјСЏ Р°С‚СЂРёР±СѓС‚Р°
+  //    Value: integer          - Р—РЅР°С‡РµРЅРёРµ Р°С‚СЂРёР±СѓС‚Р°
+  //    _defvalue: integer      - Р—РЅР°С‡РµРЅРёРµ РїРѕ-СѓРјРѕР»С‡Р°РЅРёСЋ
+  //    _defStyle: integer      - Р”РµС„РѕР»С‚РЅС‹Р№ СЃС‚РёР»СЊ
+  //    _def: boolean           - РЇРІР»СЏРµС‚СЃСЏ Р»Рё СЂР°СЃСЃРјР°С‚СЂРёРІР°РµРјС‹Р№ СЃС‚РёР»СЊ РґРµС„РѕР»С‚РЅС‹Рј
   procedure AddAttribute(const _name: string; const Value: integer; const _defvalue: integer; const _defStyle: integer; _def: boolean); overload;
   begin
     if _def then
@@ -1191,13 +1487,13 @@ var
     end;
   end;
 
-  //добавить логический атрибут
+  //РґРѕР±Р°РІРёС‚СЊ Р»РѕРіРёС‡РµСЃРєРёР№ Р°С‚СЂРёР±СѓС‚
   // Input:
-  //    _name: string           - имя атрибута
-  //    Value: boolean          - Значение атрибута
-  //    _defvalue: boolean      - Значение по-умолчанию
-  //    _defStyle: boolean      - Дефолтный стиль
-  //    _def: boolean           - Является ли рассматриваемый стиль дефолтным
+  //    _name: string           - РёРјСЏ Р°С‚СЂРёР±СѓС‚Р°
+  //    Value: boolean          - Р—РЅР°С‡РµРЅРёРµ Р°С‚СЂРёР±СѓС‚Р°
+  //    _defvalue: boolean      - Р—РЅР°С‡РµРЅРёРµ РїРѕ-СѓРјРѕР»С‡Р°РЅРёСЋ
+  //    _defStyle: boolean      - Р”РµС„РѕР»С‚РЅС‹Р№ СЃС‚РёР»СЊ
+  //    _def: boolean           - РЇРІР»СЏРµС‚СЃСЏ Р»Рё СЂР°СЃСЃРјР°С‚СЂРёРІР°РµРјС‹Р№ СЃС‚РёР»СЊ РґРµС„РѕР»С‚РЅС‹Рј
   procedure AddAttribute(const _name: string; Value: boolean; _defvalue: boolean; _defStyle: boolean; _def: boolean); overload;
   var
     t: string;
@@ -1215,13 +1511,13 @@ var
     end;
   end;
 
-  //добавить string атрибут
+  //РґРѕР±Р°РІРёС‚СЊ string Р°С‚СЂРёР±СѓС‚
   // Input:
-  //    _name: string           - имя атрибута
-  //    Value: string          - Значение атрибута
-  //    _defvalue: string      - Значение по-умолчанию
-  //    _defStyle: string      - Дефолтный стиль
-  //    _def: boolean           - Является ли рассматриваемый стиль дефолтным
+  //    _name: string           - РёРјСЏ Р°С‚СЂРёР±СѓС‚Р°
+  //    Value: string          - Р—РЅР°С‡РµРЅРёРµ Р°С‚СЂРёР±СѓС‚Р°
+  //    _defvalue: string      - Р—РЅР°С‡РµРЅРёРµ РїРѕ-СѓРјРѕР»С‡Р°РЅРёСЋ
+  //    _defStyle: string      - Р”РµС„РѕР»С‚РЅС‹Р№ СЃС‚РёР»СЊ
+  //    _def: boolean           - РЇРІР»СЏРµС‚СЃСЏ Р»Рё СЂР°СЃСЃРјР°С‚СЂРёРІР°РµРјС‹Р№ СЃС‚РёР»СЊ РґРµС„РѕР»С‚РЅС‹Рј
   procedure AddAttribute(const _name: string; const Value: string; const _defvalue: string; const _defStyle: string; _def: boolean); overload;
   begin
     if _def then
@@ -1235,13 +1531,13 @@ var
     end;
   end;
 
-  //добавить TColor атрибут
+  //РґРѕР±Р°РІРёС‚СЊ TColor Р°С‚СЂРёР±СѓС‚
   // Input:
-  //    _name: string           - имя атрибута
-  //    Value: integer          - Значение атрибута
-  //    _defvalue: integer      - Значение по-умолчанию
-  //    _defStyle: integer      - Дефолтный стиль
-  //    _def: boolean           - Является ли рассматриваемый стиль дефолтным
+  //    _name: string           - РёРјСЏ Р°С‚СЂРёР±СѓС‚Р°
+  //    Value: integer          - Р—РЅР°С‡РµРЅРёРµ Р°С‚СЂРёР±СѓС‚Р°
+  //    _defvalue: integer      - Р—РЅР°С‡РµРЅРёРµ РїРѕ-СѓРјРѕР»С‡Р°РЅРёСЋ
+  //    _defStyle: integer      - Р”РµС„РѕР»С‚РЅС‹Р№ СЃС‚РёР»СЊ
+  //    _def: boolean           - РЇРІР»СЏРµС‚СЃСЏ Р»Рё СЂР°СЃСЃРјР°С‚СЂРёРІР°РµРјС‹Р№ СЃС‚РёР»СЊ РґРµС„РѕР»С‚РЅС‹Рј
   procedure AddAttributeColor(const _name: string; const Value: TColor; const _defvalue: TColor; const _defStyle: TColor; _def: boolean);
   begin
     if _def then
@@ -1260,7 +1556,7 @@ var
     i: integer;
     t: TZAttributesH;
 
-    //необязательные атрибуты
+    //РЅРµРѕР±СЏР·Р°С‚РµР»СЊРЅС‹Рµ Р°С‚СЂРёР±СѓС‚С‹
     procedure NonReqBorderAttr(num: integer);
     begin
       //Color
@@ -1363,7 +1659,7 @@ var
       _xml.WriteEmptyTag('Font', true, true);
   end;
 
-  //записать стиль
+  //Р·Р°РїРёСЃР°С‚СЊ СЃС‚РёР»СЊ
   procedure WriteStyle(const _id: string; const _name: string; const _style: TZStyle; _def: boolean);
   begin
     with _xml do
@@ -1442,9 +1738,9 @@ var
     end;
   end;
 
-  //пишет все стили
-  //    TODO:  может, не сохранять те стили, которые не используются
-  //           на страницах? (или сделать на выбор)
+  //РїРёС€РµС‚ РІСЃРµ СЃС‚РёР»Рё
+  //    TODO:  РјРѕР¶РµС‚, РЅРµ СЃРѕС…СЂР°РЅСЏС‚СЊ С‚Рµ СЃС‚РёР»Рё, РєРѕС‚РѕСЂС‹Рµ РЅРµ РёСЃРїРѕР»СЊР·СѓСЋС‚СЃСЏ
+  //           РЅР° СЃС‚СЂР°РЅРёС†Р°С…? (РёР»Рё СЃРґРµР»Р°С‚СЊ РЅР° РІС‹Р±РѕСЂ)
   procedure WriteStyles();
   var
     i: integer;
@@ -1468,7 +1764,7 @@ var
     _xml.WriteEndTagNode();
   end;
 
-  //Сохраняет страницу Sheets[PageNum] с подписью PageName
+  //РЎРѕС…СЂР°РЅСЏРµС‚ СЃС‚СЂР°РЅРёС†Сѓ Sheets[PageNum] СЃ РїРѕРґРїРёСЃСЊСЋ PageName
   procedure WritePage(const PageNum: integer; const PageName: string);
   var
     i, j, t: integer;
@@ -1493,7 +1789,7 @@ var
       CellIndex := false;
     end;
 
-    //Разрывы страницы
+    //Р Р°Р·СЂС‹РІС‹ СЃС‚СЂР°РЅРёС†С‹
     procedure WritePageBreaks();
     var
       i: integer;
@@ -1540,7 +1836,7 @@ var
         if b then
           WriteEndTagNode(); //PageBreaks
       end;
-    end; //WritePageBreaks (Разрывы страницы)
+    end; //WritePageBreaks (Р Р°Р·СЂС‹РІС‹ СЃС‚СЂР°РЅРёС†С‹)
 
     procedure _WriteSplitFrozen(_xml: TZsspXMLWriterH; SplitMode: TZSplitMode; const SplitValue: integer; const SplitName, SplitPane: string);
     var
@@ -1647,7 +1943,7 @@ var
         if (Attributes.Count > 1)  then
           WriteTagNode('Row', true, true, true);
 
-        //Пробегаем по всем ячейкам
+        //РџСЂРѕР±РµРіР°РµРј РїРѕ РІСЃРµРј СЏС‡РµР№РєР°Рј
         CountCells := 0;
         CellIndex := false;
         for j := 0 to ProcessedSheet.ColCount - 1 do
@@ -1660,25 +1956,25 @@ var
           NumTopLeft := ProcessedSheet.MergeCells.InLeftTopCorner(j, i);
           NumArea := ProcessedSheet.MergeCells.InMergeRange(j, i);
 
-          // если ячейка входит в объединённые области и не является
-          // верхней левой ячейков в этой области - пропускаем её
+          // РµСЃР»Рё СЏС‡РµР№РєР° РІС…РѕРґРёС‚ РІ РѕР±СЉРµРґРёРЅС‘РЅРЅС‹Рµ РѕР±Р»Р°СЃС‚Рё Рё РЅРµ СЏРІР»СЏРµС‚СЃСЏ
+          // РІРµСЂС…РЅРµР№ Р»РµРІРѕР№ СЏС‡РµР№РєРѕРІ РІ СЌС‚РѕР№ РѕР±Р»Р°СЃС‚Рё - РїСЂРѕРїСѓСЃРєР°РµРј РµС‘
           if not ((NumArea >= 0) and (NumTopLeft = -1)) then
           begin
             if NumTopLeft >= 0 then
             begin
-              //ss:MergeAcross - влево
+              //ss:MergeAcross - РІР»РµРІРѕ
               t := ProcessedSheet.MergeCells.Items[NumTopLeft].Right -
                    ProcessedSheet.MergeCells.Items[NumTopLeft].Left;
               if t > 0 then
                 AttrCell.Add('ss:MergeAcross', InttOstr(t), false);
-              //ss:MergeDown - вниз
+              //ss:MergeDown - РІРЅРёР·
               t := ProcessedSheet.MergeCells.Items[NumTopLeft].Bottom -
                    ProcessedSheet.MergeCells.Items[NumTopLeft].Top;
               if t > 0 then
                 AttrCell.Add('ss:MergeDown', InttOstr(t), false);
             end;
             {tut}
-            //Сделать проверку на формулу?
+            //РЎРґРµР»Р°С‚СЊ РїСЂРѕРІРµСЂРєСѓ РЅР° С„РѕСЂРјСѓР»Сѓ?
             isFormula := false;
             if (ProcessedCell.Formula > '') then
             begin
@@ -1714,8 +2010,8 @@ var
 
             /// DATA
             AttrData.Clear();
-            // для OpenOffice Calc добавлен текст "or (j = ProcessedSheet.ColCount - 1)"
-            // т.к. в ОО таблицы отображались в некоторых случаях некорректно
+            // РґР»СЏ OpenOffice Calc РґРѕР±Р°РІР»РµРЅ С‚РµРєСЃС‚ "or (j = ProcessedSheet.ColCount - 1)"
+            // С‚.Рє. РІ РћРћ С‚Р°Р±Р»РёС†С‹ РѕС‚РѕР±СЂР°Р¶Р°Р»РёСЃСЊ РІ РЅРµРєРѕС‚РѕСЂС‹С… СЃР»СѓС‡Р°СЏС… РЅРµРєРѕСЂСЂРµРєС‚РЅРѕ
             if (ProcessedCell.Data > '') or (j = ProcessedSheet.ColCount - 1) or
                (isFormula) then
             begin
@@ -1724,7 +2020,7 @@ var
             end;
 
             /// Comment
-            {tut}  //Добавить проверки
+            {tut}  //Р”РѕР±Р°РІРёС‚СЊ РїСЂРѕРІРµСЂРєРё
             AttrComment.Clear();
             AttrCommentData.Clear();
             if ProcessedCell.ShowComment then
@@ -1737,10 +2033,10 @@ var
             end;
 
             {tut}
-            // подумай насчёт
-            // xmlns="http://www.w3.org/TR/REC-html40" для текста ячеек и комментария
+            // РїРѕРґСѓРјР°Р№ РЅР°СЃС‡С‘С‚
+            // xmlns="http://www.w3.org/TR/REC-html40" РґР»СЏ С‚РµРєСЃС‚Р° СЏС‡РµРµРє Рё РєРѕРјРјРµРЅС‚Р°СЂРёСЏ
 
-            //если kol = 0 то пустой тег рисуем
+            //РµСЃР»Рё kol = 0 С‚Рѕ РїСѓСЃС‚РѕР№ С‚РµРі СЂРёСЃСѓРµРј
             if kol > 0 then
             begin
               AddCellInRow(CountCells, CellIndex);
@@ -1859,7 +2155,7 @@ var
         WriteTagNode('Print',true, true, true);
         WriteEmptyTag('ValidPrinterInfo');
         WriteTag('PaperSizeIndex',inttostr(ProcessedSheet.SheetOptions.PaperSize), true, false, false);
-        WriteTag('HorizontalResolution', '600', true, false, false);  //может, тоже добавить?
+        WriteTag('HorizontalResolution', '600', true, false, false);  //РјРѕР¶РµС‚, С‚РѕР¶Рµ РґРѕР±Р°РІРёС‚СЊ?
         WriteTag('VerticalResolution', '600', true, false, false);
         WriteEndTagNode(); //Print
       end;
@@ -1867,7 +2163,7 @@ var
       if ProcessedSheet.Selected then
         WriteEmptyTag('Selected', true, false);
 
-      //Фиксирование столбцов/строк
+      //Р¤РёРєСЃРёСЂРѕРІР°РЅРёРµ СЃС‚РѕР»Р±С†РѕРІ/СЃС‚СЂРѕРє
       _hMode := ProcessedSheet.SheetOptions.SplitHorizontalMode;
       _vMode := ProcessedSheet.SheetOptions.SplitVerticalMode;
       b := (_vMode <> ZSplitNone) or
@@ -1925,7 +2221,7 @@ var
         WriteEndTagNode(); //Panes
       end;
 
-      {tut}//Узнать, как шифруются индексы цветов
+      {tut}//РЈР·РЅР°С‚СЊ, РєР°Рє С€РёС„СЂСѓСЋС‚СЃСЏ РёРЅРґРµРєСЃС‹ С†РІРµС‚РѕРІ
       if ProcessedSheet.TabColor <> ClWindow then
         WriteTag('TabColorIndex', inttostr(ProcessedSheet.TabColor), true, false, false);
 
@@ -1972,34 +2268,34 @@ begin
   end;
 end; //SaveXmlssToEXML
 
-//Сохраняет в поток в формате Excel XML SpreadSheet
-//      XMLSS: TZEXMLSS                 - хранилище
-//      Stream: TStream                 - поток
-//      SheetsNumbers: array of integer - массив номеров страниц в нужной последовательности
-//      SheetsNames: array of string    - массив названий страниц
-//              количество элементов в двух массивах должны совпадать
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ РїРѕС‚РѕРє РІ С„РѕСЂРјР°С‚Рµ Excel XML SpreadSheet
+//      XMLSS: TZEXMLSS                 - С…СЂР°РЅРёР»РёС‰Рµ
+//      Stream: TStream                 - РїРѕС‚РѕРє
+//      SheetsNumbers: array of integer - РјР°СЃСЃРёРІ РЅРѕРјРµСЂРѕРІ СЃС‚СЂР°РЅРёС† РІ РЅСѓР¶РЅРѕР№ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚Рё
+//      SheetsNames: array of string    - РјР°СЃСЃРёРІ РЅР°Р·РІР°РЅРёР№ СЃС‚СЂР°РЅРёС†
+//              РєРѕР»РёС‡РµСЃС‚РІРѕ СЌР»РµРјРµРЅС‚РѕРІ РІ РґРІСѓС… РјР°СЃСЃРёРІР°С… РґРѕР»Р¶РЅС‹ СЃРѕРІРїР°РґР°С‚СЊ
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string): integer; overload;
 begin
   result := SaveXmlssToEXML(XMLSS, Stream, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
 end;
 
-//Сохраняет в поток в формате Excel XML SpreadSheet
-//      XMLSS: TZEXMLSS                 - хранилище
-//      Stream: TStream                 - поток
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ РїРѕС‚РѕРє РІ С„РѕСЂРјР°С‚Рµ Excel XML SpreadSheet
+//      XMLSS: TZEXMLSS                 - С…СЂР°РЅРёР»РёС‰Рµ
+//      Stream: TStream                 - РїРѕС‚РѕРє
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; Stream: TStream): integer; overload;
 begin
   result := SaveXmlssToEXML(XMLSS, Stream, [], []);
 end;
 
-//Сохраняет в файл в формате Excel XML SpreadSheet
-//      XMLSS: TZEXMLSS                 - хранилище
-//      FileName: string            - Имя файла
-//      SheetsNumbers: array of integer - массив номеров страниц в нужной последовательности
-//      SheetsNames: array of string    - массив названий страниц
-//              количество элементов в двух массивах должны совпадать
-//      TextConverter: TAnsiToCodePageConverter - конвертер
-//      CodePageName: string - имя кодировки
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ С„Р°Р№Р» РІ С„РѕСЂРјР°С‚Рµ Excel XML SpreadSheet
+//      XMLSS: TZEXMLSS                 - С…СЂР°РЅРёР»РёС‰Рµ
+//      FileName: string            - РРјСЏ С„Р°Р№Р»Р°
+//      SheetsNumbers: array of integer - РјР°СЃСЃРёРІ РЅРѕРјРµСЂРѕРІ СЃС‚СЂР°РЅРёС† РІ РЅСѓР¶РЅРѕР№ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚Рё
+//      SheetsNames: array of string    - РјР°СЃСЃРёРІ РЅР°Р·РІР°РЅРёР№ СЃС‚СЂР°РЅРёС†
+//              РєРѕР»РёС‡РµСЃС‚РІРѕ СЌР»РµРјРµРЅС‚РѕРІ РІ РґРІСѓС… РјР°СЃСЃРёРІР°С… РґРѕР»Р¶РЅС‹ СЃРѕРІРїР°РґР°С‚СЊ
+//      TextConverter: TAnsiToCodePageConverter - РєРѕРЅРІРµСЂС‚РµСЂ
+//      CodePageName: string - РёРјСЏ РєРѕРґРёСЂРѕРІРєРё
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 var
@@ -2007,7 +2303,7 @@ var
 
 begin
   result := 0;
-  Stream := nil; // так надо!
+  Stream := nil; // С‚Р°Рє РЅР°РґРѕ!
   try
     try
       Stream := TFileStream.Create(FileName, fmCreate);
@@ -2022,29 +2318,29 @@ begin
   end;
 end; //SaveXmlssToEXML
 
-//Сохраняет в файл в формате Excel XML SpreadSheet
-//      XMLSS: TZEXMLSS                 - хранилище
-//      FileName: string            - Имя файла
-//      SheetsNumbers: array of integer - массив номеров страниц в нужной последовательности
-//      SheetsNames: array of string    - массив названий страниц
-//              количество элементов в двух массивах должны совпадать
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ С„Р°Р№Р» РІ С„РѕСЂРјР°С‚Рµ Excel XML SpreadSheet
+//      XMLSS: TZEXMLSS                 - С…СЂР°РЅРёР»РёС‰Рµ
+//      FileName: string            - РРјСЏ С„Р°Р№Р»Р°
+//      SheetsNumbers: array of integer - РјР°СЃСЃРёРІ РЅРѕРјРµСЂРѕРІ СЃС‚СЂР°РЅРёС† РІ РЅСѓР¶РЅРѕР№ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚Рё
+//      SheetsNames: array of string    - РјР°СЃСЃРёРІ РЅР°Р·РІР°РЅРёР№ СЃС‚СЂР°РЅРёС†
+//              РєРѕР»РёС‡РµСЃС‚РІРѕ СЌР»РµРјРµРЅС‚РѕРІ РІ РґРІСѓС… РјР°СЃСЃРёРІР°С… РґРѕР»Р¶РЅС‹ СЃРѕРІРїР°РґР°С‚СЊ
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string): integer; overload;
 begin
   result := SaveXmlssToEXML(XMLSS, FileName, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
 end; //SaveXmlssToEXML
 
-//Сохраняет в файл в формате Excel XML SpreadSheet
-//      XMLSS: TZEXMLSS                 - хранилище
-//      FileName: string            - Имя файла
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ С„Р°Р№Р» РІ С„РѕСЂРјР°С‚Рµ Excel XML SpreadSheet
+//      XMLSS: TZEXMLSS                 - С…СЂР°РЅРёР»РёС‰Рµ
+//      FileName: string            - РРјСЏ С„Р°Р№Р»Р°
 function SaveXmlssToEXML(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
 begin
   result := SaveXmlssToEXML(XMLSS, FileName, [], []);
 end; //SaveXmlssToEXML
 
-//Читает из потока Excel XML SpreadSheet (EXMLSS)
-//      XMLSS: TZEXMLSS                 - хранилище
-//      Stream: TStream                 - поток
+//Р§РёС‚Р°РµС‚ РёР· РїРѕС‚РѕРєР° Excel XML SpreadSheet (EXMLSS)
+//      XMLSS: TZEXMLSS                 - С…СЂР°РЅРёР»РёС‰Рµ
+//      Stream: TStream                 - РїРѕС‚РѕРє
 function ReadEXMLSS(var XMLSS: TZEXMLSS; Stream: TStream): integer; overload;
 var
   _xml: TZsspXMLReaderH;
@@ -2063,7 +2359,7 @@ var
     end;
   end;
 
-  {tut} //нужно ускорить, сделать без pos в один проход
+  {tut} //РЅСѓР¶РЅРѕ СѓСЃРєРѕСЂРёС‚СЊ, СЃРґРµР»Р°С‚СЊ Р±РµР· pos РІ РѕРґРёРЅ РїСЂРѕС…РѕРґ
   function ReplaceAll(const src: string; const substr: string; const value: string): string;
   var
     k: integer;
@@ -2356,8 +2652,8 @@ var
             idC := _StrToInt(s) - 1
           else
             inc(idC);
-          t1 := 0; //влево
-          t2 := 0; //вниз 
+          t1 := 0; //РІР»РµРІРѕ
+          t2 := 0; //РІРЅРёР· 
           CheckCol(PageNum, idC + 1);
           s := _xml.Attributes.ItemsByName['ss:MergeAcross'];
           if (s > '') then
@@ -2371,7 +2667,7 @@ var
             t2 := _StrToInt(s);
             CheckRow(PageNum, idR + 1 + t2);
           end;
-          //Объединённая ячейка
+          //РћР±СЉРµРґРёРЅС‘РЅРЅР°СЏ СЏС‡РµР№РєР°
           if t1 + t2 > 0 then
             ProcessedSheet.MergeCells.AddRectXY(idC, idR, idC + t1, idR + t2);
           s := _xml.Attributes.ItemsByName['ss:Formula'];
@@ -2703,7 +2999,7 @@ var
     end;
   end; //ReadPageBreaks
 
-  //Читает секцию <Worksheet> ... </Worksheet>
+  //Р§РёС‚Р°РµС‚ СЃРµРєС†РёСЋ <Worksheet> ... </Worksheet>
   procedure ReadEXMLWorkSheet();
   var
     num: integer;
@@ -2764,9 +3060,9 @@ begin
   end;
 end; //ReadEXMLSS
 
-//Читает из файла Excel XML SpreadSheet (EXMLSS)
-//      XMLSS: TZEXMLSS             - хранилище
-//      FileName: string            - имя файла
+//Р§РёС‚Р°РµС‚ РёР· С„Р°Р№Р»Р° Excel XML SpreadSheet (EXMLSS)
+//      XMLSS: TZEXMLSS             - С…СЂР°РЅРёР»РёС‰Рµ
+//      FileName: string            - РёРјСЏ С„Р°Р№Р»Р°
 function ReadEXMLSS(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
 var
   Stream: TStream;

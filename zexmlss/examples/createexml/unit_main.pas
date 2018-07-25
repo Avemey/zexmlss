@@ -1,5 +1,5 @@
-//пример использования zexmlss
-// создаёт документ с таблицей умножения
+п»ї//РїСЂРёРјРµСЂ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ zexmlss
+// СЃРѕР·РґР°С‘С‚ РґРѕРєСѓРјРµРЅС‚ СЃ С‚Р°Р±Р»РёС†РµР№ СѓРјРЅРѕР¶РµРЅРёСЏ
 unit unit_main;
 
 {$IFDEF FPC}
@@ -7,6 +7,8 @@ unit unit_main;
 {$ENDIF}
 
 interface
+
+{$I compver.inc}
 
 uses
   {$IFDEF FPC}
@@ -37,20 +39,20 @@ implementation
 uses
  {$IfDef Unicode} AnsiStrings, {$EndIf} TypInfo,
  {$IFNDEF FPC}
- {$IF CompilerVersion > 22}zeZippyXE2, {$ELSE} zeZippyAB,{у кого чего стоит} {$IFEND} //<XE2 have not zip!
+ {$IF CompilerVersion > 22}zeZippyXE2, {$ELSE} zeZippyAB,{Сѓ РєРѕРіРѕ С‡РµРіРѕ СЃС‚РѕРёС‚} {$IFEND} //<XE2 have not zip!
  {$Else} zeZippyLaz,{$EndIf}
   zeSave, zeSaveODS, zeSaveXLSX, zeSaveEXML, zexlsx, zeodfs;
 {$IFNDEF FPC}
   {$R *.dfm}
 {$ENDIF}
 
-//Функция перевода из локальной кодировки в нужную (для примера - в utf8)
+//Р¤СѓРЅРєС†РёСЏ РїРµСЂРµРІРѕРґР° РёР· Р»РѕРєР°Р»СЊРЅРѕР№ РєРѕРґРёСЂРѕРІРєРё РІ РЅСѓР¶РЅСѓСЋ (РґР»СЏ РїСЂРёРјРµСЂР° - РІ utf8)
 function my_local_to_some_encoding(value: ansistring): ansistring;
 begin
   result := AnsiToUtf8(value);
 end;
 
-//Создать файл
+//РЎРѕР·РґР°С‚СЊ С„Р°Р№Р»
 procedure TfrmMain.CreateEXMLSS();
 var
   sd: TSaveDialog;
@@ -61,7 +63,6 @@ var
   ha: TZHorizontalAlignment;
   s: string;
   _ConvertParams: integer;
-
 begin
   TextConverter := nil;
   {$IFNDEF FPC}
@@ -75,14 +76,15 @@ begin
   sd.Options := sd.Options + [ofOverwritePrompt];
   if sd.Execute then
   begin
+
     tz := TZEXMLSS.Create(nil);
     try
-      //В документе 2 страницы
+      //Р’ РґРѕРєСѓРјРµРЅС‚Рµ 2 СЃС‚СЂР°РЅРёС†С‹
       tz.Sheets.Count := 2;
-      tz.Sheets[0].Title := 'Таблица Пифагора';
-      //добавим стили
+      tz.Sheets[0].Title := 'РўР°Р±Р»РёС†Р° РџРёС„Р°РіРѕСЂР°';
+      //РґРѕР±Р°РІРёРј СЃС‚РёР»Рё
       tz.Styles.Count := 7;
-      //0 - для заголовка (20)
+      //0 - РґР»СЏ Р·Р°РіРѕР»РѕРІРєР° (20)
       tz.Styles[0].Font.Size := 20;
       tz.Styles[0].Font.Style := [fsBold];
       tz.Styles[0].Font.Name := 'Tahoma';
@@ -91,65 +93,65 @@ begin
       tz.Styles[0].Alignment.Horizontal := ZHCenter;
       tz.Styles[0].Alignment.Vertical := ZVCenter;
       tz.Styles[0].Alignment.WrapText := true;
-      //1 - стиль для таблицы
+      //1 - СЃС‚РёР»СЊ РґР»СЏ С‚Р°Р±Р»РёС†С‹
       tz.Styles[1].Border[0].Weight := 1;
       tz.Styles[1].Border[0].LineStyle := ZEContinuous;
       for i := 1 to 3 do tz.Styles[1].Border[i].Assign(tz.Styles[1].Border[0]);
 
-      //6 - разные границы в одной таблице
+      //6 - СЂР°Р·РЅС‹Рµ РіСЂР°РЅРёС†С‹ РІ РѕРґРЅРѕР№ С‚Р°Р±Р»РёС†Рµ
       tz.Styles[6].Assign(tz.Styles[1]);
       for i := 0 to 3 do tz.Styles[6].Border[i].Weight := 2;
 
-      //2 - стиль для заголовка таблицы (жирный по центру)
+      //2 - СЃС‚РёР»СЊ РґР»СЏ Р·Р°РіРѕР»РѕРІРєР° С‚Р°Р±Р»РёС†С‹ (Р¶РёСЂРЅС‹Р№ РїРѕ С†РµРЅС‚СЂСѓ)
       tz.Styles[2].Assign(tz.Styles[1]);
       tz.Styles[2].Font.Style := [fsBold];
       tz.Styles[2].Alignment.Horizontal := ZHCenter;
-      //3-ий стиль
+      //3-РёР№ СЃС‚РёР»СЊ
       tz.Styles[3].Font.Size := 16;
       tz.Styles[3].Font.Name := 'Arial Black';
-      //4-ый стиль
+      //4-С‹Р№ СЃС‚РёР»СЊ
       tz.Styles[4].Font.Size := 18;
       tz.Styles[4].Font.Name := 'Arial';
-      //5-ый стиль
+      //5-С‹Р№ СЃС‚РёР»СЊ
       tz.Styles[5].Font.Size := 14;
       tz.Styles[5].Font.Name := 'Arial Black';
 
       with tz.Sheets[0] do
       begin
-        //установим количество строк и столбцов
+        //СѓСЃС‚Р°РЅРѕРІРёРј РєРѕР»РёС‡РµСЃС‚РІРѕ СЃС‚СЂРѕРє Рё СЃС‚РѕР»Р±С†РѕРІ
         RowCount := 20 + Ord(High(TZVerticalAlignment )) + 2;
         ColCount := 20;
 
         Cell[0, 0].CellStyle := 3;
-        Cell[0, 0].Data := 'Пример использования zexmlss';
+        Cell[0, 0].Data := 'РџСЂРёРјРµСЂ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ zexmlss';
 
-        //ячейка с ссылкой
+        //СЏС‡РµР№РєР° СЃ СЃСЃС‹Р»РєРѕР№
         Cell[0, 2].CellStyle := 4;
-        Cell[0, 2].Data := 'Домашняя страница: http://avemey.com';
+        Cell[0, 2].Data := 'Р”РѕРјР°С€РЅСЏСЏ СЃС‚СЂР°РЅРёС†Р°: http://avemey.com';
         Cell[0, 2].Href := 'http://avemey.com';
-        Cell[0, 2].HRefScreenTip := 'Клацните по ссылке'#13#10'(текст всплывающей подсказки к ссылке)';
+        Cell[0, 2].HRefScreenTip := 'РљР»Р°С†РЅРёС‚Рµ РїРѕ СЃСЃС‹Р»РєРµ'#13#10'(С‚РµРєСЃС‚ РІСЃРїР»С‹РІР°СЋС‰РµР№ РїРѕРґСЃРєР°Р·РєРё Рє СЃСЃС‹Р»РєРµ)';
         MergeCells.AddRectXY(0, 2, 10, 2);
 
-        //Примечание
+        //РџСЂРёРјРµС‡Р°РЅРёРµ
         Cell[0, 3].CellStyle := 5;
-        Cell[0, 3].Data := 'Есть примечание!';
-        Cell[0, 3].Comment := 'Текст примечания 1';
-        Cell[0, 3].CommentAuthor := 'Кто-то 1 оставил примечание';
+        Cell[0, 3].Data := 'Р•СЃС‚СЊ РїСЂРёРјРµС‡Р°РЅРёРµ!';
+        Cell[0, 3].Comment := 'РўРµРєСЃС‚ РїСЂРёРјРµС‡Р°РЅРёСЏ 1';
+        Cell[0, 3].CommentAuthor := 'РљС‚Рѕ-С‚Рѕ 1 РѕСЃС‚Р°РІРёР» РїСЂРёРјРµС‡Р°РЅРёРµ';
         Cell[0, 3].ShowComment := true;
 
         Cell[16, 3].CellStyle := 5;
-        Cell[16, 3].Data := 'Тоже примечание!';
-        Cell[16, 3].Comment := 'Текст примечания 2';
-        Cell[16, 3].CommentAuthor := 'Кто-то 2 оставил примечание';
+        Cell[16, 3].Data := 'РўРѕР¶Рµ РїСЂРёРјРµС‡Р°РЅРёРµ!';
+        Cell[16, 3].Comment := 'РўРµРєСЃС‚ РїСЂРёРјРµС‡Р°РЅРёСЏ 2';
+        Cell[16, 3].CommentAuthor := 'РљС‚Рѕ-С‚Рѕ 2 РѕСЃС‚Р°РІРёР» РїСЂРёРјРµС‡Р°РЅРёРµ';
         Cell[16, 3].ShowComment := true;
         Cell[16, 3].AlwaysShowComment := true;
-        ColWidths[16] := 160; //Ширина столбца
+        ColWidths[16] := 160; //РЁРёСЂРёРЅР° СЃС‚РѕР»Р±С†Р°
 
         Cell[1, 1].CellStyle := 0;
-        Cell[1, 1].Data := 'Таблица умножения (таблица Пифагора)';
+        Cell[1, 1].Data := 'РўР°Р±Р»РёС†Р° СѓРјРЅРѕР¶РµРЅРёСЏ (С‚Р°Р±Р»РёС†Р° РџРёС„Р°РіРѕСЂР°)';
         MergeCells.AddRectXY(1, 1, 16, 1);
 
-        Cell[0, 6].Data := 'Объединённая'#13#10'ячейка!';
+        Cell[0, 6].AsString := 'РћР±СЉРµРґРёРЅС‘РЅРЅР°СЏ'#13#10'СЏС‡РµР№РєР°!';
         Cell[0, 6].CellStyle := 0;
         MergeCells.AddRectXY(0, 6, 3, 14);
 
@@ -235,13 +237,13 @@ begin
           end;
       end;
 
-     //копируем данные с 0 на 1-ую страницу
+     //РєРѕРїРёСЂСѓРµРј РґР°РЅРЅС‹Рµ СЃ 0 РЅР° 1-СѓСЋ СЃС‚СЂР°РЅРёС†Сѓ
      tz.Sheets[1].Assign(tz.Sheets[0]);
-     tz.Sheets[1].Title := 'Таблица Пифагора (формулы)';
+     tz.Sheets[1].Title := 'РўР°Р±Р»РёС†Р° РџРёС„Р°РіРѕСЂР° (С„РѕСЂРјСѓР»С‹)';
 
-     //На второй странице будем использовать формулы.
-     //Используем формулы вида R1C1 (они проще всего переводятся в другие)
-     s := '=R6C*RC6'; // координаты в табличке на 1 больше
+     //РќР° РІС‚РѕСЂРѕР№ СЃС‚СЂР°РЅРёС†Рµ Р±СѓРґРµРј РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ С„РѕСЂРјСѓР»С‹.
+     //РСЃРїРѕР»СЊР·СѓРµРј С„РѕСЂРјСѓР»С‹ РІРёРґР° R1C1 (РѕРЅРё РїСЂРѕС‰Рµ РІСЃРµРіРѕ РїРµСЂРµРІРѕРґСЏС‚СЃСЏ РІ РґСЂСѓРіРёРµ)
+     s := '=R6C*RC6'; // РєРѕРѕСЂРґРёРЅР°С‚С‹ РІ С‚Р°Р±Р»РёС‡РєРµ РЅР° 1 Р±РѕР»СЊС€Рµ
 
      if (AnsiEndsText('.xml', sd.FileName)) then
       with tz.Sheets[1] do
@@ -260,16 +262,8 @@ begin
           Cell[5 + i, 5 + j].Formula := ZER1C1ToA1(s, 5 + i, 5 + j, _ConvertParams);
      end;
 
-      //сохраняем 0-ую и 1-ую страницу в файл
-      //кодировка - utf8, имя кодировки='utf-8' (для utf-8 можно ''), BOM=''
-//      SaveXmlssToEXML(tz, sd.FileName, [0, 1], [], @TextConverter, 'utf-8');
-
-      if AnsiEndsText('.xlsx', sd.FileName) then
-       SaveXmlssToXLSX(tz, sd.FileName, [0], [], @TextConverter, 'utf-8')
-      else if AnsiEndsText('.ods', sd.FileName) then
-       SaveXmlssToODFS(tz, sd.FileName, [0], [], @TextConverter, 'utf-8')
-      else
-       TZXMLSSave.From(tz).Charset('utf-8', TextConverter).Save(sd.FileName);
+      // Removed Old code
+      TZXMLSSave.From(tz).Charset('utf-8', TextConverter).Save(sd.FileName);
       // Page 1 - formulae - only XML SS format
 
       // formulae would fail in XLSX format and Excel would complain on "corrupt worksheet"

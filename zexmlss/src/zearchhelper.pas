@@ -1,4 +1,4 @@
-//****************************************************************
+п»ї//****************************************************************
 // Common routines for pack/unpack to/from zip.
 // Author:  Ruslan V. Neborak
 // e-mail:  avemey@tut.by
@@ -32,6 +32,7 @@
 unit zearchhelper;
 
 interface
+{$I compver.inc}
 
 uses
   sysutils;
@@ -42,7 +43,7 @@ function ZEDelTree(ADir: string): boolean;
 
 implementation
 
-//Получает путь к темпу
+//С•РѕР»СѓС‡Р°РµС‚ РїСѓС‚СЊ Рє С‚РµРјРїСѓ
 function ZEGetTempDir(): string;
 begin
   {$IFDEF FPC}
@@ -52,12 +53,12 @@ begin
   {$ENDIF}
 end;
 
-//Создаёт уникальную пустую директорию в ADir
+//вЂ”РѕР·РґР°Р„С‚ СѓРЅРёРєР°Р»СЊРЅСѓСЋ РїСѓСЃС‚СѓСЋ РґРёСЂРµРєС‚РѕСЂРёСЋ РІ ADir
 //INPUT
-//  const ADir: string    - путь, в котором нужно создать директорию
-//  var retTmpDir: string - возвращаемый путь к временной директории
+//  const ADir: string    - РїСѓС‚СЊ, РІ РєРѕС‚РѕСЂРѕРј РЅСѓР¶РЅРѕ СЃРѕР·РґР°С‚СЊ РґРёСЂРµРєС‚РѕСЂРёСЋ
+//  var retTmpDir: string - РІРѕР·РІСЂР°С‰Р°РµРјС‹Р№ РїСѓС‚СЊ Рє РІСЂРµРјРµРЅРЅРѕР№ РґРёСЂРµРєС‚РѕСЂРёРё
 //RETURN
-//        boolean - true - директория успешно создана
+//        boolean - true - РґРёСЂРµРєС‚РѕСЂРёВ¤ СѓСЃРїРµС€РЅРѕ СЃРѕР·РґР°РЅР°
 function ZECreateUniqueTmpDir(const ADir: string; var retTmpDir: string): boolean;
 var
   l: integer;
@@ -68,7 +69,7 @@ var
   kol: integer;
 
 begin
-  result := false;
+  {$IFNDEF BERLIN_UP} Result := true; {$ENDIF Value assigned never used}
   l := length(ADir);
   retTmpDir := ADir;
   if (l > 1) then
@@ -93,11 +94,11 @@ begin
     retTmpDir := retTmpDir + stime + s + PathDelim;
 end; //ZECreateUniqueTmpDir
 
-//Удаляет директорию с содержимым
+//вЂќРґР°Р»В¤РµС‚ РґРёСЂРµРєС‚РѕСЂРёСЋ СЃ СЃРѕРґРµСЂР¶РёРјС‹Рј
 //INPUT
-//      ADir: string - имя удаляемой директории
+//      ADir: string - РёРјВ¤ СѓРґР°Р»В¤РµРјРѕР№ РґРёСЂРµРєС‚РѕСЂРёРё
 //RETURN
-//      boolean - true - директория успешно удалена
+//      boolean - true - РґРёСЂРµРєС‚РѕСЂРёВ¤ СѓСЃРїРµС€РЅРѕ СѓРґР°Р»РµРЅР°
 function ZEDelTree(ADir: string): boolean;
 
   function _DelTree(const AddDir: string): boolean;

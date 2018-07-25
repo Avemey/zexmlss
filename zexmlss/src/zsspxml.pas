@@ -1,17 +1,46 @@
-//****************************************************************
+п»ї//****************************************************************
 // zsspxml: XML reader
-// Накалякано в Мозыре в 2009 году
-// Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
-// e-mail: avemey(мяу)tut(точка)by
+// РќР°РєР°Р»СЏРєР°РЅРѕ РІ РњРѕР·С‹СЂРµ РІ 2009 РіРѕРґСѓ
+// РђРІС‚РѕСЂ:  РќРµР±РѕСЂР°Рє Р СѓСЃР»Р°РЅ Р’Р»Р°РґРёРјРёСЂРѕРІРёС‡ (Ruslan V. Neborak)
+// e-mail: avemey(РјСЏСѓ)tut(С‚РѕС‡РєР°)by
 // URL:    http://avemey.com
 // Ver:    0.0.7
-// Лицензия: zlib
+// Р›РёС†РµРЅР·РёСЏ: zlib
 // Last update: 2014.07.20
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the
 // use of this software.
 //****************************************************************
+/// <summary>
+///   Key features:
+///   <list type="bullet">
+///     <item>
+///       Read and write excel XML files in windows-1251, CP866, UTF-8, UTF-16 (Little Endian and Big Endian) encodings
+///     </item>
+///     <item>
+///       Save and Load Open Document Format (ODS) as directory (Lazarus/Delphi) and as packed single file (Lazarus (for delphi if read readme.en))
+///     </item>
+///     <item>
+///       Import and export Office Open XML (xlsx) from directory (Lazarus/Delphi) and from packed single file (Lazarus (reame.en -&gt; Delphi))
+///     </item>
+///     <item>
+///       Simple copy cells to/from StringGrid
+///     </item>
+///     <item>
+///       Simple copy cells (with style and merged cells) to/from ZColorStringGrid (only for Delphi and C++Builder if not defined NOZCOLORSTRINGGRID in zexml.inc) <br />
+///     </item>
+///   </list>
+/// </summary>
+/// <remarks>
+///   For compatibility with unicode Delphi (&gt; = RAD Studio 2009) added: <br /><br />TZAttrArrayH <br />TZAttributesH <br />TZsspXMLWriterH <br />TZsspXMLReaderH <br /><br />
+///   For Free Pascal-a and Delphi &lt; 2009 they are equal of types without postfix "H", for unicode Delphi these types fields ansistring replaced with string.
+/// </remarks>
+/// <seealso href="http://avemey.com/zexmlss/index.php?lang=en">
+///   zexmlss can create and load excel 2002/2003 XML (SpreadsheetML / XML Spreadsheet), OpenDocument Format (ODS), Office Open XML (xlsx) files without installed MS Excell or
+///   OpenOffice calc. <br />Works in Lazarus (tested with Lazarus 1.2.6 and FPC 2.6 under Linux and Windows), in Delphi 7, Borland Developer Studio 2005, BDS 2006, CodeGear
+///   Delphi 2007, CodeGear RAD Studio 2009 and 2010, Delphi XE and Delphi XE2, in C++ Builder 6. <br />License: zlib License
+/// </seealso>
 unit zsspxml;
 
 interface
@@ -40,13 +69,22 @@ const
 
 type
 
-  //конвертер ANSI текста в нужную кодировку
+  //РєРѕРЅРІРµСЂС‚РµСЂ ANSI С‚РµРєСЃС‚Р° РІ РЅСѓР¶РЅСѓСЋ РєРѕРґРёСЂРѕРІРєСѓ
+  /// <summary>
+  ///   Text converter from local encoding to needed encoding
+  /// </summary>
   TAnsiToCPConverter = function (const AnsiText: ansistring): ansistring;
 
   TReadCPCharObj = procedure(var RetChar: ansistring; var _eof: boolean) of object;
   TReadCPChar = procedure(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+  /// <summary>
+  ///   Text converter from reading encoding to local encoding
+  /// </summary>
   TCPToAnsiConverter = TAnsiToCPConverter;
 
+  /// <summary>
+  ///   Attribute-value
+  /// </summary>
   TZAttrArray = array [0..1] of ansistring;
 
   TagsProp = record
@@ -54,11 +92,14 @@ type
     CloseTagNewLine: boolean;
   end;
 
-  //Построитель атрибутов для тэгов
+  //РџРѕСЃС‚СЂРѕРёС‚РµР»СЊ Р°С‚СЂРёР±СѓС‚РѕРІ РґР»СЏ С‚СЌРіРѕРІ
+  /// <summary>
+  ///   Builder attributes for tags.
+  /// </summary>
   TZAttributes = class(TPersistent)
   private
     FCount: integer;
-    FMaxCount: integer;           //реальное кол-во элементов
+    FMaxCount: integer;           //СЂРµР°Р»СЊРЅРѕРµ РєРѕР»-РІРѕ СЌР»РµРјРµРЅС‚РѕРІ
     FItems: array of TZAttrArray;
     function GetAttrS(const Att: ansistring): ansistring;
     procedure SetAttrS(const Att: ansistring; const Value: ansistring);
@@ -71,34 +112,124 @@ type
   public
     constructor Create();
     destructor Destroy(); override;
+    /// <summary>
+    ///   Adds attribute
+    /// </summary>
+    /// <param name="AttrName">
+    ///   Attribute Name
+    /// </param>
+    /// <param name="TestMatch">
+    ///   checks for attribute AttrName entry, if attribute was entered then changes it's value, else new attribute is added.
+    /// </param>
     procedure Add(const AttrName: ansistring; const Value: ansistring; TestMatch: boolean = true); overload;
+    /// <summary>
+    ///   Adds attributes
+    /// </summary>
+    /// <param name="Attr">
+    ///   Attributes
+    /// </param>
+    /// <param name="TestMatch">
+    ///   checks for attribute AttrName entry, if attribute was entered then changes it's value, else new attribute is added.
+    /// </param>
     procedure Add(const Attr: TZAttrArray; TestMatch: boolean = true); overload;
+    /// <summary>
+    ///   Adds attributes
+    /// </summary>
+    /// <param name="Att">
+    ///   Attributes
+    /// </param>
+    /// <param name="TestMatch">
+    ///   checks for attribute AttrName entry, if attribute was entered then changes it's value, else new attribute is added.
+    /// </param>
     procedure Add(Att: array of TZAttrArray; TestMatch: boolean {$IFDEF VER130} {$ELSE}= true {$ENDIF}); overload;
     procedure Assign(Source: TPersistent); override;
+    /// <summary>
+    ///   Delete all atributes.
+    /// </summary>
     procedure Clear();
+    /// <summary>
+    ///   Delete attribute with number Index. Attributes with larger number are shifting left.
+    /// </summary>
     procedure DeleteItem(Index: integer);
+    /// <summary>
+    ///   Adds attribute AttrName with value Value on position Index.
+    /// </summary>
     procedure Insert(Index: integer; const AttrName: ansistring; const Value: ansistring; TestMatch: boolean = true); overload;
+    /// <summary>
+    ///   Adds attribute AttrName with value Value on position Index.
+    /// </summary>
     procedure Insert(Index: integer; const Attr: TZAttrArray; TestMatch: boolean = true); overload;
+    /// <summary>
+    ///   Return string with attributes.
+    /// </summary>
+    /// <param name="quote">
+    ///   quotation mark for attribute.
+    /// </param>
+    /// <param name="CheckEntity">
+    ///   if true then corrects entity
+    /// </param>
+    /// <param name="addempty">
+    ///   true then do not add attributes with empty value.
+    /// </param>
     function ToString(quote: ansichar; CheckEntity: boolean; addempty: boolean): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
+    /// <summary>
+    ///   Return string with attributes.
+    /// </summary>
+    /// <param name="quote">
+    ///   quotation mark for attribute.
+    /// </param>
+    /// <param name="CheckEntity">
+    ///   if true then corrects entity
+    /// </param>
     function ToString(quote: ansichar; CheckEntity: boolean): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
+    /// <summary>
+    ///   Return string with attributes.
+    /// </summary>
+    /// <param name="quote">
+    ///   quotation mark for attribute.
+    /// </param>
     function ToString(quote: ansichar): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
+    /// <summary>
+    ///   Return string with attributes.
+    /// </summary>
+    /// <param name="CheckEntity">
+    ///   if true then corrects entity
+    /// </param>
     function ToString(CheckEntity: boolean): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
+    /// <summary>
+    ///   Return string with attributes.
+    /// </summary>
     function ToString(): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload;  {$IFDEF Z_FPC_USE_TOSTRING} override; {$ELSE} virtual; {$ENDIF}
     function IsContainsAttribute(const AttrName: ansistring; CaseSensitivity: boolean = true): boolean;
+    /// <summary>
+    ///   Number of attributes. (RO)
+    /// </summary>
     property Count: integer read FCount;
+    /// <summary>
+    ///   Access to the attribute-value by number num.
+    /// </summary>
     property Items[num: integer]: TZAttrArray read GetAttr write SetAttr;
+    /// <summary>
+    ///   Access to the attribute value by name Att.
+    /// </summary>
     property ItemsByName[const Att: ansistring]: ansistring read GetAttrS write SetAttrS; default;
+    /// <summary>
+    ///   Access to the attribute value by number num.
+    /// </summary>
     property ItemsByNum[num: integer]: ansistring read GetAttrI write SetAttrI;
   end;
 
-  //пишет XML
+  //РїРёС€РµС‚ XML
+  /// <summary>
+  ///   Class-writer can write xml to string, stream or file in Windows-1251, UTF-8, UTF-16 (BE and LE) encodings. Use TextConverter property for write in other encodings.
+  /// </summary>
   TZsspXMLWriter = class
   private
-    FAttributeQuote: ansichar;          //какие кавычки используем для атрибутов
+    FAttributeQuote: ansichar;          //РєР°РєРёРµ РєР°РІС‹С‡РєРё РёСЃРїРѕР»СЊР·СѓРµРј РґР»СЏ Р°С‚СЂРёР±СѓС‚РѕРІ
     FAttributes: TZAttributes;
-    FTags: array of TagsProp;       //"Стек тэгов"
-    FTagCount: integer;             //кол-во тэгов в "стеке тэгов"
-    FMaxTagCount: integer;          //Реальный размер FTags
+    FTags: array of TagsProp;       //"РЎС‚РµРє С‚СЌРіРѕРІ"
+    FTagCount: integer;             //РєРѕР»-РІРѕ С‚СЌРіРѕРІ РІ "СЃС‚РµРєРµ С‚СЌРіРѕРІ"
+    FMaxTagCount: integer;          //Р РµР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ FTags
     FBuffer: ansistring;
     FMaxBufferLength: integer;
     FInProcess: boolean;
@@ -110,7 +241,7 @@ type
     FTab: ansistring;
     FTabSymbol: ansistring;
     FTabLength: integer;
-    FDestination: byte;  //куда пишем: 0 - Stream, 1 - File, 2 - String;
+    FDestination: byte;  //РєСѓРґР° РїРёС€РµРј: 0 - Stream, 1 - File, 2 - String;
     function  GetTag(num: integer): ansistring;
     function  GetTabSymbol(): ansichar;
     procedure SetAttributeQuote(Value: ansichar);
@@ -130,124 +261,453 @@ type
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
-    function BeginSaveToStream(Stream: TStream): boolean;      //начать запись в поток
-    function BeginSaveToFile(const FileName: string): boolean;       //начать запись в файл
-    function BeginSaveToString(): boolean;                     //начать запись в Buffer
+    /// <summary>
+    ///   Begin writing to Stream.
+    /// </summary>
+    /// <returns>
+    ///   True - start writing to stream. Sets InProcess True. <br />False - could not write.
+    /// </returns>
+    function BeginSaveToStream(Stream: TStream): boolean;      //РЅР°С‡Р°С‚СЊ Р·Р°РїРёСЃСЊ РІ РїРѕС‚РѕРє
+    /// <summary>
+    ///   egin writing to file FileName. <br />
+    /// </summary>
+    /// <returns>
+    ///   True - start writing to file. Sets InProcess True. <br />False - could not write.
+    /// </returns>
+    function BeginSaveToFile(const FileName: string): boolean;       //РЅР°С‡Р°С‚СЊ Р·Р°РїРёСЃСЊ РІ С„Р°Р№Р»
+    /// <summary>
+    ///   Begin writing to string Buffer. <br />
+    /// </summary>
+    /// <returns>
+    ///   True - start writing to Buffer. Sets InProcess True. <br />False - could not write.
+    /// </returns>
+    function BeginSaveToString(): boolean;                     //РЅР°С‡Р°С‚СЊ Р·Р°РїРёСЃСЊ РІ Buffer
+    /// <summary>
+    ///   End writing to string/file/stream. Sets InProcess False.
+    /// </summary>
     procedure EndSaveTo();
+    /// <summary>
+    ///   Empties the Buffer. All characters from Buffer have been written to a file.
+    /// </summary>
     procedure FlushBuffer();
+    /// <summary>
+    ///   Write CDATA. CDATA - text. CorrectCDATA - if true then replaces ']]&gt;' on ']]&amp;gt;'. StartNewLine - if true then starts from new line (ignored when NewLine =
+    ///   false).
+    /// </summary>
+    /// <param name="CDATA">
+    ///   text
+    /// </param>
+    /// <param name="CorrectCDATA">
+    ///   if true then replaces ']]&gt;' on ']]&amp;gt;'
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then starts from new line (ignored when NewLine = false
+    /// </param>
     procedure WriteCDATA(CDATA: ansistring; CorrectCDATA: boolean; StartNewLine: boolean = true); overload;     //<![CDATA[ bla-bla-bla <><><>...]]>
+    /// <summary>
+    ///   Write CDATA. CDATA - text. CorrectCDATA - if true then replaces ']]&gt;' on ']]&amp;gt;'. StartNewLine - if true then starts from new line (ignored when NewLine =
+    ///   false).
+    /// </summary>
+    /// <param name="CDATA">
+    ///   text
+    /// </param>
     procedure WriteCDATA(const CDATA: ansistring); overload;
+    /// <summary>
+    ///   Write comment.
+    /// </summary>
+    /// <param name="Comment">
+    ///   text of comment.
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then start from new line (ignored when NewLine = false).
+    /// </param>
     procedure WriteComment(const Comment: ansistring; StartNewLine: boolean = true);           //<!-- bla-bla-bla -->
     procedure WriteEmptyTag(const TagName: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CheckEntity: boolean = true); overload; // <tag a="a"... />
     procedure WriteEmptyTag(const TagName: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    ///   Write empty tag.
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then start from new line (ignored when NewLine = false).
+    /// </param>
+    /// <param name="CheckEntity">
+    ///   if true then corrects entity.
+    /// </param>
     procedure WriteEmptyTag(const TagName: ansistring; StartNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    ///   Write empty tag.
+    /// </summary>
     procedure WriteEmptyTag(const TagName: ansistring; SAttributes: TZAttributes); overload;
+    /// <summary>
+    ///   Write empty tag.
+    /// </summary>
     procedure WriteEmptyTag(const TagName: ansistring; AttrArray: array of TZAttrArray); overload;
+    /// <summary>
+    ///   Write empty tag.
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
     procedure WriteEmptyTag(const TagName: ansistring); overload;
+    /// <summary>
+    ///   Write end of node.
+    /// </summary>
     procedure WriteEndTagNode(); overload;
+    /// <summary>
+    ///   Write end of node.
+    /// </summary>
     procedure WriteEndTagNode(isForce: boolean; CloseTagNewLine: boolean); overload;
+    /// <summary>
+    ///   Write instruction
+    /// </summary>
+    /// <param name="InstructionName">
+    ///   name of instruction.
+    /// </param>
+    /// <param name="SAttributes">
+    ///   attributes
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then start from new line (ignored when NewLine = false)
+    /// </param>
+    /// <param name="CheckEntity">
+    ///   if true then corrects entity.
+    /// </param>
     procedure WriteInstruction(const InstructionName: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    ///   Write instruction
+    /// </summary>
+    /// <param name="InstructionName">
+    ///   name of instruction.
+    /// </param>
+    /// <param name="SAttributes">
+    ///   attributes
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then start from new line (ignored when NewLine = false)
+    /// </param>
+    /// <param name="CheckEntity">
+    ///   if true then corrects entity.
+    /// </param>
     procedure WriteInstruction(const InstructionName: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    ///   Write instruction
+    /// </summary>
+    /// <param name="InstructionName">
+    ///   name of instruction.
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then start from new line (ignored when NewLine = false)
+    /// </param>
+    /// <param name="CheckEntity">
+    ///   if true then corrects entity.
+    /// </param>
     procedure WriteInstruction(const InstructionName: ansistring; StartNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    ///   Write instruction
+    /// </summary>
+    /// <param name="InstructionName">
+    ///   name of instruction.
+    /// </param>
+    /// <param name="SAttributes">
+    ///   attributes
+    /// </param>
     procedure WriteInstruction(const InstructionName: ansistring; SAttributes: TZAttributes); overload;
+    /// <summary>
+    ///   Write instruction
+    /// </summary>
+    /// <param name="InstructionName">
+    ///   name of instruction.
+    /// </param>
+    /// <param name="SAttributes">
+    ///   attributes
+    /// </param>
     procedure WriteInstruction(const InstructionName: ansistring; AttrArray: array of TZAttrArray); overload;
+    /// <summary>
+    ///   Write instruction
+    /// </summary>
+    /// <param name="InstructionName">
+    ///   name of instruction.
     procedure WriteInstruction(const InstructionName: ansistring); overload;
+    /// <summary>
+    ///   <para>
+    ///     Write not processed text. Text
+    ///   </para>
+    ///   <note type="warning">
+    ///     can break XML!
+    ///   </note>
+    /// </summary>
+    /// <param name="Text">
+    ///   text
+    /// </param>
+    /// <param name="UseConverter">
+    ///   used TextConverter
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then start from new line (ignored when NewLine = false).
+    /// </param>
     procedure WriteRaw(Text: ansistring; UseConverter: boolean; StartNewLine: boolean = true);
     procedure WriteTag(const TagName: ansistring; const Text: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true); overload;
     procedure WriteTag(const TagName: ansistring; const Text: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    ///   Write tag (&lt;tag ...&gt;text&lt;/tag&gt;).
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="Text">
+    ///   text
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then start from new line (ignored when NewLine = false).
+    /// </param>
+    /// <param name="CloseTagNewLine">
+    ///   if true then closed tag starts from new line.
+    /// </param>
+    /// <param name="CheckEntity">
+    ///   if true then corrects entity.
+    /// </param>
     procedure WriteTag(const TagName: ansistring; const Text: ansistring; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    ///   Write tag (&lt;tag ...&gt;text&lt;/tag&gt;).
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="Text">
+    ///   text
+    /// </param>
+    /// <param name="SAttributes">
+    ///   Attributes
+    /// </param>
     procedure WriteTag(const TagName: ansistring; const Text: ansistring; SAttributes: TZAttributes); overload;
+    /// <summary>
+    ///   Write tag (&lt;tag ...&gt;text&lt;/tag&gt;).
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="Text">
+    ///   text
+    /// </param>
+    /// <param name="SAttributes">
+    ///   Attributes
+    /// </param>
     procedure WriteTag(const TagName: ansistring; const Text: ansistring; AttrArray: array of TZAttrArray); overload;
+    /// <summary>
+    ///   Write tag (&lt;tag ...&gt;text&lt;/tag&gt;).
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="Text">
+    ///   text
+    /// </param>
     procedure WriteTag(const TagName: ansistring; const Text: ansistring); overload;
+    /// <summary>
+    ///   Write node.
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="SAttributes">
+    ///   Attributes
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then start from new line (ignored when NewLine = false).
+    /// </param>
+    /// <param name="CloseTagNewLine">
+    ///   if true then closed tag starts from new line.
+    /// </param>
+    /// <param name="CheckEntity">
+    ///   if true then corrects entity. Attributes get from Attributes.
+    /// </param>
     procedure WriteTagNode(const TagName: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    ///   Write node.
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="AttrArray">
+    ///   Attributes
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then start from new line (ignored when NewLine = false).
+    /// </param>
+    /// <param name="CloseTagNewLine">
+    ///   if true then closed tag starts from new line.
+    /// </param>
+    /// <param name="CheckEntity">
+    ///   if true then corrects entity. Attributes get from Attributes.
+    /// </param>
     procedure WriteTagNode(const TagName: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean {$IFDEF VER130}{$ELSE} = true{$ENDIF}); overload;
+    /// <summary>
+    ///   Write node.
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then start from new line (ignored when NewLine = false).
+    /// </param>
+    /// <param name="CloseTagNewLine">
+    ///   if true then closed tag starts from new line.
+    /// </param>
+    /// <param name="CheckEntity">
+    ///   if true then corrects entity.
+    /// </param>
     procedure WriteTagNode(const TagName: ansistring; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    ///   Write node.
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="SAttributes">
+    ///   Attributes
+    /// </param>
     procedure WriteTagNode(const TagName: ansistring; SAttributes: TZAttributes); overload;
+    /// <summary>
+    ///   Write node.
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="AttrArray">
+    ///   Attributes
+    /// </param>
     procedure WriteTagNode(const TagName: ansistring; AttrArray: array of TZAttrArray); overload;
+    /// <summary>
+    ///   Write node.
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
     procedure WriteTagNode(const TagName: ansistring); overload;
+    /// <summary>
+    ///   Tag's attributes.
+    /// </summary>
     property Attributes: TZAttributes read FAttributes write SetAttributes;
+    /// <summary>
+    ///   Quotation mark for attribute values ( ' (prime) or " (double prime)). <br />" (double prime) by default.
+    /// </summary>
     property AttributeQuote: ansichar read FAttributeQuote write SetAttributeQuote;
+    /// <summary>
+    ///   Buffer. (read only)
+    /// </summary>
     property Buffer: ansistring read FBuffer;
+    /// <summary>
+    ///   Return True if writing in process. (read only)
+    /// </summary>
     property InProcess: boolean read FInProcess;
+    /// <summary>
+    ///   Buffer length (&gt;0). If InProcess = True then property read only. <br />4096 bytes by default.
+    /// </summary>
     property MaxBufferLength: integer read FMaxBufferLength write SetMaxBufferLength;
+    /// <summary>
+    ///   If True then tag starts with new line. If InProcess = True then property read only. <br />True by default
+    /// </summary>
     property NewLine: boolean read FNewLine write SetNewLine;
+    /// <summary>
+    ///   Number of tab-symbols before tag. If InProcess = True then property read only. <br />0 by default.
+    /// </summary>
     property TabLength: integer read FTabLength write SetTabLength;
+    /// <summary>
+    ///   Tab symbol (#32 (space) or #9 (tab)). If InProcess = True then property read only. <br />#32 by default.
+    /// </summary>
     property TabSymbol: ansichar read GetTabSymbol write SetTabSymbol;
+    /// <summary>
+    ///   Number of open tags before current tag. (read only)
+    /// </summary>
     property TagCount: integer read FTagCount;
+    /// <summary>
+    ///   Return open tag number num. (read only)
+    /// </summary>
     property Tags[num: integer]: ansistring read GetTag;
+    /// <summary>
+    ///   Set text converter. If InProcess = True then property read only.
+    /// </summary>
     Property TextConverter: TAnsiToCPConverter read FTextConverter write SetTextConverter;
+    /// <summary>
+    ///   If True then newline character is #10 (LF) else newline "character" is #13#10 (CR+LF).
+    /// </summary>
     property UnixNLSeparator: boolean read FUnixNLSeparator write SetUnixNLSeparator;
   end;
 
-  //Обязательные кодировки:
+  //РћР±СЏР·Р°С‚РµР»СЊРЅС‹Рµ РєРѕРґРёСЂРѕРІРєРё:
   //    windows-1251
   //    cp866
   //    UTF-8
   //    UTF-16
-  //Проблемы:   1. Как определить кодировку текста?
-  //            2. Как прочитать текст в многобайтной кодировке?
-  //            3. Как парсить текст в многобайтной кодировке?
-  //            4. Как обрабатывать неизвестные кодировки?
+  //РџСЂРѕР±Р»РµРјС‹:   1. РљР°Рє РѕРїСЂРµРґРµР»РёС‚СЊ РєРѕРґРёСЂРѕРІРєСѓ С‚РµРєСЃС‚Р°?
+  //            2. РљР°Рє РїСЂРѕС‡РёС‚Р°С‚СЊ С‚РµРєСЃС‚ РІ РјРЅРѕРіРѕР±Р°Р№С‚РЅРѕР№ РєРѕРґРёСЂРѕРІРєРµ?
+  //            3. РљР°Рє РїР°СЂСЃРёС‚СЊ С‚РµРєСЃС‚ РІ РјРЅРѕРіРѕР±Р°Р№С‚РЅРѕР№ РєРѕРґРёСЂРѕРІРєРµ?
+  //            4. РљР°Рє РѕР±СЂР°Р±Р°С‚С‹РІР°С‚СЊ РЅРµРёР·РІРµСЃС‚РЅС‹Рµ РєРѕРґРёСЂРѕРІРєРё?
 
-  //читает XML
+  //С‡РёС‚Р°РµС‚ XML
+  /// <summary>
+  ///   Class-reader. Read XML from string, stream or file in CP866, Windows-1251, UTF-8 and UTF-16 (BE and LE) encodings.
+  /// </summary>
   TZsspXMLReader = class
   private
-    FAttributes: TZAttributes;      //Атрибуты
+    FAttributes: TZAttributes;      //РђС‚СЂРёР±СѓС‚С‹
     FStream: TStream;
-    FTags: array of ansistring;     //"Стек тэгов"
-    FTagCount: integer;             //кол-во тэгов в "стеке тэгов"
-    FMaxTagCount: integer;          //Реальный размер FTags
-    FBuffer: ansistring;               //буфер
-    FMaxBufferLength: integer;         //Размер буфера
-    FInProcess: boolean;               //в процессе чтения
-    FSourceType: byte;                 //1 - файл, 2 - поток, 3 - строка
-    FPFirst: integer;                  //Начало буфера
-    FPLast:  integer;                  //Конец буфера
-    FTextBeforeTag: ansistring;        //Текст до тэга
-    FErrorCode: integer;               //код ошибки (0 - всё нормально)
-             // and    1  =    1 - значение параметра без кавычек (<TAG param=value>)
-             // and    2  =    2 - <TAG ... param = > или <TAG ... param = = ...> (значение параметра без кавычек)
-             // and    4  =    4 - <TAG ... param = value = ...> (значение параметра без кавычек)
-             // and    8  =    8 - <TAG ... param =/...> (значение параметра без кавычек)
-             // and   16  =   16 - <TAG ... param = value"...> (нет открывающей кавычки)
-             // and   32  =   32 - <TAG ... param = <*va<*lue<*... > <TAG ... param = <*"value"... > (* - 0 или более)
+    FTags: array of ansistring;     //"РЎС‚РµРє С‚СЌРіРѕРІ"
+    FTagCount: integer;             //РєРѕР»-РІРѕ С‚СЌРіРѕРІ РІ "СЃС‚РµРєРµ С‚СЌРіРѕРІ"
+    FMaxTagCount: integer;          //Р РµР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ FTags
+    FBuffer: ansistring;               //Р±СѓС„РµСЂ
+    FMaxBufferLength: integer;         //Р Р°Р·РјРµСЂ Р±СѓС„РµСЂР°
+    FInProcess: boolean;               //РІ РїСЂРѕС†РµСЃСЃРµ С‡С‚РµРЅРёСЏ
+    FSourceType: byte;                 //1 - С„Р°Р№Р», 2 - РїРѕС‚РѕРє, 3 - СЃС‚СЂРѕРєР°
+    FPFirst: integer;                  //РќР°С‡Р°Р»Рѕ Р±СѓС„РµСЂР°
+    FPLast:  integer;                  //РљРѕРЅРµС† Р±СѓС„РµСЂР°
+    FTextBeforeTag: ansistring;        //РўРµРєСЃС‚ РґРѕ С‚СЌРіР°
+    FErrorCode: integer;               //РєРѕРґ РѕС€РёР±РєРё (0 - РІСЃС‘ РЅРѕСЂРјР°Р»СЊРЅРѕ)
+             // and    1  =    1 - Р·РЅР°С‡РµРЅРёРµ РїР°СЂР°РјРµС‚СЂР° Р±РµР· РєР°РІС‹С‡РµРє (<TAG param=value>)
+             // and    2  =    2 - <TAG ... param = > РёР»Рё <TAG ... param = = ...> (Р·РЅР°С‡РµРЅРёРµ РїР°СЂР°РјРµС‚СЂР° Р±РµР· РєР°РІС‹С‡РµРє)
+             // and    4  =    4 - <TAG ... param = value = ...> (Р·РЅР°С‡РµРЅРёРµ РїР°СЂР°РјРµС‚СЂР° Р±РµР· РєР°РІС‹С‡РµРє)
+             // and    8  =    8 - <TAG ... param =/...> (Р·РЅР°С‡РµРЅРёРµ РїР°СЂР°РјРµС‚СЂР° Р±РµР· РєР°РІС‹С‡РµРє)
+             // and   16  =   16 - <TAG ... param = value"...> (РЅРµС‚ РѕС‚РєСЂС‹РІР°СЋС‰РµР№ РєР°РІС‹С‡РєРё)
+             // and   32  =   32 - <TAG ... param = <*va<*lue<*... > <TAG ... param = <*"value"... > (* - 0 РёР»Рё Р±РѕР»РµРµ)
              // and   64  =   64 - <TAG ... param = value/ ... >
-             // and  128  =  128 - <!Unknown... > Странный комментарий
+             // and  128  =  128 - <!Unknown... > РЎС‚СЂР°РЅРЅС‹Р№ РєРѕРјРјРµРЅС‚Р°СЂРёР№
              // and  256  =  256 - <=...>
-             // and  512  =  512 - <tag!*...> - символ '!' в неправильном месте
+             // and  512  =  512 - <tag!*...> - СЃРёРјРІРѕР» '!' РІ РЅРµРїСЂР°РІРёР»СЊРЅРѕРј РјРµСЃС‚Рµ
              // and 1024  = 1024 - <tag ... param = ?...>
-             // and 2048  = 2048 - < tag ... > пробельный символ после <
-             // and 4096  = 4096 - < tag ... param param ... > ('=' отсутствует)
-             // and 8192  = 8192 - </|?tag ... /> ('/' или '?')
+             // and 2048  = 2048 - < tag ... > РїСЂРѕР±РµР»СЊРЅС‹Р№ СЃРёРјРІРѕР» РїРѕСЃР»Рµ <
+             // and 4096  = 4096 - < tag ... param param ... > ('=' РѕС‚СЃСѓС‚СЃС‚РІСѓРµС‚)
+             // and 8192  = 8192 - </|?tag ... /> ('/' РёР»Рё '?')
              // and 16384 = 16384 - <tag ... ?>
-             // and 32768 = 32768 - '<' в неподходящем месте
-             // and 65536 = 65536 - "'" или '"' в неподходящем месте
-             // and 131072 = 131072 - неожиданный конец тега
-             // and 262144 = 262144 - перед закрывающим тэгом нету открывающего
-             // and 524288 = 524288 - EOF и кол-во тэгов > 0
+             // and 32768 = 32768 - '<' РІ РЅРµРїРѕРґС…РѕРґСЏС‰РµРј РјРµСЃС‚Рµ
+             // and 65536 = 65536 - "'" РёР»Рё '"' РІ РЅРµРїРѕРґС…РѕРґСЏС‰РµРј РјРµСЃС‚Рµ
+             // and 131072 = 131072 - РЅРµРѕР¶РёРґР°РЅРЅС‹Р№ РєРѕРЅРµС† С‚РµРіР°
+             // and 262144 = 262144 - РїРµСЂРµРґ Р·Р°РєСЂС‹РІР°СЋС‰РёРј С‚СЌРіРѕРј РЅРµС‚Сѓ РѕС‚РєСЂС‹РІР°СЋС‰РµРіРѕ
+             // and 524288 = 524288 - EOF Рё РєРѕР»-РІРѕ С‚СЌРіРѕРІ > 0
 
 
-    FRawTextTag: ansistring;           //Текст тэга
-//    FRawTextTagNotDecoded: ansistring; //Текст тэга не декодированный
-    FTagName: ansistring;              //Имя тэга (инструкции/комментария)
-    FValue: ansistring;                //Текст CDATA или комментария
-    FTagType: byte;                    //Тип тэга:
-                                                // 0 - что-то непонятное
+    FRawTextTag: ansistring;           //РўРµРєСЃС‚ С‚СЌРіР°
+//    FRawTextTagNotDecoded: ansistring; //РўРµРєСЃС‚ С‚СЌРіР° РЅРµ РґРµРєРѕРґРёСЂРѕРІР°РЅРЅС‹Р№
+    FTagName: ansistring;              //РРјСЏ С‚СЌРіР° (РёРЅСЃС‚СЂСѓРєС†РёРё/РєРѕРјРјРµРЅС‚Р°СЂРёСЏ)
+    FValue: ansistring;                //РўРµРєСЃС‚ CDATA РёР»Рё РєРѕРјРјРµРЅС‚Р°СЂРёСЏ
+    FTagType: byte;                    //РўРёРї С‚СЌРіР°:
+                                                // 0 - С‡С‚Рѕ-С‚Рѕ РЅРµРїРѕРЅСЏС‚РЅРѕРµ
                                                 // 1 - <?...?>
                                                 // 2 - <![CDATA[..]]>
                                                 // 3 - <!--..-->
                                                 // 4 - <...>    (4 and 4 = 4)
                                                 // 5 - <.../>   (5 and 4 = 4)
                                                 // 6 - </...>   (6 and 4 = 4)
-    FCharReader: TReadCPChar;           //Читает "символ"
-    FCharConverter: TCPToAnsiConverter; //конвертер
+    FCharReader: TReadCPChar;           //Р§РёС‚Р°РµС‚ "СЃРёРјРІРѕР»"
+    FCharConverter: TCPToAnsiConverter; //РєРѕРЅРІРµСЂС‚РµСЂ
     FStreamEnd: boolean;
     FIgnoreCase: boolean;
     FQuotesEqual: boolean;
     FAttributesMatch: boolean;
     function  GetTag(num: integer): ansistring;
     procedure SetMaxBufferLength(Value: integer);
-    procedure SetAttributes(Value: TZAttributes);
     procedure AddTag(const Value: ansistring);
     procedure DeleteClosedTag();
     procedure DeleteTag();
@@ -255,45 +715,110 @@ type
     procedure SetQuotesEqual(Value: boolean);
     procedure SetAttributesMatch(Value: boolean);
   protected
+    procedure SetAttributes(Value: TZAttributes); // moved here to stop never used warning
     procedure Clear();
     procedure ClearAll();
-    procedure RecognizeEncoding(var txt: ansistring);      //Попытка распознания кодировки
+    procedure RecognizeEncoding(var txt: ansistring);      //РџРѕРїС‹С‚РєР° СЂР°СЃРїРѕР·РЅР°РЅРёСЏ РєРѕРґРёСЂРѕРІРєРё
     procedure ReadBuffer();
     procedure GetOneChar(var OneChar: ansistring; var err: boolean);
     procedure ResizeTagArray(NewSize: integer);
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
+    /// <summary>
+    ///   Begin to read XML from a file FileName. <br />
+    /// </summary>
+    /// <returns>
+    ///   0 - OK <br />1 - already in reading <br />2 - error <br />3 - Stream = nil
+    /// </returns>
     function BeginReadFile(FileName: string): integer;
+    /// <summary>
+    ///   Begin to read XML from Stream. <br />
+    /// </summary>
+    /// <returns>
+    ///   0 if no errors.
+    /// </returns>
     function BeginReadStream(Stream: TStream): integer;
+    /// <summary>
+    ///   Begin to read XML from string Source.
+    /// </summary>
+    /// <param name="IgnoreCodePage">
+    ///   if True then Ignores encoding
+    /// </param>
+    /// <returns>
+    ///   0 if no errors.
+    /// </returns>
     function BeginReadString(Source: ansistring; IgnoreCodePage: boolean = true): integer;
+    /// <summary>
+    ///   Read tag.
+    /// </summary>
     function ReadTag(): boolean;
+    /// <summary>
+    ///   End reading.
+    /// </summary>
     procedure EndRead();
+    /// <returns>
+    ///   True when current file (stream or string) position is the end.
+    /// </returns>
     function Eof(): boolean; virtual;
+    /// <summary>
+    ///   Attributes of tag.
+    /// </summary>
     property Attributes: TZAttributes read FAttributes;
     property AttributesMatch: boolean read FAttributesMatch write SetAttributesMatch;
+    /// <summary>
+    ///   Return True when processed XML. (RO)
+    /// </summary>
     property InProcess: boolean read FInProcess;
+    /// <summary>
+    ///   Raw text. (RO)
+    /// </summary>
     property RawTextTag: ansistring read FRawTextTag;
+    /// <summary>
+    ///   Return error code. 0 - OK, 1 - value without quotes, etc. (RO)
+    /// </summary>
     property ErrorCode: integer read FErrorCode;
+    /// <summary>
+    ///   If True then ignore case sensitive. If InProcess = True then property read only. <br />False by default.
+    /// </summary>
     property IgnoreCase: boolean read FIgnoreCase write SetIgnoreCase;
+    /// <summary>
+    ///   Return name of readed tag/instruction/comment. (RO)
+    /// </summary>
     property TagName: ansistring read FTagName;
+    /// <summary>
+    ///   Return CDATA or comment text. (RO)
+    /// </summary>
     property TagValue: ansistring read FValue;
+    /// <summary>
+    ///   Return type of tag: <br /><br />0 - unknown <br />1 - &lt;?...?&gt; <br />2 - &lt;![CDATA[..]]&gt; <br />3 - &lt;!--..--&gt; <br />4 - &lt;...&gt; <br />5 - &lt;.../&gt;
+    ///   <br />6 - &lt;/...&gt; <br />
+    /// </summary>
     property TagType: byte read FTagType;
+    /// <summary>
+    ///   Number of opened tags before current tag. (RO)
+    /// </summary>
     property TagCount: integer read FTagCount;
+    /// <summary>
+    ///   Return opened tag number num. (RO)
+    /// </summary>
     property Tags[num: integer]: ansistring read GetTag;
     property TextBeforeTag: ansistring read FTextBeforeTag;
+    /// <summary>
+    ///   Buffer size (&gt;=512). If InProcess = True then property read only. <br />4096 bytes by default.
+    /// </summary>
     property MaxBufferLength: integer read FMaxBufferLength write SetMaxBufferLength;
-    property QuotesEqual: boolean read FQuotesEqual write SetQuotesEqual; //признак того, что двойные и одинарные кавычки
-                                                                          //равны. Если установлено в false, то в <tagname attr1="asda' attr2='adsas">
-                                                                          //будет один атрибут "attr1" cо значением "asda' attr2='adsas",
-                                                                          //в противном случае распознается 2 атрибута: "attr1"="asda" и "attr2"="adsas".
-                                                                          //По умолчанию false.
+    property QuotesEqual: boolean read FQuotesEqual write SetQuotesEqual; //РїСЂРёР·РЅР°Рє С‚РѕРіРѕ, С‡С‚Рѕ РґРІРѕР№РЅС‹Рµ Рё РѕРґРёРЅР°СЂРЅС‹Рµ РєР°РІС‹С‡РєРё
+                                                                          //СЂР°РІРЅС‹. Р•СЃР»Рё СѓСЃС‚Р°РЅРѕРІР»РµРЅРѕ РІ false, С‚Рѕ РІ <tagname attr1="asda' attr2='adsas">
+                                                                          //Р±СѓРґРµС‚ РѕРґРёРЅ Р°С‚СЂРёР±СѓС‚ "attr1" cРѕ Р·РЅР°С‡РµРЅРёРµРј "asda' attr2='adsas",
+                                                                          //РІ РїСЂРѕС‚РёРІРЅРѕРј СЃР»СѓС‡Р°Рµ СЂР°СЃРїРѕР·РЅР°РµС‚СЃСЏ 2 Р°С‚СЂРёР±СѓС‚Р°: "attr1"="asda" Рё "attr2"="adsas".
+                                                                          //РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ false.
   end;
 
-//для Delphi >=2009
+//РґР»СЏ Delphi >=2009
   {$IFDEF DELPHI_UNICODE}
   TZAttrArrayH = array [0..1] of string;
-  //Класс-обёртка-костыль для атрибутов над TZAttributes
+  //РљР»Р°СЃСЃ-РѕР±С‘СЂС‚РєР°-РєРѕСЃС‚С‹Р»СЊ РґР»СЏ Р°С‚СЂРёР±СѓС‚РѕРІ РЅР°Рґ TZAttributes
   TZAttributesH = class(TPersistent)
   private
     FAttributes: TZAttributes;
@@ -327,7 +852,7 @@ type
     property ItemsByNum[num: integer]: string read GetAttrI write SetAttrI;
   end;
 
-  //пишет XML
+  //РїРёС€РµС‚ XML
   TZsspXMLWriterH = class
   private
     FAttributes: TZAttributesH;
@@ -355,9 +880,9 @@ type
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
-    function BeginSaveToStream(Stream: TStream): boolean;      //начать запись в поток
-    function BeginSaveToFile(FileName: string): boolean;   //начать запись в файл
-    function BeginSaveToString(): boolean;                     //начать запись в Buffer
+    function BeginSaveToStream(Stream: TStream): boolean;      //РЅР°С‡Р°С‚СЊ Р·Р°РїРёСЃСЊ РІ РїРѕС‚РѕРє
+    function BeginSaveToFile(FileName: string): boolean;   //РЅР°С‡Р°С‚СЊ Р·Р°РїРёСЃСЊ РІ С„Р°Р№Р»
+    function BeginSaveToString(): boolean;                     //РЅР°С‡Р°С‚СЊ Р·Р°РїРёСЃСЊ РІ Buffer
     procedure EndSaveTo();
     procedure FlushBuffer();
     procedure WriteCDATA(CDATA: string; CorrectCDATA: boolean; StartNewLine: boolean = true); overload;     //<![CDATA[ bla-bla-bla <><><>...]]>
@@ -405,10 +930,10 @@ type
     property UnixNLSeparator: boolean read GetUnixNLSeparator write SetUnixNLSeparator;
   end;
 
-  //читает XML
+  //С‡РёС‚Р°РµС‚ XML
   TZsspXMLReaderH = class
   private
-    FAttributes: TZAttributesH;      //Атрибуты
+    FAttributes: TZAttributesH;      //РђС‚СЂРёР±СѓС‚С‹
     FXMLReader: TZsspXMLReader;
     function GetAttributes(): TZAttributesH;
     function GetInProcess(): boolean;
@@ -423,13 +948,13 @@ type
     function  GetTag(num: integer): string;
     procedure SetMaxBufferLength(Value: integer);
     function GetMaxBufferLength(): integer;
-    procedure SetAttributes(Value: TZAttributesH);
     procedure SetIgnoreCase(Value: boolean);
     procedure SetQuotesEqual(Value: boolean);
     function GetQuotesEqual(): boolean;
     procedure SetAttributesMatch(Value: boolean);
     function GetAttributesMatch(): boolean;
   protected
+    procedure SetAttributes(Value: TZAttributesH); // moved here to stop never used warning
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
@@ -461,16 +986,16 @@ type
   TZsspXMLWriterH = TZsspXMLWriter;
   TZsspXMLReaderH = TZsspXMLReader;
   {$ENDIF}
-//конец для Delphi >=2009
+//РєРѕРЅРµС† РґР»СЏ Delphi >=2009
 
-//Читатали
+//Р§РёС‚Р°С‚Р°Р»Рё
 procedure ReadCharUTF8(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 procedure ReadCharUTF16LE(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 procedure ReadCharUTF16BE(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 procedure ReadCharUTF32(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 procedure ReadCharOneByte(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 
-//////////// Конвертеры
+//////////// РљРѕРЅРІРµСЂС‚РµСЂС‹
 function conv_UTF8ToLocal(const Text: ansistring): ansistring;
 function conv_UTF16LEToLocal(const Text: ansistring): ansistring;
 function conv_UTF16BEToLocal(const Text: ansistring): ansistring;
@@ -479,36 +1004,36 @@ function conv_UTF32BEToLocal(const Text: ansistring): ansistring;
 function conv_WIN1251ToLocal(const Text: ansistring): ansistring;
 function conv_CP866ToLocal(const Text: ansistring): ansistring;
 
-//заменяет в строке спецсимволы
+//Р·Р°РјРµРЅСЏРµС‚ РІ СЃС‚СЂРѕРєРµ СЃРїРµС†СЃРёРјРІРѕР»С‹
 function CheckStrEntity(const st: ansistring; checkamp: boolean = true): ansistring; {$IFDEF DELPHI_UNICODE} overload; {$ENDIF}
 {$IFDEF DELPHI_UNICODE}
 function CheckStrEntity(const st: string; checkamp: boolean = true): string; overload;
 {$ENDIF}
 
-//проверяем на корректность сущность (не факт, что валидную), в случае
-//чего заменяем '&' на '&amp;'
+//РїСЂРѕРІРµСЂСЏРµРј РЅР° РєРѕСЂСЂРµРєС‚РЅРѕСЃС‚СЊ СЃСѓС‰РЅРѕСЃС‚СЊ (РЅРµ С„Р°РєС‚, С‡С‚Рѕ РІР°Р»РёРґРЅСѓСЋ), РІ СЃР»СѓС‡Р°Рµ
+//С‡РµРіРѕ Р·Р°РјРµРЅСЏРµРј '&' РЅР° '&amp;'
 procedure Correct_Entity(const _St: ansistring; num: integer; var _result: ansistring); {$IFDEF DELPHI_UNICODE} overload; {$ENDIF}
 {$IFDEF DELPHI_UNICODE}
 procedure Correct_Entity(const _St: string; num: integer; var _result: string); overload;
 {$ENDIF}
 
-//Добавляет аттрибут
+//Р”РѕР±Р°РІР»СЏРµС‚ Р°С‚С‚СЂРёР±СѓС‚
 function ToAttribute(const AttrName: ansistring; const Value: ansistring): TZAttrArray; {$IFDEF DELPHI_UNICODE} overload; {$ENDIF}
 {$IFDEF DELPHI_UNICODE}
 function ToAttribute(const AttrName: string; const Value: string): TZAttrArrayH; overload;
 {$ENDIF}
 
 
-//Распознаёт кодировку XML и HTML текста
+//Р Р°СЃРїРѕР·РЅР°С‘С‚ РєРѕРґРёСЂРѕРІРєСѓ XML Рё HTML С‚РµРєСЃС‚Р°
 function RecognizeEncodingXML(startpos: integer; var txt: ansistring; out cpfromtext: integer; out cpname: ansistring; out ftype: integer): boolean; overload;
 
-//Распознаёт BOM (Byte Order Mark) текста
+//Р Р°СЃРїРѕР·РЅР°С‘С‚ BOM (Byte Order Mark) С‚РµРєСЃС‚Р°
 function RecognizeBOM(var txt: ansistring): integer;
 
-//Распознаёт кодировку XML и HTML текста вместе с BOM
+//Р Р°СЃРїРѕР·РЅР°С‘С‚ РєРѕРґРёСЂРѕРІРєСѓ XML Рё HTML С‚РµРєСЃС‚Р° РІРјРµСЃС‚Рµ СЃ BOM
 function RecognizeEncodingXML(var txt: ansistring; out BOM: integer; out cpfromtext: integer; out cpname: ansistring; out ftype: integer): boolean; overload;
 
-//Получить дефолтный UTF8 конвертер
+//РџРѕР»СѓС‡РёС‚СЊ РґРµС„РѕР»С‚РЅС‹Р№ UTF8 РєРѕРЅРІРµСЂС‚РµСЂ
 function ZEGetDefaultUTF8Converter(): TAnsiToCPConverter;
 
 implementation
@@ -518,7 +1043,7 @@ uses
   duansistr;
 {$ENDIF}
 
-//// читатели
+//// С‡РёС‚Р°С‚РµР»Рё
 
 procedure ReadCharUTF8(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 var
@@ -541,7 +1066,7 @@ begin
       if t > 127 then
       begin
         {
-        //вроде как возможны 5-ти байтные, но в стандарте нету
+        //РІСЂРѕРґРµ РєР°Рє РІРѕР·РјРѕР¶РЅС‹ 5-С‚Рё Р±Р°Р№С‚РЅС‹Рµ, РЅРѕ РІ СЃС‚Р°РЅРґР°СЂС‚Рµ РЅРµС‚Сѓ
         if t and 248 = 248 then
           kol := 4 else} {tut}
         kol := 0;
@@ -553,7 +1078,7 @@ begin
           kol := 1;
         for i := 1 to kol do
         begin
-          //все последующие симовлы должны быть вида 10xxxxxx {tut}
+          //РІСЃРµ РїРѕСЃР»РµРґСѓСЋС‰РёРµ СЃРёРјРѕРІР»С‹ РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ РІРёРґР° 10xxxxxx {tut}
           ReadCPChar(s, _eof);
           text := text + s;
           if _eof then exit;
@@ -645,7 +1170,7 @@ begin
     _eof := true;
 end;
 
-//для однобайтных кодировок
+//РґР»СЏ РѕРґРЅРѕР±Р°Р№С‚РЅС‹С… РєРѕРґРёСЂРѕРІРѕРє
 procedure ReadCharOneByte(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 begin
   _eof := false;
@@ -656,9 +1181,9 @@ begin
     _eof := true;
 end;
 
-//////////// Конвертеры
+//////////// РљРѕРЅРІРµСЂС‚РµСЂС‹
 
-{tut} //Не забыть бы конвертеры все добавить...
+{tut} //РќРµ Р·Р°Р±С‹С‚СЊ Р±С‹ РєРѕРЅРІРµСЂС‚РµСЂС‹ РІСЃРµ РґРѕР±Р°РІРёС‚СЊ...
 
 function CP866ToWin1251(const cp866: ansistring): ansistring;
 var
@@ -681,7 +1206,7 @@ begin
 end;
 
 {$IFDEF FPC}
-//конвертеры для FPC (работает с UTF-8)
+//РєРѕРЅРІРµСЂС‚РµСЂС‹ РґР»СЏ FPC (СЂР°Р±РѕС‚Р°РµС‚ СЃ UTF-8)
 
 function conv_UTF8ToLocal(const Text: ansistring): ansistring;
 begin
@@ -720,7 +1245,7 @@ var
 begin
   ws := '';
   i := 2;
-  {tut}// что делать, если длина не кратна 2?
+  {tut}// С‡С‚Рѕ РґРµР»Р°С‚СЊ, РµСЃР»Рё РґР»РёРЅР° РЅРµ РєСЂР°С‚РЅР° 2?
   l := length(Text);
   while i <= l do
   begin
@@ -741,7 +1266,7 @@ var
 begin
   ws := '';
   i := 2;
-  {tut}// что делать, если длина не кратна 2?
+  {tut}// С‡С‚Рѕ РґРµР»Р°С‚СЊ, РµСЃР»Рё РґР»РёРЅР° РЅРµ РєСЂР°С‚РЅР° 2?
   l := length(Text);
   while i <= l do
   begin
@@ -755,7 +1280,7 @@ end;
 
 function conv_WIN1251ToLocal(const Text: ansistring): ansistring;
 begin
-  {tut} //не забыть переделать!
+  {tut} //РЅРµ Р·Р°Р±С‹С‚СЊ РїРµСЂРµРґРµР»Р°С‚СЊ!
   result := AnsiToUtf8(Text);
 end;
 
@@ -778,7 +1303,7 @@ end;
 
 
 {$ELSE}
-//Для  Delphi
+//Р”Р»СЏ  Delphi
 
 function conv_UTF8ToLocal(const Text: ansistring): ansistring;
 begin
@@ -798,7 +1323,7 @@ var
 begin
   ws := '';
   i := 2;
-  {tut}// что делать, если длина не кратна 2?
+  {tut}// С‡С‚Рѕ РґРµР»Р°С‚СЊ, РµСЃР»Рё РґР»РёРЅР° РЅРµ РєСЂР°С‚РЅР° 2?
   l := length(Text);
   while i <= l do
   begin
@@ -823,7 +1348,7 @@ var
 begin
   ws := '';
   i := 2;
-  {tut}// что делать, если длина не кратна 2?
+  {tut}// С‡С‚Рѕ РґРµР»Р°С‚СЊ, РµСЃР»Рё РґР»РёРЅР° РЅРµ РєСЂР°С‚РЅР° 2?
   l := length(Text);
   while i <= l do
   begin
@@ -861,7 +1386,7 @@ end;
 {$ENDIF}
 ///////////////////////////
 
-//Добавляет аттрибут
+//Р”РѕР±Р°РІР»СЏРµС‚ Р°С‚С‚СЂРёР±СѓС‚
 function ToAttribute(const AttrName: ansistring; const Value: ansistring): TZAttrArray;
 begin
   result[0] := AttrName;
@@ -876,8 +1401,8 @@ begin
 end;
 {$ENDIF}
 
-//проверяем на корректность сущность (не факт, что валидную), в случае
-//чего заменяем '&' на '&amp;'
+//РїСЂРѕРІРµСЂСЏРµРј РЅР° РєРѕСЂСЂРµРєС‚РЅРѕСЃС‚СЊ СЃСѓС‰РЅРѕСЃС‚СЊ (РЅРµ С„Р°РєС‚, С‡С‚Рѕ РІР°Р»РёРґРЅСѓСЋ), РІ СЃР»СѓС‡Р°Рµ
+//С‡РµРіРѕ Р·Р°РјРµРЅСЏРµРј '&' РЅР° '&amp;'
 procedure Correct_Entity(const _St: ansistring; num: integer; var _result: ansistring);
 var
   b: boolean;
@@ -930,13 +1455,13 @@ begin
 end;
 {$ENDIF}
 
-//заменяет в строке спецсимволы
+//Р·Р°РјРµРЅСЏРµС‚ РІ СЃС‚СЂРѕРєРµ СЃРїРµС†СЃРёРјРІРѕР»С‹
 //INPUT
-//      St: ansistring - исходная строка
-//      checkamp: boolean - true - заменять & сразу на &amp;
-//                          false - если сущность - оставлять
+//      St: ansistring - РёСЃС…РѕРґРЅР°СЏ СЃС‚СЂРѕРєР°
+//      checkamp: boolean - true - Р·Р°РјРµРЅСЏС‚СЊ & СЃСЂР°Р·Сѓ РЅР° &amp;
+//                          false - РµСЃР»Рё СЃСѓС‰РЅРѕСЃС‚СЊ - РѕСЃС‚Р°РІР»СЏС‚СЊ
 //RETURN
-//      ansistring - Обработанная строка
+//      ansistring - РћР±СЂР°Р±РѕС‚Р°РЅРЅР°СЏ СЃС‚СЂРѕРєР°
 function CheckStrEntity(const st: ansistring; checkamp: boolean = true): ansistring;
 var
   i, kol: integer;
@@ -964,13 +1489,13 @@ begin
 end;
 
 {$IFDEF DELPHI_UNICODE}
-//заменяет в строке спецсимволы
+//Р·Р°РјРµРЅСЏРµС‚ РІ СЃС‚СЂРѕРєРµ СЃРїРµС†СЃРёРјРІРѕР»С‹
 //INPUT
-//      St: string - исходная строка
-//      checkamp: boolean - true - заменять & сразу на &amp;
-//                          false - если сущность - оставлять
+//      St: string - РёСЃС…РѕРґРЅР°СЏ СЃС‚СЂРѕРєР°
+//      checkamp: boolean - true - Р·Р°РјРµРЅСЏС‚СЊ & СЃСЂР°Р·Сѓ РЅР° &amp;
+//                          false - РµСЃР»Рё СЃСѓС‰РЅРѕСЃС‚СЊ - РѕСЃС‚Р°РІР»СЏС‚СЊ
 //RETURN
-//      ansistring - Обработанная строка
+//      ansistring - РћР±СЂР°Р±РѕС‚Р°РЅРЅР°СЏ СЃС‚СЂРѕРєР°
 function CheckStrEntity(const st: string; checkamp: boolean = true): string;
 var
   i, kol: integer;
@@ -998,7 +1523,7 @@ begin
 end; //CheckStrEntity
 {$ENDIF}
 
-//Получить дефолтный UTF8 конвертер
+//РџРѕР»СѓС‡РёС‚СЊ РґРµС„РѕР»С‚РЅС‹Р№ UTF8 РєРѕРЅРІРµСЂС‚РµСЂ
 function ZEGetDefaultUTF8Converter(): TAnsiToCPConverter;
 begin
   {$IFDEF FPC}
@@ -1012,14 +1537,14 @@ begin
   {$ENDIF}
 end; //ZEGetDefaultUTF8Converter
 
-//Возвращает номер кодировки по его названию (UPCASE не забываем!)
+//Р’РѕР·РІСЂР°С‰Р°РµС‚ РЅРѕРјРµСЂ РєРѕРґРёСЂРѕРІРєРё РїРѕ РµРіРѕ РЅР°Р·РІР°РЅРёСЋ (UPCASE РЅРµ Р·Р°Р±С‹РІР°РµРј!)
 //INPUT
-//    txt: ansistring - имя кодировки в ВЕРХНЕМ РЕГИСТРЕ
-//RETURN: integer - номер кодировки
+//    txt: ansistring - РёРјСЏ РєРѕРґРёСЂРѕРІРєРё РІ Р’Р•Р РҐРќР•Рњ Р Р•Р“РРЎРўР Р•
+//RETURN: integer - РЅРѕРјРµСЂ РєРѕРґРёСЂРѕРІРєРё
 function CPFromName(txt: ansistring): integer;
 begin
   result := 0;
-  // если нету BOMа, то UTF-16/32 считаем как UTF-16/32BE
+  // РµСЃР»Рё РЅРµС‚Сѓ BOMР°, С‚Рѕ UTF-16/32 СЃС‡РёС‚Р°РµРј РєР°Рє UTF-16/32BE
   if (txt = 'UTF-8') or (txt = 'UTF8') then result := 1 else
   if txt = 'UTF-16' then result := 2 else
  // if txt = 'UTF-16LE' then result := 3 else
@@ -1029,14 +1554,14 @@ begin
   if txt = 'CP866' then result := 7;
 end;
 
-//Распознаёт кодировку XML и HTML текста
-//(во всяком случае попытается)
+//Р Р°СЃРїРѕР·РЅР°С‘С‚ РєРѕРґРёСЂРѕРІРєСѓ XML Рё HTML С‚РµРєСЃС‚Р°
+//(РІРѕ РІСЃСЏРєРѕРј СЃР»СѓС‡Р°Рµ РїРѕРїС‹С‚Р°РµС‚СЃСЏ)
 //INPUT
-//    startpos: integer   - стартовая позиция
-//    txt: ansistring         - текст для распознания
+//    startpos: integer   - СЃС‚Р°СЂС‚РѕРІР°СЏ РїРѕР·РёС†РёСЏ
+//    txt: ansistring         - С‚РµРєСЃС‚ РґР»СЏ СЂР°СЃРїРѕР·РЅР°РЅРёСЏ
 //OUTPUT
-//    cpfromtext: integer - номер расспознаной кодировки из текста
-//                            0 - неопределена
+//    cpfromtext: integer - РЅРѕРјРµСЂ СЂР°СЃСЃРїРѕР·РЅР°РЅРѕР№ РєРѕРґРёСЂРѕРІРєРё РёР· С‚РµРєСЃС‚Р°
+//                            0 - РЅРµРѕРїСЂРµРґРµР»РµРЅР°
 //                            1 - UTF-8
 //                            2 - UTF-16BE
 //                            3 - UTF-16LE
@@ -1044,13 +1569,13 @@ end;
 //                            5 - UTF-32LE
 //                            6 - Windows-1251
 //                            7 - CP866
-//    cpname: ansistring      - название кодировки из текста
-//    ftype: integer      - тип файла:
-//                            0 - непонятно
+//    cpname: ansistring      - РЅР°Р·РІР°РЅРёРµ РєРѕРґРёСЂРѕРІРєРё РёР· С‚РµРєСЃС‚Р°
+//    ftype: integer      - С‚РёРї С„Р°Р№Р»Р°:
+//                            0 - РЅРµРїРѕРЅСЏС‚РЅРѕ
 //                            1 - xml
 //                            2 - html
-//RETURN: boolean         - true - кодировка скорее всего точно опознана
-//                          false - есть сомнение насчёт правильности распознания
+//RETURN: boolean         - true - РєРѕРґРёСЂРѕРІРєР° СЃРєРѕСЂРµРµ РІСЃРµРіРѕ С‚РѕС‡РЅРѕ РѕРїРѕР·РЅР°РЅР°
+//                          false - РµСЃС‚СЊ СЃРѕРјРЅРµРЅРёРµ РЅР°СЃС‡С‘С‚ РїСЂР°РІРёР»СЊРЅРѕСЃС‚Рё СЂР°СЃРїРѕР·РЅР°РЅРёСЏ
 function RecognizeEncodingXML(startpos: integer; var txt: ansistring; out cpfromtext: integer; out cpname: ansistring; out ftype: integer): boolean; overload;
 var
   i, ll: integer;
@@ -1069,13 +1594,13 @@ var
   begin
     result := _b;
     n := CPFromName(_name);
-    //если кодировка раньше не была определена
+    //РµСЃР»Рё РєРѕРґРёСЂРѕРІРєР° СЂР°РЅСЊС€Рµ РЅРµ Р±С‹Р»Р° РѕРїСЂРµРґРµР»РµРЅР°
     if cpfromtext = 0 then
       cpfromtext := n
     else
-    //если кодировка была определена ранее, а название кодировки не то -
-    //оставляем номер ранее определённой кодировкой и ставим признак
-    //недоверяи
+    //РµСЃР»Рё РєРѕРґРёСЂРѕРІРєР° Р±С‹Р»Р° РѕРїСЂРµРґРµР»РµРЅР° СЂР°РЅРµРµ, Р° РЅР°Р·РІР°РЅРёРµ РєРѕРґРёСЂРѕРІРєРё РЅРµ С‚Рѕ -
+    //РѕСЃС‚Р°РІР»СЏРµРј РЅРѕРјРµСЂ СЂР°РЅРµРµ РѕРїСЂРµРґРµР»С‘РЅРЅРѕР№ РєРѕРґРёСЂРѕРІРєРѕР№ Рё СЃС‚Р°РІРёРј РїСЂРёР·РЅР°Рє
+    //РЅРµРґРѕРІРµСЂСЏРё
     if cpfromtext <> n then
      result := false;
   end;
@@ -1098,9 +1623,9 @@ begin
   if startpos < 0 then startpos := 1;
   if startpos > ll then startpos := ll;
 
-  //сначала проверяем на UTF-16 и UTF-32
-  //если каждый второй символ #0 - значит UTF-16
-  //если 2 подряд #0, а 4-ый <>#0, значит UTF-32
+  //СЃРЅР°С‡Р°Р»Р° РїСЂРѕРІРµСЂСЏРµРј РЅР° UTF-16 Рё UTF-32
+  //РµСЃР»Рё РєР°Р¶РґС‹Р№ РІС‚РѕСЂРѕР№ СЃРёРјРІРѕР» #0 - Р·РЅР°С‡РёС‚ UTF-16
+  //РµСЃР»Рё 2 РїРѕРґСЂСЏРґ #0, Р° 4-С‹Р№ <>#0, Р·РЅР°С‡РёС‚ UTF-32
   i := startpos;
   while (i <= ll - 1) do
   begin
@@ -1119,31 +1644,31 @@ begin
       inc(kol32LE);
     inc(i, 4);
   end;
-  //перебор возможных значений
-  //точно UTF16BE
+  //РїРµСЂРµР±РѕСЂ РІРѕР·РјРѕР¶РЅС‹С… Р·РЅР°С‡РµРЅРёР№
+  //С‚РѕС‡РЅРѕ UTF16BE
   if (kol16BE > 0) and (kol16LE = 0) and (kol32BE = 0) and (kol32LE = 0) then
     cpfromtext := 2
   else
-  //точно UTF16LE
+  //С‚РѕС‡РЅРѕ UTF16LE
   if (kol16BE = 0) and (kol16LE > 0) and (kol32BE = 0) and (kol32LE = 0) then
     cpfromtext := 3
   else
-  //точно UTF32BE
+  //С‚РѕС‡РЅРѕ UTF32BE
   if (kol16BE = 0) and (kol16LE = 0) and (kol32BE > 0) and (kol32LE = 0) then
     cpfromtext := 4
   else
-  //точно UTF32LE
+  //С‚РѕС‡РЅРѕ UTF32LE
   if (kol16BE = 0) and (kol16LE = 0) and (kol32BE = 0) and (kol32LE > 0) then
     cpfromtext := 5
   else
-  //точно не UTF-16/32
+  //С‚РѕС‡РЅРѕ РЅРµ UTF-16/32
   if (kol16BE = 0) and (kol16LE = 0) and (kol32BE = 0) and (kol32LE = 0) then
   begin
     cpfromtext := 0;
   end else
   begin
-    result := false; // точно не понятно что за кодировка
-    //выбираем по макс. кол-ву
+    result := false; // С‚РѕС‡РЅРѕ РЅРµ РїРѕРЅСЏС‚РЅРѕ С‡С‚Рѕ Р·Р° РєРѕРґРёСЂРѕРІРєР°
+    //РІС‹Р±РёСЂР°РµРј РїРѕ РјР°РєСЃ. РєРѕР»-РІСѓ
     i := kol16BE;
     cpfromtext := 2;
     if i < kol16LE then
@@ -1159,16 +1684,16 @@ begin
     if i < kol32LE*2 then
       cpfromtext := 5;
   end;
-  //удаляем из текста все символы #0 - получаем (скорее всего) ASCII текст,
-  //текст приводим к верхнему регистру,
-  //в нем находим строку <?xml version="1.0" encoding="some_encoding"?> (xml)
-  //или <META bla-bla-bla CHARSET=some_encoding"> (html)
+  //СѓРґР°Р»СЏРµРј РёР· С‚РµРєСЃС‚Р° РІСЃРµ СЃРёРјРІРѕР»С‹ #0 - РїРѕР»СѓС‡Р°РµРј (СЃРєРѕСЂРµРµ РІСЃРµРіРѕ) ASCII С‚РµРєСЃС‚,
+  //С‚РµРєСЃС‚ РїСЂРёРІРѕРґРёРј Рє РІРµСЂС…РЅРµРјСѓ СЂРµРіРёСЃС‚СЂСѓ,
+  //РІ РЅРµРј РЅР°С…РѕРґРёРј СЃС‚СЂРѕРєСѓ <?xml version="1.0" encoding="some_encoding"?> (xml)
+  //РёР»Рё <META bla-bla-bla CHARSET=some_encoding"> (html)
   s := '';
   for i := startpos to ll do
     if txt[i] <> #0 then
       s := s + UpCase(txt[i]);
   //XML?
-  //todo: надо как-то определить, не php-ли это
+  //todo: РЅР°РґРѕ РєР°Рє-С‚Рѕ РѕРїСЂРµРґРµР»РёС‚СЊ, РЅРµ php-Р»Рё СЌС‚Рѕ
   {$IFDEF DELPHI_UNICODE}
   _l := DUAnsiPos(UTF8Encode('?>'), s);
   {$ELSE}
@@ -1195,7 +1720,7 @@ begin
       result := checkCPFromText(cpname, result);
     end else
     begin
-      //если это XML и нету ENCODING - значит UTF-8 (вроде бы так)
+      //РµСЃР»Рё СЌС‚Рѕ XML Рё РЅРµС‚Сѓ ENCODING - Р·РЅР°С‡РёС‚ UTF-8 (РІСЂРѕРґРµ Р±С‹ С‚Р°Рє)
       if cpfromtext = 0 then
         cpfromtext := 1
       else
@@ -1227,7 +1752,7 @@ begin
         _l := pos('>', s);
         {$ENDIF}
       end;
-      //наверное это HTML
+      //РЅР°РІРµСЂРЅРѕРµ СЌС‚Рѕ HTML
       if (_l > _f) then
       begin
         ftype := 2;
@@ -1249,17 +1774,17 @@ begin
   end;
 end;
 
-//Распознаёт BOM (Byte Order Mark) текста
-//Предполагаем, что в самом начале текста стоит BOM,
-//тогда это будет уникод:
+//Р Р°СЃРїРѕР·РЅР°С‘С‚ BOM (Byte Order Mark) С‚РµРєСЃС‚Р°
+//РџСЂРµРґРїРѕР»Р°РіР°РµРј, С‡С‚Рѕ РІ СЃР°РјРѕРј РЅР°С‡Р°Р»Рµ С‚РµРєСЃС‚Р° СЃС‚РѕРёС‚ BOM,
+//С‚РѕРіРґР° СЌС‚Рѕ Р±СѓРґРµС‚ СѓРЅРёРєРѕРґ:
 //    UTF-8:    EF BB BF
 //    UTF-16BE: FE FF     (00 SS)
 //    UTF-16LE: FF FE     (SS 00) - windows
 //    UTF-32BE: 00 00 FE FF
 //    UTF-32LE: FF FE 00 00
 //INPUT
-//      var txt: ansistring - текст для распознания BOM-а
-//RETURN: integer       - номер распознанной кодировки по BOMу
+//      var txt: ansistring - С‚РµРєСЃС‚ РґР»СЏ СЂР°СЃРїРѕР·РЅР°РЅРёСЏ BOM-Р°
+//RETURN: integer       - РЅРѕРјРµСЂ СЂР°СЃРїРѕР·РЅР°РЅРЅРѕР№ РєРѕРґРёСЂРѕРІРєРё РїРѕ BOMСѓ
 function RecognizeBOM(var txt: ansistring): integer;
 var
   ltxt: integer;
@@ -1267,7 +1792,7 @@ var
 begin
   result := 0;
   //    BOM:
-  //            0 - неопределён
+  //            0 - РЅРµРѕРїСЂРµРґРµР»С‘РЅ
   //            1 - UTF-8
   //            2 - UTF-16BE
   //            3 - UTF-16LE
@@ -1276,7 +1801,7 @@ begin
   ltxt := length(txt);
   if ltxt >= 2 then
   begin
-    //если есть BOM:
+    //РµСЃР»Рё РµСЃС‚СЊ BOM:
     case txt[1] of
       #239: //UTF-8?
            begin
@@ -1296,7 +1821,7 @@ begin
                result := 3;
                if ltxt >=4 then
                begin
-                 //не учитываем, что текст в UTF-16LE может начинаться с 00 00
+                 //РЅРµ СѓС‡РёС‚С‹РІР°РµРј, С‡С‚Рѕ С‚РµРєСЃС‚ РІ UTF-16LE РјРѕР¶РµС‚ РЅР°С‡РёРЅР°С‚СЊСЃСЏ СЃ 00 00
                  if (txt[3] = #0) and (txt[4] = #0) then
                    result := 5;
                end;
@@ -1312,14 +1837,14 @@ begin
   end;
 end;
 
-//Распознаёт кодировку XML и HTML текста вместе с BOM
-//(во всяком случае попытается)
+//Р Р°СЃРїРѕР·РЅР°С‘С‚ РєРѕРґРёСЂРѕРІРєСѓ XML Рё HTML С‚РµРєСЃС‚Р° РІРјРµСЃС‚Рµ СЃ BOM
+//(РІРѕ РІСЃСЏРєРѕРј СЃР»СѓС‡Р°Рµ РїРѕРїС‹С‚Р°РµС‚СЃСЏ)
 //INPUT
-//    txt: ansistring         - текст для распознания
+//    txt: ansistring         - С‚РµРєСЃС‚ РґР»СЏ СЂР°СЃРїРѕР·РЅР°РЅРёСЏ
 //OUTPUT
-//    BOM: integer        - номер распознаной кодировки из BOM  
-//    cpfromtext: integer - номер расспознаной кодировки из текста
-//                            0 - неопределена
+//    BOM: integer        - РЅРѕРјРµСЂ СЂР°СЃРїРѕР·РЅР°РЅРѕР№ РєРѕРґРёСЂРѕРІРєРё РёР· BOM  
+//    cpfromtext: integer - РЅРѕРјРµСЂ СЂР°СЃСЃРїРѕР·РЅР°РЅРѕР№ РєРѕРґРёСЂРѕРІРєРё РёР· С‚РµРєСЃС‚Р°
+//                            0 - РЅРµРѕРїСЂРµРґРµР»РµРЅР°
 //                            1 - UTF-8
 //                            2 - UTF-16BE
 //                            3 - UTF-16LE
@@ -1327,13 +1852,13 @@ end;
 //                            5 - UTF-32LE
 //                            6 - Windows-1251
 //                            7 - CP866
-//    cpname: ansistring      - название кодировки из текста
-//    ftype: integer      - тип файла:
-//                            0 - непонятно
+//    cpname: ansistring      - РЅР°Р·РІР°РЅРёРµ РєРѕРґРёСЂРѕРІРєРё РёР· С‚РµРєСЃС‚Р°
+//    ftype: integer      - С‚РёРї С„Р°Р№Р»Р°:
+//                            0 - РЅРµРїРѕРЅСЏС‚РЅРѕ
 //                            1 - xml
 //                            2 - html
-//RETURN: boolean         - true - кодировка скорее всего точно опознана
-//                          false - есть сомнение насчёт правильности распознания
+//RETURN: boolean         - true - РєРѕРґРёСЂРѕРІРєР° СЃРєРѕСЂРµРµ РІСЃРµРіРѕ С‚РѕС‡РЅРѕ РѕРїРѕР·РЅР°РЅР°
+//                          false - РµСЃС‚СЊ СЃРѕРјРЅРµРЅРёРµ РЅР°СЃС‡С‘С‚ РїСЂР°РІРёР»СЊРЅРѕСЃС‚Рё СЂР°СЃРїРѕР·РЅР°РЅРёСЏ
 function RecognizeEncodingXML(var txt: ansistring; out BOM: integer; out cpfromtext: integer; out cpname: ansistring; out ftype: integer): boolean; overload;
 var
   t: integer;
@@ -1365,9 +1890,9 @@ begin
   inherited;
 end;
 
-//Изменяет размер массива с тэгами
+//РР·РјРµРЅСЏРµС‚ СЂР°Р·РјРµСЂ РјР°СЃСЃРёРІР° СЃ С‚СЌРіР°РјРё
 //INPUT
-//      NewSize: integer - новый размер
+//      NewSize: integer - РЅРѕРІС‹Р№ СЂР°Р·РјРµСЂ
 procedure TZAttributes.ResizeItemsArray(NewSize: integer);
 var
   delta: integer;
@@ -1496,12 +2021,12 @@ begin
   Insert(Index, Attr[0], Attr[1], TestMatch);
 end;
 
-//Добавляет атрибут
+//Р”РѕР±Р°РІР»СЏРµС‚ Р°С‚СЂРёР±СѓС‚
 //  Input
-//           AttrName: ansistring   - имя атрибута
-//           Value: ansistring      - значение атрибута
-//           TestMatch: boolean - если true, проверяет на AttrName на совпадение с ранее
-//                                введёнными, если совпадает, меняет значение, иначе добавляет
+//           AttrName: ansistring   - РёРјСЏ Р°С‚СЂРёР±СѓС‚Р°
+//           Value: ansistring      - Р·РЅР°С‡РµРЅРёРµ Р°С‚СЂРёР±СѓС‚Р°
+//           TestMatch: boolean - РµСЃР»Рё true, РїСЂРѕРІРµСЂСЏРµС‚ РЅР° AttrName РЅР° СЃРѕРІРїР°РґРµРЅРёРµ СЃ СЂР°РЅРµРµ
+//                                РІРІРµРґС‘РЅРЅС‹РјРё, РµСЃР»Рё СЃРѕРІРїР°РґР°РµС‚, РјРµРЅСЏРµС‚ Р·РЅР°С‡РµРЅРёРµ, РёРЅР°С‡Рµ РґРѕР±Р°РІР»СЏРµС‚
 procedure TZAttributes.Add(const AttrName: ansistring; const Value: ansistring; TestMatch: boolean = true);
 var
   i: integer;
@@ -1523,21 +2048,21 @@ begin
   inc(FCount);
 end;
 
-//Добавляет атрибут
+//Р”РѕР±Р°РІР»СЏРµС‚ Р°С‚СЂРёР±СѓС‚
 //  Input
-//           Attr: TZAttrArray  - имя и значение атрибута
-//           TestMatch: boolean - если true, проверяет на AttrName на совпадение с ранее
-//                                введёнными, если совпадает, меняет значение, иначе добавляет
+//           Attr: TZAttrArray  - РёРјСЏ Рё Р·РЅР°С‡РµРЅРёРµ Р°С‚СЂРёР±СѓС‚Р°
+//           TestMatch: boolean - РµСЃР»Рё true, РїСЂРѕРІРµСЂСЏРµС‚ РЅР° AttrName РЅР° СЃРѕРІРїР°РґРµРЅРёРµ СЃ СЂР°РЅРµРµ
+//                                РІРІРµРґС‘РЅРЅС‹РјРё, РµСЃР»Рё СЃРѕРІРїР°РґР°РµС‚, РјРµРЅСЏРµС‚ Р·РЅР°С‡РµРЅРёРµ, РёРЅР°С‡Рµ РґРѕР±Р°РІР»СЏРµС‚
 procedure TZAttributes.Add(const Attr: TZAttrArray; TestMatch: boolean = true);
 begin
   Add(Attr[0], Attr[1], TestMatch);
 end;
 
-//Добавляет атрибут
+//Р”РѕР±Р°РІР»СЏРµС‚ Р°С‚СЂРёР±СѓС‚
 //  Input
-//           AttrArray: array of TZAttrArray  - масссив атрибутов
-//           TestMatch: boolean - если true, проверяет на AttrName на совпадение с ранее
-//                                введёнными, если совпадает, меняет значение, иначе добавляет
+//           AttrArray: array of TZAttrArray  - РјР°СЃСЃСЃРёРІ Р°С‚СЂРёР±СѓС‚РѕРІ
+//           TestMatch: boolean - РµСЃР»Рё true, РїСЂРѕРІРµСЂСЏРµС‚ РЅР° AttrName РЅР° СЃРѕРІРїР°РґРµРЅРёРµ СЃ СЂР°РЅРµРµ
+//                                РІРІРµРґС‘РЅРЅС‹РјРё, РµСЃР»Рё СЃРѕРІРїР°РґР°РµС‚, РјРµРЅСЏРµС‚ Р·РЅР°С‡РµРЅРёРµ, РёРЅР°С‡Рµ РґРѕР±Р°РІР»СЏРµС‚
 procedure TZAttributes.Add(Att: array of TZAttrArray; TestMatch: boolean {$IFDEF VER130} {$ELSE}= true {$ENDIF});
 var
   i: integer;
@@ -1557,7 +2082,7 @@ begin
   result := '';
   if CheckEntity then
   begin
-    //название атрибута, надеюсь, будет без спецсимволов ^__^
+    //РЅР°Р·РІР°РЅРёРµ Р°С‚СЂРёР±СѓС‚Р°, РЅР°РґРµСЋСЃСЊ, Р±СѓРґРµС‚ Р±РµР· СЃРїРµС†СЃРёРјРІРѕР»РѕРІ ^__^
     for i := 0 to Count - 1 do
       if (length(FItems[i][1]) > 0) or (addempty) then
         result := result + ' ' + FItems[i][0] + '=' + quote + CheckStrEntity(FItems[i][1]) + quote;
@@ -1658,7 +2183,7 @@ end;
 
 destructor TZsspXMLWriter.Destroy();
 begin
-  //если забыли завершить запись:
+  //РµСЃР»Рё Р·Р°Р±С‹Р»Рё Р·Р°РІРµСЂС€РёС‚СЊ Р·Р°РїРёСЃСЊ:
   if InProcess then
     EndSaveTo();
   setlength(FTags, 0) ;
@@ -1667,9 +2192,9 @@ begin
   inherited;
 end;
 
-//Изменяет размер массива с тэгами
+//РР·РјРµРЅСЏРµС‚ СЂР°Р·РјРµСЂ РјР°СЃСЃРёРІР° СЃ С‚СЌРіР°РјРё
 //INPUT
-//      NewSize: integer - новый размер
+//      NewSize: integer - РЅРѕРІС‹Р№ СЂР°Р·РјРµСЂ
 procedure TZsspXMLWriter.ResizeTagArray(NewSize: integer);
 var
   delta: integer;
@@ -1716,14 +2241,14 @@ begin
     FAttributeQuote := Value;
 end;
 
-//Устанавливает максимальную длинну буфера
+//РЈСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ РјР°РєСЃРёРјР°Р»СЊРЅСѓСЋ РґР»РёРЅРЅСѓ Р±СѓС„РµСЂР°
 procedure TZsspXMLWriter.SetMaxBufferLength(Value: integer);
 begin
   if Value > 0 then
     if not InProcess then FMaxBufferLength := Value;
 end;
 
-//Устанавливает длину табуляции
+//РЈСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ РґР»РёРЅСѓ С‚Р°Р±СѓР»СЏС†РёРё
 procedure TZsspXMLWriter.SetTabLength(Value: integer);
 var
   i: integer;
@@ -1739,11 +2264,11 @@ begin
     end;
 end;
 
-//Ставить ли после тэга перевод строки 
+//РЎС‚Р°РІРёС‚СЊ Р»Рё РїРѕСЃР»Рµ С‚СЌРіР° РїРµСЂРµРІРѕРґ СЃС‚СЂРѕРєРё 
 //  Input
 //           Value: boolean
-//                      true - тэг с новой строки
-//                      false - тэги в одну строку
+//                      true - С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё
+//                      false - С‚СЌРіРё РІ РѕРґРЅСѓ СЃС‚СЂРѕРєСѓ
 procedure TZsspXMLWriter.SetNewLine(Value: boolean);
 begin
   if not InProcess then FNewLine := Value;
@@ -1771,12 +2296,12 @@ begin
 end;
 
 
-//Записать секцию CDATA
+//Р—Р°РїРёСЃР°С‚СЊ СЃРµРєС†РёСЋ CDATA
 //  Input:
-//           CDATA: ansistring - содержимое секиции
-//           CorrectCDATA: boolean  - при true заменяет в CDATA ']]>' на ']]&gt;'
-//           StartNewLine: boolean  - начинать с новой строки (игнорируется,
-//                                   если NewLine = false)
+//           CDATA: ansistring - СЃРѕРґРµСЂР¶РёРјРѕРµ СЃРµРєРёС†РёРё
+//           CorrectCDATA: boolean  - РїСЂРё true Р·Р°РјРµРЅСЏРµС‚ РІ CDATA ']]>' РЅР° ']]&gt;'
+//           StartNewLine: boolean  - РЅР°С‡РёРЅР°С‚СЊ СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё (РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ,
+//                                   РµСЃР»Рё NewLine = false)
 procedure TZsspXMLWriter.WriteCDATA(CDATA: ansistring; CorrectCDATA: boolean; StartNewLine: boolean = true);
 var
   p: integer;
@@ -1805,30 +2330,30 @@ begin
   _AddTag('<![CDATA[', CDATA, ']]>', StartNewLine);
 end;
 
-//Записать секцию CDATA (CorrectCDATA = true; StartNewLine = true)
+//Р—Р°РїРёСЃР°С‚СЊ СЃРµРєС†РёСЋ CDATA (CorrectCDATA = true; StartNewLine = true)
 //  Input:
-//           CDATA: ansistring - содержимое секиции
+//           CDATA: ansistring - СЃРѕРґРµСЂР¶РёРјРѕРµ СЃРµРєРёС†РёРё
 procedure TZsspXMLWriter.WriteCDATA(const CDATA: ansistring);
 begin
   WriteCDATA(CDATA, true, true);
 end;
 
-//Записать комментарий
+//Р—Р°РїРёСЃР°С‚СЊ РєРѕРјРјРµРЅС‚Р°СЂРёР№
 //  Input:
-//           Comment: ansistring        - комментарий
-//           StartNewLine: boolean  - начинать с новой строки (игнорируется,
-//                                   если NewLine = false)
+//           Comment: ansistring        - РєРѕРјРјРµРЅС‚Р°СЂРёР№
+//           StartNewLine: boolean  - РЅР°С‡РёРЅР°С‚СЊ СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё (РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ,
+//                                   РµСЃР»Рё NewLine = false)
 procedure TZsspXMLWriter.WriteComment(const Comment: ansistring; StartNewLine: boolean = true);
 begin
   _AddTag('<!-- ', Comment, ' -->', StartNewLine);
 end;
 
-//Записать необработанный текст
+//Р—Р°РїРёСЃР°С‚СЊ РЅРµРѕР±СЂР°Р±РѕС‚Р°РЅРЅС‹Р№ С‚РµРєСЃС‚
 //  Input:
-//           Text: ansistring          - текст
-//           UseConverter: boolean - использовать конвертер TextConverter
-//           StartNewLine: boolean  - начинать с новой строки (игнорируется,
-//                                   если NewLine = false)
+//           Text: ansistring          - С‚РµРєСЃС‚
+//           UseConverter: boolean - РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РєРѕРЅРІРµСЂС‚РµСЂ TextConverter
+//           StartNewLine: boolean  - РЅР°С‡РёРЅР°С‚СЊ СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё (РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ,
+//                                   РµСЃР»Рё NewLine = false)
 procedure TZsspXMLWriter.WriteRaw(Text: ansistring; UseConverter: boolean; StartNewLine: boolean = true);
 begin
   if not FInProcess then exit;
@@ -1836,12 +2361,12 @@ begin
   AddText(Text, UseConverter);   
 end;
 
-//начать запись в поток
+//РЅР°С‡Р°С‚СЊ Р·Р°РїРёСЃСЊ РІ РїРѕС‚РѕРє
 //  Input:
-//           Stream: TStream - поток для записи
+//           Stream: TStream - РїРѕС‚РѕРє РґР»СЏ Р·Р°РїРёСЃРё
 //  Output:
-//           true - вроде всё нормально
-//           false - что-то не так
+//           true - РІСЂРѕРґРµ РІСЃС‘ РЅРѕСЂРјР°Р»СЊРЅРѕ
+//           false - С‡С‚Рѕ-С‚Рѕ РЅРµ С‚Р°Рє
 function TZsspXMLWriter.BeginSaveToStream(Stream: TStream): boolean;
 begin
   if FInProcess then
@@ -1865,12 +2390,12 @@ begin
   end;
 end;
 
-//начать запись в файл
+//РЅР°С‡Р°С‚СЊ Р·Р°РїРёСЃСЊ РІ С„Р°Р№Р»
 //  Input:
-//           FileName: string - имя файла
+//           FileName: string - РёРјСЏ С„Р°Р№Р»Р°
 //  Output:
-//           true - вроде всё нормально
-//           false - что-то не так
+//           true - РІСЂРѕРґРµ РІСЃС‘ РЅРѕСЂРјР°Р»СЊРЅРѕ
+//           false - С‡С‚Рѕ-С‚Рѕ РЅРµ С‚Р°Рє
 function TZsspXMLWriter.BeginSaveToFile(const FileName: string): boolean;
 var
   Stream: TStream;
@@ -1890,10 +2415,10 @@ begin
   end;
 end;
 
-//начать запись в Buffer (в этом режиме FlushBuffer не очищает буфер).
-// XML будет хранится в Buffer
+//РЅР°С‡Р°С‚СЊ Р·Р°РїРёСЃСЊ РІ Buffer (РІ СЌС‚РѕРј СЂРµР¶РёРјРµ FlushBuffer РЅРµ РѕС‡РёС‰Р°РµС‚ Р±СѓС„РµСЂ).
+// XML Р±СѓРґРµС‚ С…СЂР°РЅРёС‚СЃСЏ РІ Buffer
 //  Output:
-//           true - вроде всё нормально
+//           true - РІСЂРѕРґРµ РІСЃС‘ РЅРѕСЂРјР°Р»СЊРЅРѕ
 //           false - O_o
 function TZsspXMLWriter.BeginSaveToString(): boolean;
 begin
@@ -1909,7 +2434,7 @@ begin
   end;
 end;
 
-//Закончить запись
+//Р—Р°РєРѕРЅС‡РёС‚СЊ Р·Р°РїРёСЃСЊ
 procedure TZsspXMLWriter.EndSaveTo();
 begin
   while TagCount > 0 do WriteEndTagNode();
@@ -1920,7 +2445,7 @@ begin
   FInProcess := false;
 end;
 
-//записываем буфер в поток и очищаем буфер
+//Р·Р°РїРёСЃС‹РІР°РµРј Р±СѓС„РµСЂ РІ РїРѕС‚РѕРє Рё РѕС‡РёС‰Р°РµРј Р±СѓС„РµСЂ
 procedure TZsspXMLWriter.FlushBuffer();
 begin
   if not FInProcess then exit;
@@ -1932,24 +2457,24 @@ begin
     end;  
 end;
 
-//Установить конвертер текста
-// Если началась запись - конвертер менять нельзя
+//РЈСЃС‚Р°РЅРѕРІРёС‚СЊ РєРѕРЅРІРµСЂС‚РµСЂ С‚РµРєСЃС‚Р°
+// Р•СЃР»Рё РЅР°С‡Р°Р»Р°СЃСЊ Р·Р°РїРёСЃСЊ - РєРѕРЅРІРµСЂС‚РµСЂ РјРµРЅСЏС‚СЊ РЅРµР»СЊР·СЏ
 procedure TZsspXMLWriter.SetTextConverter(Value: TAnsiToCPConverter);
 begin
   if not InProcess then
     FTextConverter := Value;
 end;
 
-//Записать Тэг
+//Р—Р°РїРёСЃР°С‚СЊ РўСЌРі
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           Text: ansistring               - текст тэга
-//           AttrArray: array of TZAttrArray   - атрибуты
-//           StartNewLine: boolean      - начинать тэг с новой строки (игнорируется,
-//                                        если NewLine = false)
-//           CloseTagNewLine: boolean   - начинать закрывающий тэг с новой строки
-//                                        игнорируется, если NewLine = false)
-//           CheckEntity: boolean       - проверять и корректировать спецсимволы
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           Text: ansistring               - С‚РµРєСЃС‚ С‚СЌРіР°
+//           AttrArray: array of TZAttrArray   - Р°С‚СЂРёР±СѓС‚С‹
+//           StartNewLine: boolean      - РЅР°С‡РёРЅР°С‚СЊ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё (РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ,
+//                                        РµСЃР»Рё NewLine = false)
+//           CloseTagNewLine: boolean   - РЅР°С‡РёРЅР°С‚СЊ Р·Р°РєСЂС‹РІР°СЋС‰РёР№ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё
+//                                        РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ, РµСЃР»Рё NewLine = false)
+//           CheckEntity: boolean       - РїСЂРѕРІРµСЂСЏС‚СЊ Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°С‚СЊ СЃРїРµС†СЃРёРјРІРѕР»С‹
 procedure TZsspXMLWriter.WriteTag(const TagName: ansistring; const Text: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true);
 var
   t: TZAttributes;
@@ -1964,16 +2489,16 @@ begin
   end;
 end;
 
-//Записать Тэг
+//Р—Р°РїРёСЃР°С‚СЊ РўСЌРі
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           Text: ansistring               - текст тэга
-//           SAttributes: TZAttributes  - атрибуты
-//           StartNewLine: boolean      - начинать тэг с новой строки (игнорируется,
-//                                        если NewLine = false)
-//           CloseTagNewLine: boolean   - начинать закрывающий тэг с новой строки
-//                                        игнорируется, если NewLine = false)
-//           CheckEntity: boolean       - проверять и корректировать спецсимволы
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           Text: ansistring               - С‚РµРєСЃС‚ С‚СЌРіР°
+//           SAttributes: TZAttributes  - Р°С‚СЂРёР±СѓС‚С‹
+//           StartNewLine: boolean      - РЅР°С‡РёРЅР°С‚СЊ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё (РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ,
+//                                        РµСЃР»Рё NewLine = false)
+//           CloseTagNewLine: boolean   - РЅР°С‡РёРЅР°С‚СЊ Р·Р°РєСЂС‹РІР°СЋС‰РёР№ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё
+//                                        РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ, РµСЃР»Рё NewLine = false)
+//           CheckEntity: boolean       - РїСЂРѕРІРµСЂСЏС‚СЊ Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°С‚СЊ СЃРїРµС†СЃРёРјРІРѕР»С‹
 procedure TZsspXMLWriter.WriteTag(const TagName: ansistring; const Text: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true);
 var
   s: ansistring;
@@ -1988,37 +2513,37 @@ begin
   WriteEndTagNode();
 end;
 
-//Записать Тэг (атрибуты берёт из Self.Attributes)
+//Р—Р°РїРёСЃР°С‚СЊ РўСЌРі (Р°С‚СЂРёР±СѓС‚С‹ Р±РµСЂС‘С‚ РёР· Self.Attributes)
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           Text: ansistring               - текст тэга
-//           StartNewLine: boolean      - начинать тэг с новой строки (игнорируется,
-//                                        если NewLine = false)
-//           CloseTagNewLine: boolean   - начинать закрывающий тэг с новой строки
-//                                        игнорируется, если NewLine = false)
-//           CheckEntity: boolean       - проверять и корректировать спецсимволы
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           Text: ansistring               - С‚РµРєСЃС‚ С‚СЌРіР°
+//           StartNewLine: boolean      - РЅР°С‡РёРЅР°С‚СЊ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё (РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ,
+//                                        РµСЃР»Рё NewLine = false)
+//           CloseTagNewLine: boolean   - РЅР°С‡РёРЅР°С‚СЊ Р·Р°РєСЂС‹РІР°СЋС‰РёР№ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё
+//                                        РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ, РµСЃР»Рё NewLine = false)
+//           CheckEntity: boolean       - РїСЂРѕРІРµСЂСЏС‚СЊ Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°С‚СЊ СЃРїРµС†СЃРёРјРІРѕР»С‹
 procedure TZsspXMLWriter.WriteTag(const TagName: ansistring; const Text: ansistring; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true);
 begin
   WriteTag(TagName, Text, Attributes, StartNewLine, CloseTagNewLine, CheckEntity);
 end;
 
-//Записать Тэг
+//Р—Р°РїРёСЃР°С‚СЊ РўСЌРі
 // StartNewLine = true, CloseTagNewLine = false, CheckEntity = true
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           Text: ansistring               - текст тэга
-//           SAttributes: TZAttributes   - атрибуты
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           Text: ansistring               - С‚РµРєСЃС‚ С‚СЌРіР°
+//           SAttributes: TZAttributes   - Р°С‚СЂРёР±СѓС‚С‹
 procedure TZsspXMLWriter.WriteTag(const TagName: ansistring; const Text: ansistring; SAttributes: TZAttributes);
 begin
   WriteTag(TagName, Text, SAttributes, true, false, true);
 end;
 
-//Записать Тэг
+//Р—Р°РїРёСЃР°С‚СЊ РўСЌРі
 // StartNewLine = true, CloseTagNewLine = false, CheckEntity = true
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           Text: ansistring               - текст тэга
-//           AttrArray: array of TZAttrArray   - атрибуты
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           Text: ansistring               - С‚РµРєСЃС‚ С‚СЌРіР°
+//           AttrArray: array of TZAttrArray   - Р°С‚СЂРёР±СѓС‚С‹
 procedure TZsspXMLWriter.WriteTag(const TagName: ansistring; const Text: ansistring; AttrArray: array of TZAttrArray);
 var
   t: TZAttributes;
@@ -2033,67 +2558,67 @@ begin
   end;  
 end;
 
-//Записать Тэг (атрибуты берёт из Self.Attributes)
+//Р—Р°РїРёСЃР°С‚СЊ РўСЌРі (Р°С‚СЂРёР±СѓС‚С‹ Р±РµСЂС‘С‚ РёР· Self.Attributes)
 // StartNewLine = true, CloseTagNewLine = false, CheckEntity = true
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           Text: ansistring               - текст тэга
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           Text: ansistring               - С‚РµРєСЃС‚ С‚СЌРіР°
 procedure TZsspXMLWriter.WriteTag(const TagName: ansistring; const Text: ansistring);
 begin
   WriteTag(TagName, Text, Attributes, true, false, true);
 end;
 
-//Записать корневой/узловой элемент
+//Р—Р°РїРёСЃР°С‚СЊ РєРѕСЂРЅРµРІРѕР№/СѓР·Р»РѕРІРѕР№ СЌР»РµРјРµРЅС‚
 // StartNewLine = true, CloseTagNewLine = false, CheckEntity = true
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           SAttributes: TZAttributes   - атрибуты
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           SAttributes: TZAttributes   - Р°С‚СЂРёР±СѓС‚С‹
 procedure TZsspXMLWriter.WriteTagNode(const TagName: ansistring; SAttributes: TZAttributes);
 begin
   WriteTagNode(TagName, SAttributes, true, false, true);
 end;
 
-//Записать корневой/узловой элемент
+//Р—Р°РїРёСЃР°С‚СЊ РєРѕСЂРЅРµРІРѕР№/СѓР·Р»РѕРІРѕР№ СЌР»РµРјРµРЅС‚
 // StartNewLine = true, CloseTagNewLine = false, CheckEntity = true);
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           AttrArray: array of TZAttrArray   - атрибуты
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           AttrArray: array of TZAttrArray   - Р°С‚СЂРёР±СѓС‚С‹
 procedure TZsspXMLWriter.WriteTagNode(const TagName: ansistring; AttrArray: array of TZAttrArray);
 begin
   WriteTagNode(TagName, AttrArray, true, false, true);
 end;
 
-//Записать корневой/узловой элемент (атрибуты берёт из Self.Attributes)
+//Р—Р°РїРёСЃР°С‚СЊ РєРѕСЂРЅРµРІРѕР№/СѓР·Р»РѕРІРѕР№ СЌР»РµРјРµРЅС‚ (Р°С‚СЂРёР±СѓС‚С‹ Р±РµСЂС‘С‚ РёР· Self.Attributes)
 // StartNewLine = true, CloseTagNewLine = false, CheckEntity = true
 //  Input:
-//           TagName: ansistring            - имя тэга
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
 procedure TZsspXMLWriter.WriteTagNode(const TagName: ansistring);
 begin
   WriteTagNode(TagName, Attributes, true, false, true);
 end;
 
-//Записать корневой/узловой элемент (атрибуты берёт из Self.Attributes)
+//Р—Р°РїРёСЃР°С‚СЊ РєРѕСЂРЅРµРІРѕР№/СѓР·Р»РѕРІРѕР№ СЌР»РµРјРµРЅС‚ (Р°С‚СЂРёР±СѓС‚С‹ Р±РµСЂС‘С‚ РёР· Self.Attributes)
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           StartNewLine: boolean      - начинать тэг с новой строки (игнорируется,
-//                                        если NewLine = false)
-//           CloseTagNewLine: boolean   - начинать закрывающий тэг с новой строки
-//                                        игнорируется, если NewLine = false)
-//           CheckEntity: boolean       - проверять и корректировать спецсимволы
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           StartNewLine: boolean      - РЅР°С‡РёРЅР°С‚СЊ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё (РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ,
+//                                        РµСЃР»Рё NewLine = false)
+//           CloseTagNewLine: boolean   - РЅР°С‡РёРЅР°С‚СЊ Р·Р°РєСЂС‹РІР°СЋС‰РёР№ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё
+//                                        РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ, РµСЃР»Рё NewLine = false)
+//           CheckEntity: boolean       - РїСЂРѕРІРµСЂСЏС‚СЊ Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°С‚СЊ СЃРїРµС†СЃРёРјРІРѕР»С‹
 procedure TZsspXMLWriter.WriteTagNode(const TagName: ansistring; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true);
 begin
   WriteTagNode(TagName, Attributes, StartNewLine, CloseTagNewLine, CheckEntity);
 end;
 
-//Записать корневой/узловой элемент
+//Р—Р°РїРёСЃР°С‚СЊ РєРѕСЂРЅРµРІРѕР№/СѓР·Р»РѕРІРѕР№ СЌР»РµРјРµРЅС‚
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           SAttributes: TZAttributes   - атрибуты
-//           StartNewLine: boolean      - начинать тэг с новой строки (игнорируется,
-//                                        если NewLine = false)
-//           CloseTagNewLine: boolean   - начинать закрывающий тэг с новой строки
-//                                        игнорируется, если NewLine = false)
-//           CheckEntity: boolean       - проверять и корректировать спецсимволы
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           SAttributes: TZAttributes   - Р°С‚СЂРёР±СѓС‚С‹
+//           StartNewLine: boolean      - РЅР°С‡РёРЅР°С‚СЊ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё (РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ,
+//                                        РµСЃР»Рё NewLine = false)
+//           CloseTagNewLine: boolean   - РЅР°С‡РёРЅР°С‚СЊ Р·Р°РєСЂС‹РІР°СЋС‰РёР№ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё
+//                                        РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ, РµСЃР»Рё NewLine = false)
+//           CheckEntity: boolean       - РїСЂРѕРІРµСЂСЏС‚СЊ Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°С‚СЊ СЃРїРµС†СЃРёРјРІРѕР»С‹
 procedure TZsspXMLWriter.WriteTagNode(const TagName: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true);
 var
   s: ansistring;
@@ -2115,15 +2640,15 @@ begin
   AddNode(TagName, CloseTagNewLine);
 end;
 
-//Записать корневой/узловой элемент
+//Р—Р°РїРёСЃР°С‚СЊ РєРѕСЂРЅРµРІРѕР№/СѓР·Р»РѕРІРѕР№ СЌР»РµРјРµРЅС‚
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           AttrArray: array of TZAttrArray   - атрибуты
-//           StartNewLine: boolean      - начинать тэг с новой строки (игнорируется,
-//                                        если NewLine = false)
-//           CloseTagNewLine: boolean   - начинать закрывающий тэг с новой строки
-//                                        игнорируется, если NewLine = false)
-//           CheckEntity: boolean       - проверять и корректировать спецсимволы
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           AttrArray: array of TZAttrArray   - Р°С‚СЂРёР±СѓС‚С‹
+//           StartNewLine: boolean      - РЅР°С‡РёРЅР°С‚СЊ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё (РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ,
+//                                        РµСЃР»Рё NewLine = false)
+//           CloseTagNewLine: boolean   - РЅР°С‡РёРЅР°С‚СЊ Р·Р°РєСЂС‹РІР°СЋС‰РёР№ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё
+//                                        РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ, РµСЃР»Рё NewLine = false)
+//           CheckEntity: boolean       - РїСЂРѕРІРµСЂСЏС‚СЊ Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°С‚СЊ СЃРїРµС†СЃРёРјРІРѕР»С‹
 procedure TZsspXMLWriter.WriteTagNode(const TagName: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean{$IFDEF VER130}{$ELSE} = true{$ENDIF} );
 var
   t: TZAttributes;
@@ -2138,7 +2663,7 @@ begin
   end;  
 end;
 
-//Записать окончание корневого/узлового элемента
+//Р—Р°РїРёСЃР°С‚СЊ РѕРєРѕРЅС‡Р°РЅРёРµ РєРѕСЂРЅРµРІРѕРіРѕ/СѓР·Р»РѕРІРѕРіРѕ СЌР»РµРјРµРЅС‚Р°
 procedure TZsspXMLWriter.WriteEndTagNode();
 begin
   if not FInProcess then exit;
@@ -2150,9 +2675,9 @@ begin
   end;
 end;
 
-//Записать окончание корневого/узлового элемента
+//Р—Р°РїРёСЃР°С‚СЊ РѕРєРѕРЅС‡Р°РЅРёРµ РєРѕСЂРЅРµРІРѕРіРѕ/СѓР·Р»РѕРІРѕРіРѕ СЌР»РµРјРµРЅС‚Р°
 //INPUT
-//      isForce: boolean          - использовать принудительное значение CloseTagNewLine
+//      isForce: boolean          - РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕРµ Р·РЅР°С‡РµРЅРёРµ CloseTagNewLine
 //      CloseTagNewLine: boolean  -
 procedure TZsspXMLWriter.WriteEndTagNode(isForce: boolean; CloseTagNewLine: boolean);
 var
@@ -2171,25 +2696,25 @@ begin
   end;
 end;
 
-//Записать пустой Тэг
+//Р—Р°РїРёСЃР°С‚СЊ РїСѓСЃС‚РѕР№ РўСЌРі
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           SAttributes: TZAttributes   - атрибуты
-//           StartNewLine: boolean      - начинать тэг с новой строки (игнорируется,
-//                                        если NewLine = false)
-//           CheckEntity: boolean       - проверять и корректировать спецсимволы
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           SAttributes: TZAttributes   - Р°С‚СЂРёР±СѓС‚С‹
+//           StartNewLine: boolean      - РЅР°С‡РёРЅР°С‚СЊ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё (РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ,
+//                                        РµСЃР»Рё NewLine = false)
+//           CheckEntity: boolean       - РїСЂРѕРІРµСЂСЏС‚СЊ Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°С‚СЊ СЃРїРµС†СЃРёРјРІРѕР»С‹
 procedure TZsspXMLWriter.WriteEmptyTag(const TagName: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CheckEntity: boolean = true);
 begin
    _AddTag('<'+TagName, SAttributes.ToString(AttributeQuote, CheckEntity),'/>', StartNewLine)
 end;
 
-//Записать пустой Тэг
+//Р—Р°РїРёСЃР°С‚СЊ РїСѓСЃС‚РѕР№ РўСЌРі
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           AttrArray: array of TZAttrArray   - атрибуты
-//           StartNewLine: boolean      - начинать тэг с новой строки (игнорируется,
-//                                        если NewLine = false)
-//           CheckEntity: boolean       - проверять и корректировать спецсимволы
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           AttrArray: array of TZAttrArray   - Р°С‚СЂРёР±СѓС‚С‹
+//           StartNewLine: boolean      - РЅР°С‡РёРЅР°С‚СЊ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё (РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ,
+//                                        РµСЃР»Рё NewLine = false)
+//           CheckEntity: boolean       - РїСЂРѕРІРµСЂСЏС‚СЊ Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°С‚СЊ СЃРїРµС†СЃРёРјРІРѕР»С‹
 procedure TZsspXMLWriter.WriteEmptyTag(const TagName: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CheckEntity: boolean = true);
 var
   t: TZAttributes;
@@ -2204,48 +2729,48 @@ begin
   end;  
 end;
 
-//Записать пустой Тэг (атрибуты берёт из Self.Attributes)
+//Р—Р°РїРёСЃР°С‚СЊ РїСѓСЃС‚РѕР№ РўСЌРі (Р°С‚СЂРёР±СѓС‚С‹ Р±РµСЂС‘С‚ РёР· Self.Attributes)
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           StartNewLine: boolean      - начинать тэг с новой строки (игнорируется,
-//                                        если NewLine = false)
-//           CheckEntity: boolean       - проверять и корректировать спецсимволы
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           StartNewLine: boolean      - РЅР°С‡РёРЅР°С‚СЊ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё (РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ,
+//                                        РµСЃР»Рё NewLine = false)
+//           CheckEntity: boolean       - РїСЂРѕРІРµСЂСЏС‚СЊ Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°С‚СЊ СЃРїРµС†СЃРёРјРІРѕР»С‹
 procedure TZsspXMLWriter.WriteEmptyTag(const TagName: ansistring; StartNewLine: boolean; CheckEntity: boolean = true);
 begin
   WriteEmptyTag(TagName, Attributes, StartNewLine, CheckEntity);
 end;
 
-//Записать пустой Тэг
+//Р—Р°РїРёСЃР°С‚СЊ РїСѓСЃС‚РѕР№ РўСЌРі
 //StartNewLine = true, CheckEntity = true
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           SAttributes: TZAttributes   - атрибуты
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           SAttributes: TZAttributes   - Р°С‚СЂРёР±СѓС‚С‹
 procedure TZsspXMLWriter.WriteEmptyTag(const TagName: ansistring; SAttributes: TZAttributes);
 begin
   WriteEmptyTag(TagName, SAttributes, true, true);
 end;
 
-//Записать пустой Тэг
+//Р—Р°РїРёСЃР°С‚СЊ РїСѓСЃС‚РѕР№ РўСЌРі
 //StartNewLine = true, CheckEntity = true
 //  Input:
-//           TagName: ansistring            - имя тэга
-//           AttrArray: array of TZAttrArray   - атрибуты
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
+//           AttrArray: array of TZAttrArray   - Р°С‚СЂРёР±СѓС‚С‹
 procedure TZsspXMLWriter.WriteEmptyTag(const TagName: ansistring; AttrArray: array of TZAttrArray);
 begin
   WriteEmptyTag(TagName, AttrArray, true, true);
 end;
 
-//Записать пустой Тэг (атрибуты берёт из Self.Attributes)
+//Р—Р°РїРёСЃР°С‚СЊ РїСѓСЃС‚РѕР№ РўСЌРі (Р°С‚СЂРёР±СѓС‚С‹ Р±РµСЂС‘С‚ РёР· Self.Attributes)
 //StartNewLine = true, CheckEntity = true
 //  Input:
-//           TagName: ansistring            - имя тэга
+//           TagName: ansistring            - РёРјСЏ С‚СЌРіР°
 procedure TZsspXMLWriter.WriteEmptyTag(const TagName: ansistring);
 begin
   WriteEmptyTag(TagName, Attributes, true, true);
 end;
 
-//Добавить текст в буфер, и если буфер больше макс. разрешённой длинны -
-// сделать FlushBuffer
+//Р”РѕР±Р°РІРёС‚СЊ С‚РµРєСЃС‚ РІ Р±СѓС„РµСЂ, Рё РµСЃР»Рё Р±СѓС„РµСЂ Р±РѕР»СЊС€Рµ РјР°РєСЃ. СЂР°Р·СЂРµС€С‘РЅРЅРѕР№ РґР»РёРЅРЅС‹ -
+// СЃРґРµР»Р°С‚СЊ FlushBuffer
 procedure TZsspXMLWriter.AddText(const Text: ansistring; Useconverter: boolean = true);
 var
   b: boolean;
@@ -2264,9 +2789,9 @@ begin
       FlushBuffer;
 end;
 
-//Получить длинну табуляции для тэга, начинающегося с новой строки
+//РџРѕР»СѓС‡РёС‚СЊ РґР»РёРЅРЅСѓ С‚Р°Р±СѓР»СЏС†РёРё РґР»СЏ С‚СЌРіР°, РЅР°С‡РёРЅР°СЋС‰РµРіРѕСЃСЏ СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё
 //  Input:
-//           num: integer - кол-во дополнительных табов
+//           num: integer - РєРѕР»-РІРѕ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹С… С‚Р°Р±РѕРІ
 function TZsspXMLWriter.GetTab(num: integer = 0): ansistring;
 var
   i: integer;
@@ -2277,10 +2802,10 @@ begin
     result := result + FTab;
 end;
 
-//Добавляет в "Стек тэгов" новый тэг
+//Р”РѕР±Р°РІР»СЏРµС‚ РІ "РЎС‚РµРє С‚СЌРіРѕРІ" РЅРѕРІС‹Р№ С‚СЌРі
 //  Input:
-//           Tag: ansistring                - тэг
-//           CloseTagNewLine: boolean   - Начинать ли закрывающий тэг с новой строки
+//           Tag: ansistring                - С‚СЌРі
+//           CloseTagNewLine: boolean   - РќР°С‡РёРЅР°С‚СЊ Р»Рё Р·Р°РєСЂС‹РІР°СЋС‰РёР№ С‚СЌРі СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё
 procedure TZsspXMLWriter.AddNode(const TagName: ansistring; CloseTagNewLine: boolean);
 begin
   ResizeTagArray(FTagCount + 1);
@@ -2296,7 +2821,7 @@ begin
     result := FTabSymbol[1];
 end;
 
-//Устанавливает символ табуляции (только #32 и #9 - пробел и таб)
+//РЈСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ СЃРёРјРІРѕР» С‚Р°Р±СѓР»СЏС†РёРё (С‚РѕР»СЊРєРѕ #32 Рё #9 - РїСЂРѕР±РµР» Рё С‚Р°Р±)
 procedure TZsspXMLWriter.SetTabSymbol(Value: ansichar);
 begin
   if not InProcess then
@@ -2307,25 +2832,25 @@ begin
     end;
 end;
 
-//Записать инструкцию
+//Р—Р°РїРёСЃР°С‚СЊ РёРЅСЃС‚СЂСѓРєС†РёСЋ
 //  Input:
-//           InstructionName: ansistring    - имя тэга
-//           SAttributes: TZAttributes  - атрибуты
-//           StartNewLine: boolean      - начинать инструкцию с новой строки (игнорируется,
-//                                        если NewLine = false)
-//           CheckEntity: boolean       - проверять и корректировать спецсимволы
+//           InstructionName: ansistring    - РёРјСЏ С‚СЌРіР°
+//           SAttributes: TZAttributes  - Р°С‚СЂРёР±СѓС‚С‹
+//           StartNewLine: boolean      - РЅР°С‡РёРЅР°С‚СЊ РёРЅСЃС‚СЂСѓРєС†РёСЋ СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё (РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ,
+//                                        РµСЃР»Рё NewLine = false)
+//           CheckEntity: boolean       - РїСЂРѕРІРµСЂСЏС‚СЊ Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°С‚СЊ СЃРїРµС†СЃРёРјРІРѕР»С‹
 procedure TZsspXMLWriter.WriteInstruction(const InstructionName: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CheckEntity: boolean = true);
 begin
   _AddTag('<?'+InstructionName, SAttributes.ToString(AttributeQuote, CheckEntity),'?>', StartNewLine)
 end;
 
-//Записать инструкцию
+//Р—Р°РїРёСЃР°С‚СЊ РёРЅСЃС‚СЂСѓРєС†РёСЋ
 //  Input:
-//           InstructionName: ansistring    - имя тэга
-//           AttrArray: array of TZAttrArray  - атрибуты
-//           StartNewLine: boolean      - начинать инструкцию с новой строки (игнорируется,
-//                                        если NewLine = false)
-//           CheckEntity: boolean       - проверять и корректировать спецсимволы
+//           InstructionName: ansistring    - РёРјСЏ С‚СЌРіР°
+//           AttrArray: array of TZAttrArray  - Р°С‚СЂРёР±СѓС‚С‹
+//           StartNewLine: boolean      - РЅР°С‡РёРЅР°С‚СЊ РёРЅСЃС‚СЂСѓРєС†РёСЋ СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё (РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ,
+//                                        РµСЃР»Рё NewLine = false)
+//           CheckEntity: boolean       - РїСЂРѕРІРµСЂСЏС‚СЊ Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°С‚СЊ СЃРїРµС†СЃРёРјРІРѕР»С‹
 procedure TZsspXMLWriter.WriteInstruction(const InstructionName: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CheckEntity: boolean = true);
 var
   t: TZAttributes;
@@ -2340,41 +2865,41 @@ begin
   end;  
 end;
 
-//Записать инструкцию (атрибуты берёт из Self.Attributes)
+//Р—Р°РїРёСЃР°С‚СЊ РёРЅСЃС‚СЂСѓРєС†РёСЋ (Р°С‚СЂРёР±СѓС‚С‹ Р±РµСЂС‘С‚ РёР· Self.Attributes)
 //  Input:
-//           InstructionName: ansistring    - имя тэга
-//           StartNewLine: boolean      - начинать инструкцию с новой строки (игнорируется,
-//                                        если NewLine = false)
-//           CheckEntity: boolean       - проверять и корректировать спецсимволы
+//           InstructionName: ansistring    - РёРјСЏ С‚СЌРіР°
+//           StartNewLine: boolean      - РЅР°С‡РёРЅР°С‚СЊ РёРЅСЃС‚СЂСѓРєС†РёСЋ СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё (РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ,
+//                                        РµСЃР»Рё NewLine = false)
+//           CheckEntity: boolean       - РїСЂРѕРІРµСЂСЏС‚СЊ Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°С‚СЊ СЃРїРµС†СЃРёРјРІРѕР»С‹
 procedure TZsspXMLWriter.WriteInstruction(const InstructionName: ansistring; StartNewLine: boolean; CheckEntity: boolean = true);
 begin
   WriteInstruction(InstructionName, Attributes, StartNewLine, CheckEntity);
 end;
 
-//Записать инструкцию
+//Р—Р°РїРёСЃР°С‚СЊ РёРЅСЃС‚СЂСѓРєС†РёСЋ
 //StartNewLine = true, CheckEntity = true
 //  Input:
-//           InstructionName: ansistring    - имя тэга
-//           SAttributes: TZAttributes  - атрибуты
+//           InstructionName: ansistring    - РёРјСЏ С‚СЌРіР°
+//           SAttributes: TZAttributes  - Р°С‚СЂРёР±СѓС‚С‹
 procedure TZsspXMLWriter.WriteInstruction(const InstructionName: ansistring; SAttributes: TZAttributes);
 begin
   WriteInstruction(InstructionName, SAttributes, true, true);
 end;
 
-//Записать инструкцию
+//Р—Р°РїРёСЃР°С‚СЊ РёРЅСЃС‚СЂСѓРєС†РёСЋ
 //StartNewLine = true, CheckEntity = true
 //  Input:
-//           InstructionName: ansistring    - имя тэга
-//           AttrArray: array of TZAttrArray  - атрибуты
+//           InstructionName: ansistring    - РёРјСЏ С‚СЌРіР°
+//           AttrArray: array of TZAttrArray  - Р°С‚СЂРёР±СѓС‚С‹
 procedure TZsspXMLWriter.WriteInstruction(const InstructionName: ansistring; AttrArray: array of TZAttrArray);
 begin
   WriteInstruction(InstructionName, AttrArray, true, true);
 end;
 
-//Записать инструкцию (атрибуты берёт из Self.Attributes)
+//Р—Р°РїРёСЃР°С‚СЊ РёРЅСЃС‚СЂСѓРєС†РёСЋ (Р°С‚СЂРёР±СѓС‚С‹ Р±РµСЂС‘С‚ РёР· Self.Attributes)
 //StartNewLine = true, CheckEntity = true
 //  Input:
-//           InstructionName: ansistring    - имя тэга
+//           InstructionName: ansistring    - РёРјСЏ С‚СЌРіР°
 procedure TZsspXMLWriter.WriteInstruction(const InstructionName: ansistring);
 begin
   WriteInstruction(InstructionName, Attributes, true, true);
@@ -2405,9 +2930,9 @@ begin
   inherited Destroy();
 end;
 
-//Изменяет размер массива с тэгами
+//РР·РјРµРЅСЏРµС‚ СЂР°Р·РјРµСЂ РјР°СЃСЃРёРІР° СЃ С‚СЌРіР°РјРё
 //INPUT
-//      NewSize: integer - новый размер
+//      NewSize: integer - РЅРѕРІС‹Р№ СЂР°Р·РјРµСЂ
 procedure TZsspXMLReader.ResizeTagArray(NewSize: integer);
 var
   delta: integer;
@@ -2475,7 +3000,7 @@ begin
     result := '';
 end;
 
-//Устанавливает максимальную длинну буфера
+//РЈСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ РјР°РєСЃРёРјР°Р»СЊРЅСѓСЋ РґР»РёРЅРЅСѓ Р±СѓС„РµСЂР°
 procedure TZsspXMLReader.SetMaxBufferLength(Value: integer);
 begin
   if Value > 513 then
@@ -2489,13 +3014,13 @@ begin
     end;
 end;
 
-//Начать читать XML из файла
+//РќР°С‡Р°С‚СЊ С‡РёС‚Р°С‚СЊ XML РёР· С„Р°Р№Р»Р°
 //Input:
-//      FileName: string  - имя файла
+//      FileName: string  - РёРјСЏ С„Р°Р№Р»Р°
 //Output:
-//      integer:        0 - всё нормально
-//                      1 - данный объект уже работает!
-//                      2 - какое-то ошибко
+//      integer:        0 - РІСЃС‘ РЅРѕСЂРјР°Р»СЊРЅРѕ
+//                      1 - РґР°РЅРЅС‹Р№ РѕР±СЉРµРєС‚ СѓР¶Рµ СЂР°Р±РѕС‚Р°РµС‚!
+//                      2 - РєР°РєРѕРµ-С‚Рѕ РѕС€РёР±РєРѕ
 //                      3 - Stream = nil
 function TZsspXMLReader.BeginReadFile(FileName: string): integer;
 var
@@ -2526,13 +3051,13 @@ begin
   end;
 end;
 
-//Начать читать XML из потока
+//РќР°С‡Р°С‚СЊ С‡РёС‚Р°С‚СЊ XML РёР· РїРѕС‚РѕРєР°
 //Input:
-//      Stream: TStream - поток
+//      Stream: TStream - РїРѕС‚РѕРє
 //Output:
-//      integer:        0 - всё нормально
-//                      1 - данный объект уже работает!
-//                      2 - какое-то ошибко
+//      integer:        0 - РІСЃС‘ РЅРѕСЂРјР°Р»СЊРЅРѕ
+//                      1 - РґР°РЅРЅС‹Р№ РѕР±СЉРµРєС‚ СѓР¶Рµ СЂР°Р±РѕС‚Р°РµС‚!
+//                      2 - РєР°РєРѕРµ-С‚Рѕ РѕС€РёР±РєРѕ
 //                      3 - Stream = nil
 function TZsspXMLReader.BeginReadStream(Stream: TStream): integer;
 var
@@ -2560,7 +3085,7 @@ begin
         FSourceType := 2;
       ClearAll();
       ReadBuffer();
-      //выбор энкодера для чтения
+      //РІС‹Р±РѕСЂ СЌРЅРєРѕРґРµСЂР° РґР»СЏ С‡С‚РµРЅРёСЏ
       s := copy(FBuffer, 1, FPlast);
       RecognizeEncoding(s);
     end;
@@ -2568,14 +3093,14 @@ begin
 end;
 
 
-//Начать читать XML из строки
+//РќР°С‡Р°С‚СЊ С‡РёС‚Р°С‚СЊ XML РёР· СЃС‚СЂРѕРєРё
 //Input:
-//      Soure: ansistring           - текст XML
-//      IgnoreCodePage: boolean - Игнорировать ли кодировку текста
+//      Soure: ansistring           - С‚РµРєСЃС‚ XML
+//      IgnoreCodePage: boolean - РРіРЅРѕСЂРёСЂРѕРІР°С‚СЊ Р»Рё РєРѕРґРёСЂРѕРІРєСѓ С‚РµРєСЃС‚Р°
 //Output:
-//      integer:        0 - всё нормально
-//                      1 - данный объект уже работает!
-//                      2 - какое-то ошибко
+//      integer:        0 - РІСЃС‘ РЅРѕСЂРјР°Р»СЊРЅРѕ
+//                      1 - РґР°РЅРЅС‹Р№ РѕР±СЉРµРєС‚ СѓР¶Рµ СЂР°Р±РѕС‚Р°РµС‚!
+//                      2 - РєР°РєРѕРµ-С‚Рѕ РѕС€РёР±РєРѕ
 //                      3 - Stream = nil
 function TZsspXMLReader.BeginReadString(Source: ansistring; IgnoreCodePage: boolean = true): integer;
 begin
@@ -2591,7 +3116,7 @@ begin
   end;
 end;
 
-//закончить чтение
+//Р·Р°РєРѕРЅС‡РёС‚СЊ С‡С‚РµРЅРёРµ
 procedure TZsspXMLReader.EndRead();
 begin
   if InProcess then
@@ -2604,7 +3129,7 @@ begin
   end;
 end;
 
-//Очистка (кроме кол-ва тэгов и стека)
+//РћС‡РёСЃС‚РєР° (РєСЂРѕРјРµ РєРѕР»-РІР° С‚СЌРіРѕРІ Рё СЃС‚РµРєР°)
 procedure TZsspXMLReader.Clear();
 begin
   FTextBeforeTag := '';
@@ -2616,7 +3141,7 @@ begin
   FAttributes.Clear();
 end;
 
-//Очистка всего
+//РћС‡РёСЃС‚РєР° РІСЃРµРіРѕ
 procedure TZsspXMLReader.ClearAll();
 var
   t: integer;
@@ -2640,7 +3165,7 @@ begin
   FStreamEnd := false;
 end;
 
-//Читает 1 символ из буфера
+//Р§РёС‚Р°РµС‚ 1 СЃРёРјРІРѕР» РёР· Р±СѓС„РµСЂР°
 procedure TZsspXMLReader.GetOneChar(var OneChar: ansistring; var err: boolean);
 begin
   err := false;
@@ -2661,14 +3186,14 @@ begin
   end;
 end;
 
-//Читает буфер из потока
+//Р§РёС‚Р°РµС‚ Р±СѓС„РµСЂ РёР· РїРѕС‚РѕРєР°
 procedure TZsspXMLReader.ReadBuffer();
 var
   t: integer;
 
 begin
   if InProcess then
-  if (FSourceType = 1) or (FSourceType = 2) then // только для файла/потока
+  if (FSourceType = 1) or (FSourceType = 2) then // С‚РѕР»СЊРєРѕ РґР»СЏ С„Р°Р№Р»Р°/РїРѕС‚РѕРєР°
   begin
     t := 0;
     //SetString(FBuffer, nil, MaxBufferLength);
@@ -2690,22 +3215,22 @@ begin
   end;
 end;
 
-//Попытка распознания кодировки
-// Берём текст из буфера и пытаемся распознать кодировку
+//РџРѕРїС‹С‚РєР° СЂР°СЃРїРѕР·РЅР°РЅРёСЏ РєРѕРґРёСЂРѕРІРєРё
+// Р‘РµСЂС‘Рј С‚РµРєСЃС‚ РёР· Р±СѓС„РµСЂР° Рё РїС‹С‚Р°РµРјСЃСЏ СЂР°СЃРїРѕР·РЅР°С‚СЊ РєРѕРґРёСЂРѕРІРєСѓ
 //INPUT:
-//      var txt: ansistring - анализируемый текст
+//      var txt: ansistring - Р°РЅР°Р»РёР·РёСЂСѓРµРјС‹Р№ С‚РµРєСЃС‚
 procedure TZsspXMLReader.RecognizeEncoding(var txt: ansistring);
 var
   BOM: integer;
   cpname: ansistring;
-  recognized: boolean;  //флаг точного определения кодировки
-  codepagenum: integer; //кодировка
+  recognized: boolean;  //С„Р»Р°Рі С‚РѕС‡РЅРѕРіРѕ РѕРїСЂРµРґРµР»РµРЅРёСЏ РєРѕРґРёСЂРѕРІРєРё
+  codepagenum: integer; //РєРѕРґРёСЂРѕРІРєР°
   ftype: integer;
 
 begin
-  //кодировка текста
+  //РєРѕРґРёСЂРѕРІРєР° С‚РµРєСЃС‚Р°
   //    codepagenum:
-  //            0 - неопределена
+  //            0 - РЅРµРѕРїСЂРµРґРµР»РµРЅР°
   //            1 - UTF-8
   //            2 - UTF-16BE
   //            3 - UTF-16LE
@@ -2755,7 +3280,7 @@ begin
     end;
   end else
   begin
-    {tut}// вручную перепроверка і всё такое
+    {tut}// РІСЂСѓС‡РЅСѓСЋ РїРµСЂРµРїСЂРѕРІРµСЂРєР° С– РІСЃС‘ С‚Р°РєРѕРµ
     FCharReader := nil;
     case codepagenum of
       1:
@@ -2792,9 +3317,9 @@ begin
   end;
 end;
 
-//Читает тэг
-//return:       true - какие-то замечания при чтении (подробнее - ErrorCode)
-//              false - всё нормально
+//Р§РёС‚Р°РµС‚ С‚СЌРі
+//return:       true - РєР°РєРёРµ-С‚Рѕ Р·Р°РјРµС‡Р°РЅРёСЏ РїСЂРё С‡С‚РµРЅРёРё (РїРѕРґСЂРѕР±РЅРµРµ - ErrorCode)
+//              false - РІСЃС‘ РЅРѕСЂРјР°Р»СЊРЅРѕ
 function TZsspXMLReader.ReadTag(): boolean;
 var
   Ch: ansistring;
@@ -2802,7 +3327,7 @@ var
   err: boolean;
   RawEncodingBeforeTag: ansistring;
   RawTextTagNonDecoded: ansistring;
-  end_tag: boolean;  //найден конец тэга
+  end_tag: boolean;  //РЅР°Р№РґРµРЅ РєРѕРЅРµС† С‚СЌРіР°
   _isClosedTag: boolean;
   _isInstruction: boolean;
 
@@ -2822,11 +3347,11 @@ var
   procedure RawTag();
   begin
     RawTextTagNonDecoded := RawTextTagNonDecoded + ch;
-    if ss[1] <> #0 then  //todo: что делать, если в тексте действительно будет #0?
+    if ss[1] <> #0 then  //todo: С‡С‚Рѕ РґРµР»Р°С‚СЊ, РµСЃР»Рё РІ С‚РµРєСЃС‚Рµ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ Р±СѓРґРµС‚ #0?
       FRawTextTag := FRawTextTag + ss;
   end;
 
-  //срабатывает после обнаружения "="
+  //СЃСЂР°Р±Р°С‚С‹РІР°РµС‚ РїРѕСЃР»Рµ РѕР±РЅР°СЂСѓР¶РµРЅРёСЏ "="
   function GetParamValue(): ansistring;
   var
     count_quote: byte;
@@ -2912,7 +3437,7 @@ var
               if count_quote = 1 then
                 result := result + ss
               else
-                //будем игнорировать
+                //Р±СѓРґРµРј РёРіРЅРѕСЂРёСЂРѕРІР°С‚СЊ
                 FErrorCode := FErrorCode or 32;
             end;
           '"','''':
@@ -2953,10 +3478,10 @@ var
       delete(svalue, t - 1, 2);
   end;
 
-  //комментарий / CDATA
+  //РєРѕРјРјРµРЅС‚Р°СЂРёР№ / CDATA
   function GetCommentCDATA(): integer;
   var
-    _type_comment: integer; //сразу в result
+    _type_comment: integer; //СЃСЂР°Р·Сѓ РІ result
     _tmp: integer;
     _last2: ansistring;
     s, sl: ansistring;
@@ -2980,7 +3505,7 @@ var
           '>':
             begin
               case _type_comment of
-                -1:   // <!unknown_tag ....> - сразу заканчиваем
+                -1:   // <!unknown_tag ....> - СЃСЂР°Р·Сѓ Р·Р°РєР°РЅС‡РёРІР°РµРј
                   begin
                     end_tag := true;
                     break;
@@ -3147,13 +3672,13 @@ var
                 begin
                   FTagName := s;
                   s := '';
-                  GetParamValue(); //может, забыли имя параметра ввести? {tut}
+                  GetParamValue(); //РјРѕР¶РµС‚, Р·Р°Р±С‹Р»Рё РёРјСЏ РїР°СЂР°РјРµС‚СЂР° РІРІРµСЃС‚Рё? {tut}
                 end;
                 FErrorCode := FErrorCode or 256;
                 _isTagName := 13;
               end;
             end;
-          '!':  //комментарий / CDATA
+          '!':  //РєРѕРјРјРµРЅС‚Р°СЂРёР№ / CDATA
             begin
               if (_isTagName = 0) and (length(s) = 0) then
               begin
@@ -3179,7 +3704,7 @@ var
             end;
           '/':
             begin
-              // сделать проверку, если текст тэга не пустой
+              // СЃРґРµР»Р°С‚СЊ РїСЂРѕРІРµСЂРєСѓ, РµСЃР»Рё С‚РµРєСЃС‚ С‚СЌРіР° РЅРµ РїСѓСЃС‚РѕР№
               if (_isTagName = 0) and (length(s) = 0) then
                 FTagType := 6
               else
@@ -3207,7 +3732,7 @@ var
                   _isParam := true;
               end;
             end;
-          #0:; //и что с ним делать? {tut}
+          #0:; //Рё С‡С‚Рѕ СЃ РЅРёРј РґРµР»Р°С‚СЊ? {tut}
           else
             begin
               if _isParam then
@@ -3274,7 +3799,7 @@ begin
       FErrorCode := FErrorCode or 524288;
 end;
 
-//Добавить тэг в стэк
+//Р”РѕР±Р°РІРёС‚СЊ С‚СЌРі РІ СЃС‚СЌРє
 procedure TZsspXMLReader.AddTag(const Value: ansistring);
 begin
   inc(FTagCount);
@@ -3328,15 +3853,15 @@ begin
 end;
 
 ////////////////////////////////////////////////////////////////////////////////
-/////                   тут начинются костыли                              /////                              
+/////                   С‚СѓС‚ РЅР°С‡РёРЅСЋС‚СЃСЏ РєРѕСЃС‚С‹Р»Рё                              /////                              
 ////////////////////////////////////////////////////////////////////////////////
 
-//для Delphi >=2009
+//РґР»СЏ Delphi >=2009
 {$IFDEF DELPHI_UNICODE}
 
 ////////////////////////////////////////////////////////////////////////////////
-//// TZAttributesH - атрибуты для тэгов (почему постфикс H? Потому, что Helper
-////                 (или хентай).) для юникодной дельфы.
+//// TZAttributesH - Р°С‚СЂРёР±СѓС‚С‹ РґР»СЏ С‚СЌРіРѕРІ (РїРѕС‡РµРјСѓ РїРѕСЃС‚С„РёРєСЃ H? РџРѕС‚РѕРјСѓ, С‡С‚Рѕ Helper
+////                 (РёР»Рё С…РµРЅС‚Р°Р№).) РґР»СЏ СЋРЅРёРєРѕРґРЅРѕР№ РґРµР»СЊС„С‹.
 ////////////////////////////////////////////////////////////////////////////////
 
 constructor TZAttributesH.Create();
@@ -3365,31 +3890,31 @@ begin
   result := FAttributes.Count;
 end;
 
-//Получает значение атрибута по его названию
+//РџРѕР»СѓС‡Р°РµС‚ Р·РЅР°С‡РµРЅРёРµ Р°С‚СЂРёР±СѓС‚Р° РїРѕ РµРіРѕ РЅР°Р·РІР°РЅРёСЋ
 function TZAttributesH.GetAttrS(Att: string): string;
 begin
   result := UTF8ToString(FAttributes.ItemsByName[UTF8Encode(Att)]);
 end;
 
-//Устанавливает значение атрибута по названию
+//РЈСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ Р·РЅР°С‡РµРЅРёРµ Р°С‚СЂРёР±СѓС‚Р° РїРѕ РЅР°Р·РІР°РЅРёСЋ
 procedure TZAttributesH.SetAttrS(Att: string; const Value: string);
 begin
   FAttributes.ItemsByName[UTF8Encode(Att)] := UTF8Encode(Value);
 end;
 
-//Получает знаечние атрибута по номеру
+//РџРѕР»СѓС‡Р°РµС‚ Р·РЅР°РµС‡РЅРёРµ Р°С‚СЂРёР±СѓС‚Р° РїРѕ РЅРѕРјРµСЂСѓ
 function TZAttributesH.GetAttrI(num: integer): string;
 begin
   result := UTF8ToString(FAttributes.ItemsByNum[num]);
 end;
 
-//Устанавливает значение атрибута по номеру
+//РЈСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ Р·РЅР°С‡РµРЅРёРµ Р°С‚СЂРёР±СѓС‚Р° РїРѕ РЅРѕРјРµСЂСѓ
 procedure TZAttributesH.SetAttrI(num: integer; const Value: string);
 begin
   FAttributes.ItemsByNum[num] := UTF8Encode(Value);
 end;
 
-//Получает значение атрибут-значение по номеру
+//РџРѕР»СѓС‡Р°РµС‚ Р·РЅР°С‡РµРЅРёРµ Р°С‚СЂРёР±СѓС‚-Р·РЅР°С‡РµРЅРёРµ РїРѕ РЅРѕРјРµСЂСѓ
 function TZAttributesH.GetAttr(num: integer): TZAttrArrayH;
 var
   t: TZAttrArrayH;
@@ -3403,7 +3928,7 @@ begin
   result := t;
 end;
 
-//Устанавливает атрибут-значение по номеру
+//РЈСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ Р°С‚СЂРёР±СѓС‚-Р·РЅР°С‡РµРЅРёРµ РїРѕ РЅРѕРјРµСЂСѓ
 procedure TZAttributesH.SetAttr(num: integer; const Value: TZAttrArrayH);
 var
   t: TZAttrArrayH;
@@ -3482,7 +4007,7 @@ end;
 
 function TZAttributesH.IsContainsAttribute(const AttrName: string; CaseSensitivity: boolean = true): boolean;
 begin
-  Result := FAttributes.IsContainsAttribute(UTF8ToString(AttrName), CaseSensitivity);
+  Result := FAttributes.IsContainsAttribute(UTF8EncodeToShortString(AttrName), CaseSensitivity); // conversion with data loss warning
 end;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -4003,7 +4528,7 @@ end;
 {$ENDIF}
 
 ////////////////////////////////////////////////////////////////////////////////
-/////                   тут костыли заканчиваются                          /////
+/////                   С‚СѓС‚ РєРѕСЃС‚С‹Р»Рё Р·Р°РєР°РЅС‡РёРІР°СЋС‚СЃСЏ                          /////
 ////////////////////////////////////////////////////////////////////////////////
 
 end.

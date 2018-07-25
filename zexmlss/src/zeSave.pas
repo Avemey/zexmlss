@@ -1,4 +1,4 @@
-(* Simplistic interface for uniform workbook saving
+﻿(* Simplistic interface for uniform workbook saving
    Bridge object template for different avemey.com
       export routines.
 

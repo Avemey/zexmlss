@@ -1,0 +1,44 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{461C6C16-F74B-4634-80C5-EC7AC2F9D877}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="zexmlsslib.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="zexmlsslib">
+        <MSBuild Projects="zexmlsslib.dproj"/>
+    </Target>
+    <Target Name="zexmlsslib:Clean">
+        <MSBuild Projects="zexmlsslib.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="zexmlsslib:Make">
+        <MSBuild Projects="zexmlsslib.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="zexmlsslib"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="zexmlsslib:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="zexmlsslib:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+    <ItemGroup Condition="'$(BuildGroup)'=='Build All'">
+        <BuildGroupProject Include="zexmlsslib.dproj">
+            <ProjectGuid>{3CC3B766-2D13-4B54-8E0D-A3D82AD28218}</ProjectGuid>
+            <Configurations>Debug;Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+    </ItemGroup>
+</Project>
