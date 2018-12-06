@@ -5356,6 +5356,7 @@ var
   _WriteHelper: TZEODFWriteHelper;
 
 begin
+  Result := 0;
   azg := nil;
   _WriteHelper := nil;
   try
@@ -5414,7 +5415,6 @@ begin
     if (Assigned(_WriteHelper)) then
       FreeAndNil(_WriteHelper);
   end;
-  Result := 0;
 end; //ExportXmlssToODFS
 
 

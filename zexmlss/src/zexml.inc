@@ -8,6 +8,9 @@
 //Charts
 {$DEFINE ZUSE_CHARTS}
 
+// Drawings
+{$DEFINE ZUSE_DRAWINGS}
+
 // Free Pascal / Lazarus
 {$IFDEF FPC}
   //для FPC пока нету ZColorStringGrid-а
