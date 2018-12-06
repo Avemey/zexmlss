@@ -124,6 +124,14 @@ const
   ZipCompressionMethod_WavPack=     97; //WavPack compressed data
   ZipCompressionMethod_PPMd =       98; //PPMd version I, Rev 1
 
+  // for compatibility
+  {$ifdef WIN32}
+  faReadOnly  = $00000001;
+  faHidden    = $00000002;
+  faSysFile   = $00000004;
+  faArchive   = $00000020;
+  {$endif}
+
 type
   TOnDecompressFile = procedure(Sender: TObject; Current, Total: Integer) of object;
   TOnCompressFile = procedure(Sender: TObject; Current, Total: Integer) of object;
@@ -2783,7 +2791,7 @@ procedure TKAZipEntries.CreateFolder(FolderName: string; FolderDate: TDateTime);
 var
   FN: string;
 begin
-  FN := IncludeTrailingBackslash(FolderName);
+  FN := IncludeTrailingPathDelimiter(FolderName);
   AddFolderChain(FN, faDirectory, FolderDate);
   FParent.FIsDirty := True;
 end;
@@ -2796,8 +2804,8 @@ var
   X: Integer;
   L: Integer;
 begin
-  FN := ToZipName(IncludeTrailingBackslash(FolderName));
-  NFN := ToZipName(IncludeTrailingBackslash(NewFolderName));
+  FN := ToZipName(IncludeTrailingPathDelimiter(FolderName));
+  NFN := ToZipName(IncludeTrailingPathDelimiter(NewFolderName));
   L := Length(FN);
   if IndexOf(NFN) = -1 then
   begin
@@ -3820,14 +3828,17 @@ function TCRC32Stream.Write(const Buffer; Count: Integer): Longint;
 var
   i: Integer;
   state: LongWord;
-  data: PByteArray;
+  data: PByte;
 begin
   state := FCRC32;
 
   data := Addr(Buffer);
 
   for i := 0 to Count-1 do
-    state := (state shr 8) xor CRCTable[Byte(state) xor data[i]];
+  begin
+    state := (state shr 8) xor CRCTable[Byte(state) xor data^];
+    Inc(data);
+  end;
 
   FCRC32 := state;
 
