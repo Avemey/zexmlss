@@ -2112,7 +2112,7 @@ begin
     begin
       //Attr: number:calendar
       //      number:style
-      _result := _result + IfThen(_isLong, 'GG', 'G')
+      _result := _result + CheckIsLong('GG', 'G')
     end
     else
     //Quarter
@@ -2335,6 +2335,7 @@ var
     begin
       s := '';
       _pos := 0;
+      _currentpos := 0;
 
       for i := 0 to FEmbededTextCount - 1 do
         if (FEmbededTextArray[i].NumberPosition >= 0) then
