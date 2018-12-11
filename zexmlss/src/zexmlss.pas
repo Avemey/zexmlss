@@ -466,6 +466,10 @@ type
     FPaperSize: byte;
     FPaperWidth: integer;
     FPaperHeight: integer;
+
+    FFitToHeight: integer; //Number of vertical pages to fit on
+    FFitToWidth: integer;  //Number of horizontal pages to fit on
+
     FSplitVerticalMode: TZSplitMode;
     FSplitHorizontalMode: TZSplitMode;
     FSplitVerticalValue: integer;       //Вроде можно вводить отрицательные
@@ -497,6 +501,10 @@ type
                                                                                   // used only for PaperSize = 0!
     property PaperHeight: integer read FPaperHeight write FPaperHeight default 0; //User defined paper height in mm.
                                                                                   // used only for PaperSize = 0!
+
+    property FitToHeight: integer read FFitToHeight write FFitToHeight default -1;
+    property FitToWidth: integer read FFitToWidth write FFitToWidth default -1;
+
     property PortraitOrientation: boolean read FPortraitOrientation write FPortraitOrientation default true;
     property CenterHorizontal: boolean read FCenterHorizontal write FCenterHorizontal default false;
     property CenterVertical: boolean read FCenterVertical write FCenterVertical default false;
@@ -1147,6 +1155,7 @@ type
     FRowCount: integer;
     FColCount: integer;
     FTabColor: TColor;                  //цвет закладки
+    FFitToPage: Boolean;
     FDefaultRowHeight: real;
     FDefaultColWidth: real;
     FMergeCells: TZMergeCells;
@@ -1209,6 +1218,7 @@ type
     property AutoFilter: string read FAutoFilter write FAutoFilter;
     property Protect: boolean read FProtect write FProtect default false; //защищён ли лист от изменения
     property TabColor: TColor read FTabColor write FTabColor default ClWindow;
+    property FitToPage: Boolean read FFitToPage write FFitToPage default false;
     property Title: string read FTitle write FTitle;
     property RowCount: integer read GetRowCount write SetRowCount;
     property RightToLeft: boolean read FRightToLeft write FRightToLeft default false;
@@ -1338,6 +1348,13 @@ function ColorToHTMLHex(Color: TColor): string;
 
 //переводит Hex RGB (string) в TColor
 function HTMLHexToColor(value: string): TColor;
+
+//переводит Hex ARGB (string) в TColor
+//32-разрядное значение ARGB представлено в виде AARRGGBB.
+//Самый старший байт (MSB), представленный AA, является значением альфа-компонента. 
+//Второй, третий и четвертый байты, представленные RR, GG и BB, 
+//соответственно, являются компонентами красный цвет, зеленого и синего соответственно.
+function ARGBToColor(value: string): TColor;
 
 //Перевести пиксели в типографский пункт (point)
 function PixelToPoint(inPixel: integer; PixelSizeMM: real = 0.265): real;
@@ -2051,6 +2068,42 @@ begin
     if value[1] = '#' then delete(value, 1, 1);
     //А что, если будут цвета типа "black"?  {tut}
     for i := 1 to length(value) do
+    begin
+      if n > 2 then break;
+      case value[i] of
+        '0'..'9': t := ord(value[i]) - 48;
+        'A'..'F': t := 10 + ord(value[i]) - 65;
+        else
+          t := 0;
+      end;
+      a[n] := a[n] * 16 + t;
+      if i mod 2 = 0 then inc(n);
+    end;
+    result := a[2] shl 16 or a[1] shl 8 or a[0]//RGB(a[0], a[1], a[2]);
+    //a[2] shl 16 or a[1] shl 8 or a[0]; = RGB
+  end;
+end;
+
+//переводит Hex ARGB (string) в TColor
+//не уверен возможно ли учитывать альфа-канал при переводе
+//пока отбросим его
+function ARGBToColor(value: string): TColor;
+var
+  a: array [0..2] of integer;
+  i, n, t: integer;
+
+begin
+  result := 0;
+  if (value > '') then
+  begin
+    value := UpperCase(value);
+    {$HINTS OFF}
+    FillChar(a, sizeof(a), 0);
+    {$HINTS ON}
+    n := 0;
+    if value[1] = '#' then delete(value, 1, 1);
+    //А что, если будут цвета типа "black"?  {tut}
+    for i := 3 to length(value) do
     begin
       if n > 2 then break;
       case value[i] of
@@ -3376,6 +3429,8 @@ begin
   HeaderMargin := 13;
   FooterMargin := 13;
   FPaperSize := 9;
+  FFitToHeight:=-1;
+  FFitToWidth:=-1;
 
   FIsEvenFooterEqual := true;
   FIsEvenHeaderEqual := true;
@@ -3470,6 +3525,8 @@ begin
     HeaderData := t.HeaderData;
     FooterData := t.FooterData;
     PaperSize := t.PaperSize;
+    FitToHeight := t.FitToHeight;
+    FitToWidth := t.FitToWidth;
     SplitVerticalMode := t.SplitVerticalMode;
     SplitHorizontalMode := t.SplitHorizontalMode;
     SplitVerticalValue := t.SplitVerticalValue;
@@ -3585,6 +3642,7 @@ begin
     RowCount    := zSource.RowCount;
     ColCount    := zSource.ColCount;
     TabColor    := zSource.TabColor;
+    FitToPage   := zSource.FitToPage;
     Title       := zSource.Title;
     Protect     := zSource.Protect;
     RightToLeft := zSource.RightToLeft;

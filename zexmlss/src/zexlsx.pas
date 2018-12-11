@@ -2260,6 +2260,23 @@ var
     end; //while
   end; //_ReadHyperLinks();
 
+  //<sheetPr> ... </sheetPr> 
+  procedure _ReadSheetPr();
+  begin
+    while (not ((xml.TagName = 'sheetPr') and (xml.TagType = 6))) do
+    begin
+      xml.ReadTag();
+      if (xml.Eof()) then
+        break;
+      
+      if xml.TagName = 'tabColor' then
+        _currSheet.TabColor := ARGBToColor(xml.Attributes.ItemsByName['rgb']);
+      
+      if xml.TagName = 'pageSetUpPr' then
+        _currSheet.FitToPage := ZEStrToBoolean(xml.Attributes.ItemsByName['fitToPage']);
+    end;    
+  end; //_ReadSheetPr();
+
   //<sheetViews> ... </sheetViews>
   procedure _ReadSheetViews();
   var
@@ -2749,8 +2766,16 @@ begin
           if (TryStrToInt(s, _t)) then
             _currSheet.SheetOptions.StartPageNumber := _t;
             
-        //s := xml.Attributes.ItemsByName['fitToHeight'];
-        //s := xml.Attributes.ItemsByName['fitToWidth'];
+        s := xml.Attributes.ItemsByName['fitToHeight'];
+        if (s > '') then
+          if (TryStrToInt(s, _t)) then
+            _currSheet.SheetOptions.FitToHeight := _t;
+
+        s := xml.Attributes.ItemsByName['fitToWidth'];
+        if (s > '') then
+          if (TryStrToInt(s, _t)) then
+            _currSheet.SheetOptions.FitToWidth := _t;
+
         //s := xml.Attributes.ItemsByName['horizontalDpi'];
         //s := xml.Attributes.ItemsByName['id'];
         s := xml.Attributes.ItemsByName['orientation'];
@@ -2794,6 +2819,9 @@ begin
       else
       if ((xml.TagName = 'hyperlinks') and (xml.TagType = 4)) then
         _ReadHyperLinks()
+      else
+      if ((xml.TagName = 'sheetPr') and (xml.TagType = 4)) then
+        _ReadSheetPr()
       else
       if ((xml.TagName = 'sheetViews') and (xml.TagType = 4)) then
         _ReadSheetViews()
@@ -5743,7 +5771,11 @@ var
     _xml.WriteTagNode('sheetPr', true, true, false);
 
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('fitToPage', 'false');
+    _xml.Attributes.Add('rgb', 'FF'+ColorToHTMLHex(_sheet.TabColor)); //ARGB ס אכüפא FF
+    _xml.WriteEmptyTag('tabColor', true, false);
+
+    _xml.Attributes.Clear();
+    _xml.Attributes.Add('fitToPage', XLSXBoolToStr(_sheet.FitToPage));
     _xml.WriteEmptyTag('pageSetUpPr', true, false);
 
     _xml.WriteEndTagNode(); //sheetPr
@@ -6052,8 +6084,12 @@ var
     _xml.Attributes.Add('copies', '1', false);
     _xml.Attributes.Add('draft', 'false', false);
     _xml.Attributes.Add('firstPageNumber', '1', false);
-    _xml.Attributes.Add('fitToHeight', '1', false);
-    _xml.Attributes.Add('fitToWidth', '1', false);
+
+    if _sheet.SheetOptions.FitToHeight >= 0 then
+      _xml.Attributes.Add('fitToHeight', intToStr(_sheet.SheetOptions.FitToHeight), false);
+    
+    if _sheet.SheetOptions.FitToWidth >= 0 then  
+      _xml.Attributes.Add('fitToWidth', IntToStr(_sheet.SheetOptions.FitToWidth), false);
     _xml.Attributes.Add('horizontalDpi', '300', false);
 //    if (_sheet.SheetOptions.PortraitOrientation) then
 //      s := 'portrait'
