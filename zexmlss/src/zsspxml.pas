@@ -38,6 +38,15 @@ const
   BOMUTF32BE = #0#0#254#255; // 00 00 FE FF
   BOMUTF32LE = #255#254#0#0; // FF FE 00 00
 
+const
+  TAG_TYPE_UNKNOWN  = 0; // что-то непонятное
+  TAG_TYPE_DECLARE  = 1; // <?...?>
+  TAG_TYPE_CDATA    = 2; // <![CDATA[..]]>
+  TAG_TYPE_COMMENT  = 3; // <!--..-->
+  TAG_TYPE_START    = 4; // <...>    (4 and 4 = 4)
+  TAG_TYPE_CLOSED   = 5; // <.../>   (5 and 4 = 4)
+  TAG_TYPE_END      = 6; // </...>   (6 and 4 = 4)
+
 type
 
   //конвертер ANSI текста в нужную кодировку
@@ -1645,7 +1654,11 @@ begin
   FBuffer := '';
   FMaxBufferLength := 4096;
   FInProcess := false;
-  FNewLine := true;
+  {$ifdef NOXMLINDENTS}
+  FNewLine := False;
+  {$else}
+  FNewLine := True;
+  {$endif}
   FUnixNLSeparator := false;
   FTabLength := 0;
   FTab := '';
@@ -2610,7 +2623,7 @@ begin
   FTextBeforeTag := '';
   FRawTextTag := '';
   FTagName := '';
-  FTagType := 0;
+  FTagType := TAG_TYPE_UNKNOWN;
   FValue := '';
   FErrorCode := 0;
   FAttributes.Clear();
@@ -3117,14 +3130,14 @@ var
               //
               if _isClosedTag then
               begin
-                if (FTagType <> 1) and (FTagType <> 6) then
-                  FTagType := 5
+                if (FTagType <> TAG_TYPE_DECLARE) and (FTagType <> TAG_TYPE_END) then
+                  FTagType := TAG_TYPE_CLOSED
                 else
                   FErrorCode := FErrorCode or 8192;
               end else
               if _isInstruction then
               begin
-                if FTagType <> 1 then
+                if FTagType <> TAG_TYPE_DECLARE then
                   FErrorCode := FErrorCode or 16384;
               end;
               end_tag := true;
@@ -3160,8 +3173,8 @@ var
                 _tmp := GetCommentCDATA();
                 if end_tag then
                   case _tmp of
-                    1: FTagType := 3;
-                    2: FTagType := 2;
+                    1: FTagType := TAG_TYPE_COMMENT;
+                    2: FTagType := TAG_TYPE_CDATA;
                   end;
                 break;
               end else
@@ -3173,7 +3186,7 @@ var
           '?':
             begin
               if (_isTagName = 0) and (length(s) = 0) then
-                FTagType := 1
+                FTagType := TAG_TYPE_DECLARE
               else
                 _isInstruction := true;
             end;
@@ -3181,7 +3194,7 @@ var
             begin
               // сделать проверку, если текст тэга не пустой
               if (_isTagName = 0) and (length(s) = 0) then
-                FTagType := 6
+                FTagType := TAG_TYPE_END
               else
               begin
                 if _isTagName = 0 then
@@ -3251,8 +3264,8 @@ begin
               FErrorCode := FErrorCode or 131072
             else
               if end_tag then
-                if (FTagType = 0) and (length(FTagName) > 0) then
-                  FTagType := 4;
+                if (FTagType = TAG_TYPE_UNKNOWN) and (length(FTagName) > 0) then
+                  FTagType := TAG_TYPE_START;
 
             Break;
           end;
@@ -3264,10 +3277,10 @@ begin
       end;//case
     end; //if
   end;  //while
-  if FTagType = 4 then
+  if FTagType = TAG_TYPE_START then
     AddTag(FTagName)
   else
-  if FTagType = 6 then
+  if FTagType = TAG_TYPE_END then
     DeleteClosedTag();
   if eof() then
     if TagCount > 0 then

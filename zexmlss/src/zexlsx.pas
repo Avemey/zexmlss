@@ -41,19 +41,19 @@ interface
 {$I compver.inc}
 
 {$IFDEF FPC}
-  {$mode objfpc}{$H+}
+  {$mode DELPHI}{$H+}
 {$ENDIF}
 
 uses
   SysUtils, Classes, Types, Graphics,
-  zeformula, zsspxml, zexmlss, zesavecommon, zeZippy
+  zeformula, zsspxml, zexmlss, zesavecommon
   {$IFNDEF FPC}
   ,windows
   {$ELSE}
   ,LCLType,
   LResources
   {$ENDIF}
-  {$IFDEF FPC},zipper{$ELSE}{$I xlsxzipuses.inc}{$ENDIF};
+  {$IFDEF FPC},zipper{$ELSE}, zeZipper{$ENDIF};
 
 type
   TZXLSXFileItem = record
@@ -258,10 +258,8 @@ type
 function ReadXSLXPath(var XMLSS: TZEXMLSS; DirName: string): integer; deprecated {$IFDEF FPC}'Use ReadXLSXPath!'{$ENDIF};
 function ReadXLSXPath(var XMLSS: TZEXMLSS; DirName: string): integer;
 
-{$IFDEF FPC}
 function ReadXSLX(var XMLSS: TZEXMLSS; FileName: string): integer; deprecated {$IFDEF FPC}'Use ReadXLSX!'{$ENDIF};
 function ReadXLSX(var XMLSS: TZEXMLSS; FileName: string): integer;
-{$ENDIF}
 
 function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
                              const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
@@ -269,23 +267,19 @@ function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const Sheets
                              const SheetsNames: array of string): integer; overload;
 function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string): integer; overload;
 
-{$IFDEF FPC}
 function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
 function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
                          const SheetsNames: array of string): integer; overload;
 function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
-{$ENDIF}
 
-{$IFNDEF FPC}
-{$I xlsxzipfunc.inc}
-{$ENDIF}
-
-function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string;
-                         BOM: ansistring = '';
-                         AllowUnzippedFolder: boolean = false;
-                         ZipGenerator: CZxZipGens = nil): integer;
+function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string;
+  const SheetsNumbers: array of integer;
+  const SheetsNames: array of string;
+  TextConverter: TAnsiToCPConverter;
+  CodePageName: string;
+  BOM: AnsiString = '';
+  AllowUnzippedFolder: boolean = false): integer;
 
 //Дополнительные функции, на случай чтения отдельного файла
 function ZEXSLXReadTheme(var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer): boolean;
@@ -325,7 +319,8 @@ uses
 {$EndIf}
   StrUtils,
   Math,
-  zenumberformats;
+  zenumberformats,
+  zearchhelper;
 
 {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
 const
@@ -369,7 +364,15 @@ type
 
   TZEXLSXFontArray = array of TZEXLSXFont; //массив шрифтов
 
-{$IFDEF FPC}
+  TStreamList = class(TList)
+  protected
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+    function GetItem(AIndex: Integer): TStream;
+  public
+    property Items[AIndex: Integer]: TStream read GetItem;
+  end;
+
+
   //Для распаковки в поток
 
   procedure XLSXSortRelationArray(var arr: TZXLSXRelationsArray; count: integer); forward;
@@ -580,7 +583,11 @@ end; //GetCurrentPageCommentsNumber
 
 procedure TXSLXZipHelper.DoCreateOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
 begin
-  AStream := TMemorystream.Create;
+  {$ifdef MSWINDOWS}
+  AStream := TTmpFileStream.Create();
+  {$else}
+  AStream := TMemoryStream.Create();
+  {$endif}
 end;
 
 procedure TXSLXZipHelper.DoDoneOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
@@ -761,7 +768,7 @@ begin
     end;
   end;
 end;
-{$ENDIF}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 ///                   Differential Formatting
@@ -1187,7 +1194,7 @@ var
   t: integer;
 
 begin
-  while (not((xml.TagName = 'numFmts') and (xml.TagType = 6))) and (not xml.Eof()) do
+  while (not((xml.TagName = 'numFmts') and (xml.TagType = TAG_TYPE_END))) and (not xml.Eof()) do
   begin
     xml.ReadTag();
 
@@ -1536,16 +1543,16 @@ begin
       xml.ReadTag();
       if (xml.TagName = 'a:clrScheme') then
       begin
-        if (xml.TagType = 4) then
+        if (xml.TagType = TAG_TYPE_START) then
           _b := true;
-        if (xml.TagType = 6) then
+        if (xml.TagType = TAG_TYPE_END) then
           _b := false;
       end else
-      if ((xml.TagName = 'a:sysClr') and (_b) and (xml.TagType in [4, 5])) then
+      if ((xml.TagName = 'a:sysClr') and (_b) and (xml.TagType in [TAG_TYPE_START, TAG_TYPE_CLOSED])) then
       begin
         _addFillColor(xml.Attributes.ItemsByName['lastClr']);
       end else
-      if ((xml.TagName = 'a:srgbClr') and (_b) and (xml.TagType in [4, 5])) then
+      if ((xml.TagName = 'a:srgbClr') and (_b) and (xml.TagType in [TAG_TYPE_START, TAG_TYPE_CLOSED])) then
       begin
         _addFillColor(xml.Attributes.ItemsByName['val']);
       end;
@@ -1583,7 +1590,7 @@ begin
     while (not xml.Eof()) do
     begin
       xml.ReadTag();
-      if ((xml.TagName = 'Override') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'Override') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         s := xml.Attributes.ItemsByName['PartName'];
         if (s > '') then
@@ -1662,20 +1669,20 @@ begin
     while (not xml.Eof()) do
     begin
       xml.ReadTag();
-      if ((xml.TagName = 'si') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'si') and (xml.TagType = TAG_TYPE_START)) then
       begin
         s := '';
         k := 0;
-        while (not((xml.TagName = 'si') and (xml.TagType = 6))) and (not xml.Eof) do
+        while (not((xml.TagName = 'si') and (xml.TagType = TAG_TYPE_END))) and (not xml.Eof) do
         begin
           xml.ReadTag();
-          if ((xml.TagName = 't') and (xml.TagType = 6)) then
+          if ((xml.TagName = 't') and (xml.TagType = TAG_TYPE_END)) then
           begin
             if (k > 1) then
               s := s + {$IFDEF FPC} LineEnding {$ELSE} sLineBreak {$ENDIF};
             s := s + xml.TextBeforeTag;
           end;
-          if (xml.TagName = 'r') and (xml.TagType = 6) then
+          if (xml.TagName = 'r') and (xml.TagType = TAG_TYPE_END) then
             inc(k);
         end; //while
         SetLength(StrArray, StrCount + 1);
@@ -1857,7 +1864,7 @@ var
     _cc := 0;
     CheckRow(1);
     CheckCol(1);
-    while (not ((xml.TagName = 'sheetData') and (xml.TagType = 6))) do
+    while (not ((xml.TagName = 'sheetData') and (xml.TagType = TAG_TYPE_END))) do
     begin
       xml.ReadTag();
       if (xml.Eof) then
@@ -1867,13 +1874,14 @@ var
       if (xml.TagName = 'c') then
       begin
         s := xml.Attributes.ItemsByName['r']; //номер
-        if (s > '') then
+        if (s <> '') then
+        begin
           if (ZEGetCellCoords(s, _cc, _cr)) then
           begin
             _currCol := _cc;
             CheckCol(_cc + 1);
           end;
-
+        end;
         _type := xml.Attributes.ItemsByName['t']; //тип
 
         //s := xml.Attributes.ItemsByName['cm'];
@@ -1886,8 +1894,8 @@ var
         if (s > '') then
           if (tryStrToInt(s, t)) then
             _currCell.CellStyle := t;
-        if (xml.TagType = 4) then
-        while (not ((xml.TagName = 'c') and (xml.TagType = 6))) do
+        if (xml.TagType = TAG_TYPE_START) then
+        while (not ((xml.TagName = 'c') and (xml.TagType = TAG_TYPE_END))) do
         begin
           xml.ReadTag();
           if (xml.Eof) then
@@ -1895,14 +1903,14 @@ var
 
           //is пока игнорируем
 
-          if (((xml.TagName = 'v') or (xml.TagName = 't')) and (xml.TagType = 6)) then
+          if (((xml.TagName = 'v') or (xml.TagName = 't')) and (xml.TagType = TAG_TYPE_END)) then
           begin
             if (_num > 0) then
               v := v + {$IFDEF FPC} LineEnding {$ELSE} sLineBreak {$ENDIF};
             v := v + xml.TextBeforeTag;  
             inc(_num);
           end else
-          if ((xml.TagName = 'f') and (xml.TagType = 6)) then
+          if ((xml.TagName = 'f') and (xml.TagType = TAG_TYPE_END)) then
             _currCell.Formula := ZEReplaceEntity(xml.TextBeforeTag);
 
         end; //while
@@ -1956,7 +1964,7 @@ var
         CheckCol(_currCol + 1);
       end else
       //строка
-      if ((xml.TagName = 'row') and (xml.TagType in [4, 5])) then
+      if ((xml.TagName = 'row') and (xml.TagType in [TAG_TYPE_START, TAG_TYPE_CLOSED])) then
       begin
         _currCol := 0;
         s := xml.Attributes.ItemsByName['r']; //индекс строки
@@ -1994,14 +2002,14 @@ var
         //s := xml.Attributes.ItemsByName['thickBot'];
         //s := xml.Attributes.ItemsByName['thickTop'];
 
-        if (xml.TagType = 5) then
+        if (xml.TagType = TAG_TYPE_CLOSED) then
         begin
           inc(_currRow);
           CheckRow(_currRow + 1);
         end;
       end else
       //конец строки
-      if ((xml.TagName = 'row') and (xml.TagType = 6)) then
+      if ((xml.TagName = 'row') and (xml.TagType = TAG_TYPE_END)) then
       begin
         inc(_currRow);
         CheckRow(_currRow + 1);
@@ -2041,13 +2049,13 @@ var
     y1 := 0;
     x2 := 0;
     y2 := 0;
-    while (not ((xml.TagName = 'mergeCells') and (xml.TagType = 6))) do
+    while (not ((xml.TagName = 'mergeCells') and (xml.TagType = TAG_TYPE_END))) do
     begin
       xml.ReadTag();
       if (xml.Eof) then
         break;
 
-      if ((xml.TagName = 'mergeCell') and (xml.TagType in [4, 5])) then
+      if ((xml.TagName = 'mergeCell') and (xml.TagType in [TAG_TYPE_START, TAG_TYPE_CLOSED])) then
       begin
         s := xml.Attributes.ItemsByName['ref'];
         t := length(s);
@@ -2113,13 +2121,13 @@ var
 
   begin
     num := 0;
-    while (not ((xml.TagName = 'cols') and (xml.TagType = 6))) do
+    while (not ((xml.TagName = 'cols') and (xml.TagType = TAG_TYPE_END))) do
     begin
       xml.ReadTag();
       if (xml.Eof) then
         break;
 
-      if ((xml.TagName = 'col') and (xml.TagType in [4, 5])) then
+      if ((xml.TagName = 'col') and (xml.TagType in [TAG_TYPE_START, TAG_TYPE_CLOSED])) then
       begin
         CheckCol(num + 1);
         s := xml.Attributes.ItemsByName['bestFit'];
@@ -2228,13 +2236,13 @@ var
   begin
     _c := 0;
     _r := 0;
-    while (not ((xml.TagName = 'hyperlinks') and (xml.TagType = 6))) do
+    while (not ((xml.TagName = 'hyperlinks') and (xml.TagType = TAG_TYPE_END))) do
     begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
 
-      if ((xml.TagName = 'hyperlink') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'hyperlink') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         s := xml.Attributes.ItemsByName['ref'];
         if (s > '') then
@@ -2268,7 +2276,7 @@ var
     s: string;
 
   begin
-    while (not ((xml.TagName = 'sheetViews') and (xml.TagType = 6))) do
+    while (not ((xml.TagName = 'sheetViews') and (xml.TagType = TAG_TYPE_END))) do
     begin
       xml.ReadTag();
       if (xml.Eof()) then
@@ -2280,7 +2288,7 @@ var
         _currSheet.Selected := s = '1';
       end;
 
-      if ((xml.TagName = 'pane') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'pane') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         SplitMode := ZSplitSplit;
         s := xml.Attributes.ItemsByName['state'];
@@ -2592,14 +2600,14 @@ var
       _isCFAdded := false;
       _CF := nil;
       _tmpStyle := TZStyle.Create();
-      while (not ((xml.TagType = 6) and (xml.TagName = ZETag_conditionalFormatting))) do
+      while (not ((xml.TagType = TAG_TYPE_END) and (xml.TagName = ZETag_conditionalFormatting))) do
       begin
         xml.ReadTag();
         if (xml.Eof()) then
           break;
 
         // cfRule = Conditional Formatting Rule
-        if ((xml.TagType = 4) and (xml.TagName = ZETag_cfRule)) then
+        if ((xml.TagType = TAG_TYPE_START) and (xml.TagName = ZETag_cfRule)) then
         begin
          (*
           Атрибуты в cfRule:
@@ -2654,12 +2662,12 @@ var
           //_priority := xml.Attributes['priority'];
 
           count := 0;
-          while (not ((xml.TagType = 6) and (xml.TagName = ZETag_cfRule))) do
+          while (not ((xml.TagType = TAG_TYPE_END) and (xml.TagName = ZETag_cfRule))) do
           begin
             xml.ReadTag();
             if (xml.Eof()) then
               break;
-            if (xml.TagType = 6) then
+            if (xml.TagType = TAG_TYPE_END) then
               if (xml.TagName = ZETag_formula) then
               begin
                 if (count >= MaxFormulasCount) then
@@ -2701,20 +2709,20 @@ begin
     while (not xml.Eof()) do
     begin
       xml.ReadTag();
-      if ((xml.TagName = 'sheetData') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'sheetData') and (xml.TagType = TAG_TYPE_START)) then
         _ReadSheetData()
       else
-      if ((xml.TagName = 'autoFilter') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'autoFilter') and (xml.TagType = TAG_TYPE_CLOSED)) then
         _ReadAutoFilter()
       else
-      if ((xml.TagName = 'mergeCells') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'mergeCells') and (xml.TagType = TAG_TYPE_START)) then
         _ReadMerge()
       else
-      if ((xml.TagName = 'cols') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'cols') and (xml.TagType = TAG_TYPE_START)) then
         _ReadCols()
       else
       //Отступы
-      if ((xml.TagName = 'pageMargins') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'pageMargins') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         //в дюймах
         s := xml.Attributes.ItemsByName['bottom'];
@@ -2737,7 +2745,7 @@ begin
           _currSheet.SheetOptions.MarginTop := round(_tmpr);
       end else
       //Настройки страницы
-      if ((xml.TagName = 'pageSetup') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'pageSetup') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         //s := xml.Attributes.ItemsByName['blackAndWhite'];
         //s := xml.Attributes.ItemsByName['cellComments'];
@@ -2776,7 +2784,7 @@ begin
         //s := xml.Attributes.ItemsByName['verticalDpi'];
       end else
       //настройки печати
-      if ((xml.TagName = 'printOptions') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'printOptions') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         //s := xml.Attributes.ItemsByName['gridLines'];
         //s := xml.Attributes.ItemsByName['gridLinesSet'];
@@ -2789,17 +2797,17 @@ begin
         if (s > '') then
           _currSheet.SheetOptions.CenterVertical := ZEStrToBoolean(s);
       end else
-      if ((xml.TagName = 'dimension') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'dimension') and (xml.TagType = TAG_TYPE_CLOSED)) then
         _GetDimension()
       else
-      if ((xml.TagName = 'hyperlinks') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'hyperlinks') and (xml.TagType = TAG_TYPE_START)) then
         _ReadHyperLinks()
       else
-      if ((xml.TagName = 'sheetViews') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'sheetViews') and (xml.TagType = TAG_TYPE_START)) then
         _ReadSheetViews()
       {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
       else
-      if ((xml.TagType = 4) and (xml.TagName = ZETag_conditionalFormatting)) then
+      if ((xml.TagType = TAG_TYPE_START) and (xml.TagName = ZETag_conditionalFormatting)) then
         _ReadConditionFormatting()
       {$ENDIF}
       ;
@@ -3080,14 +3088,14 @@ var
 
   begin
     _currFont := -1;
-    while (not ((xml.TagName = 'fonts') and (xml.TagType = 6))) do
+    while (not ((xml.TagName = 'fonts') and (xml.TagType = TAG_TYPE_END))) do
     begin
       xml.ReadTag();
       if (xml.Eof) then
         break;
 
       s := xml.Attributes.ItemsByName['val'];
-      if ((xml.TagName = 'font') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'font') and (xml.TagType = TAG_TYPE_START)) then
       begin
         _currFont := FontCount;
         inc(FontCount);
@@ -3096,45 +3104,45 @@ var
       end else
       if (_currFont >= 0) then
       begin
-        if ((xml.TagName = 'name') and (xml.TagType = 5)) then
+        if ((xml.TagName = 'name') and (xml.TagType = TAG_TYPE_CLOSED)) then
           FontArray[_currFont].name := s
         else
-        if ((xml.TagName = 'b') and (xml.TagType = 5)) then
+        if ((xml.TagName = 'b') and (xml.TagType = TAG_TYPE_CLOSED)) then
           FontArray[_currFont].bold := true
         else
-        if ((xml.TagName = 'charset') and (xml.TagType = 5)) then
+        if ((xml.TagName = 'charset') and (xml.TagType = TAG_TYPE_CLOSED)) then
         begin
           if (TryStrToInt(s, t)) then
             FontArray[_currFont].charset := t;
         end else
-        if ((xml.TagName = 'color') and (xml.TagType = 5)) then
+        if ((xml.TagName = 'color') and (xml.TagType = TAG_TYPE_CLOSED)) then
         begin
           ZXLSXGetColor(FontArray[_currFont].color,
                         FontArray[_currFont].ColorType,
                         FontArray[_currFont].LumFactor);
         end else
-        if ((xml.TagName = 'i') and (xml.TagType = 5)) then
+        if ((xml.TagName = 'i') and (xml.TagType = TAG_TYPE_CLOSED)) then
           FontArray[_currFont].italic := true
         else
-  //      if ((xml.TagName = 'outline') and (xml.TagType = 5)) then
+  //      if ((xml.TagName = 'outline') and (xml.TagType = TAG_TYPE_CLOSED)) then
   //      begin
   //      end else
-        if ((xml.TagName = 'strike') and (xml.TagType = 5)) then
+        if ((xml.TagName = 'strike') and (xml.TagType = TAG_TYPE_CLOSED)) then
           FontArray[_currFont].strike := true
         else
-        if ((xml.TagName = 'sz') and (xml.TagType = 5)) then
+        if ((xml.TagName = 'sz') and (xml.TagType = TAG_TYPE_CLOSED)) then
         begin
           if (TryStrToInt(s, t)) then
             FontArray[_currFont].fontsize := t;
         end else
-        if ((xml.TagName = 'u') and (xml.TagType = 5)) then
+        if ((xml.TagName = 'u') and (xml.TagType = TAG_TYPE_CLOSED)) then
         begin
           if (s > '') then
             if (s <> 'none') then
               FontArray[_currFont].underline := true;
         end
         else
-        if ((xml.TagName = 'vertAlign') and (xml.TagType = 5)) then
+        if ((xml.TagName = 'vertAlign') and (xml.TagType = TAG_TYPE_CLOSED)) then
         begin
         end;
       end; //if  
@@ -3318,13 +3326,13 @@ var
     _diagDown := false;
     _diagUP := false;
     _color := clBlack;
-    while (not ((xml.TagName = 'borders') and (xml.TagType = 6))) do
+    while (not ((xml.TagName = 'borders') and (xml.TagType = TAG_TYPE_END))) do
     begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
 
-      if ((xml.TagName = 'border') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'border') and (xml.TagType = TAG_TYPE_START)) then
       begin
         _currBorder := BorderCount;
         inc(BorderCount);
@@ -3341,7 +3349,7 @@ var
           _diagUP := ZEStrToBoolean(s);
       end else
       begin
-        if (xml.TagType in [4, 5]) then
+        if (xml.TagType in [TAG_TYPE_START, TAG_TYPE_CLOSED]) then
         begin
           if (xml.TagName = 'left') then
           begin
@@ -3408,20 +3416,20 @@ var
 
   begin
     _currFill := -1;
-    while (not ((xml.TagName = 'fills') and (xml.TagType = 6))) do
+    while (not ((xml.TagName = 'fills') and (xml.TagType = TAG_TYPE_END))) do
     begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
 
-      if ((xml.TagName = 'fill') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'fill') and (xml.TagType = TAG_TYPE_START)) then
       begin
         _currFill := FillCount;
         inc(FillCount);
         SetLength(FillArray, FillCount);
         ZEXLSXClearPatternFill(FillArray[_currFill]);
       end else
-      if ((xml.TagName = 'patternFill') and (xml.TagType in [4, 5])) then
+      if ((xml.TagName = 'patternFill') and (xml.TagType in [TAG_TYPE_START, TAG_TYPE_CLOSED])) then
       begin
         if (_currFill >= 0) then
         begin
@@ -3452,7 +3460,7 @@ var
             FillArray[_currFill].patternfill := _GetPatternFillByStr(s);
         end;
       end else
-      if ((xml.TagName = 'bgColor') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'bgColor') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         if (_currFill >= 0) then
         begin
@@ -3464,7 +3472,7 @@ var
           ZEXLSXSwapPatternFillColors(FillArray[_currFill]);
         end;
       end else
-      if ((xml.TagName = 'fgColor') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'fgColor') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         if (_currFill >= 0) then
           ZXLSXGetColor(FillArray[_currFill].bgcolor,
@@ -3486,7 +3494,7 @@ var
 
   begin
     _currCell := -1;
-    while (not ((xml.TagName = TagName) and (xml.TagType = 6))) do
+    while (not ((xml.TagName = TagName) and (xml.TagType = TAG_TYPE_END))) do
     begin
       xml.ReadTag();
       if (xml.Eof()) then
@@ -3494,7 +3502,7 @@ var
 
       b := false;  
 
-      if ((xml.TagName = 'xf') and (xml.TagType in [4, 5])) then
+      if ((xml.TagName = 'xf') and (xml.TagType in [TAG_TYPE_START, TAG_TYPE_CLOSED])) then
       begin
         _currCell := StyleCount;
         inc(StyleCount);
@@ -3547,7 +3555,7 @@ var
           if (TryStrToInt(s, t)) then
             CSA[_currCell].xfId := t;
       end else
-      if ((xml.TagName = 'alignment') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'alignment') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         if (_currCell >= 0) then
         begin
@@ -3614,7 +3622,7 @@ var
             CSA[_currCell].alignment.wrapText := ZEStrToBoolean(s);
         end; //if
       end else
-      if ((xml.TagName = 'protection') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'protection') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         if (_currCell >= 0) then
         begin
@@ -3636,13 +3644,13 @@ var
     b: boolean;
 
   begin
-    while (not ((xml.TagName = 'cellStyles') and (xml.TagType = 6))) do
+    while (not ((xml.TagName = 'cellStyles') and (xml.TagType = TAG_TYPE_END))) do
     begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
 
-      if ((xml.TagName = 'cellStyle') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'cellStyle') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         b := false;
         SetLength(StyleArray, StyleCount + 1);
@@ -3674,13 +3682,13 @@ var
 
   procedure _ReadColors();
   begin
-    while (not ((xml.TagName = 'colors') and (xml.TagType = 6))) do
+    while (not ((xml.TagName = 'colors') and (xml.TagType = TAG_TYPE_END))) do
     begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
 
-      if ((xml.TagName = 'rgbColor') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'rgbColor') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         s := xml.Attributes.ItemsByName['rgb'];
         if (length(s) > 2) then
@@ -3888,7 +3896,7 @@ var
     procedure _ReadDFFont();
     begin
       _df.UseFont := true;
-      while ((xml.TagType <> 6) and (xml.TagName <> 'font')) do
+      while ((xml.TagType <> TAG_TYPE_END) and (xml.TagName <> 'font')) do
       begin
         xml.ReadTag();
         if (xml.Eof) then
@@ -3917,13 +3925,13 @@ var
     procedure _ReadDFFill();
     begin
       _df.UseFill := true;
-      while ((xml.TagType <> 6) or (xml.TagName <> 'fill')) do
+      while ((xml.TagType <> TAG_TYPE_END) or (xml.TagName <> 'fill')) do
       begin
         xml.ReadTag();
         if (xml.Eof) then
           break;
 
-        if (xml.TagType in [4, 5]) then
+        if (xml.TagType in [TAG_TYPE_START, TAG_TYPE_CLOSED]) then
         begin
           if (xml.TagName = 'patternFill') then
           begin
@@ -3976,13 +3984,13 @@ var
     begin
       _df.UseBorder := true;
       _borderNum := 0;
-      while ((xml.TagType <> 6) or (xml.TagName <> 'border')) do
+      while ((xml.TagType <> TAG_TYPE_END) or (xml.TagName <> 'border')) do
       begin
         xml.ReadTag();
         if (xml.Eof) then
           break;
 
-        if (xml.TagType in [4, 5]) then
+        if (xml.TagType in [TAG_TYPE_START, TAG_TYPE_CLOSED]) then
         begin
           _tmptag := xml.TagName;
           if (_tmptag = 'left') then
@@ -4033,12 +4041,12 @@ var
 
       ReadHelper.DiffFormatting.Add();
       _df := ReadHelper.DiffFormatting[_dfIndex];
-      while ((xml.TagType <> 6) or (xml.TagName <> 'dxf')) do
+      while ((xml.TagType <> TAG_TYPE_END) or (xml.TagName <> 'dxf')) do
       begin
         xml.ReadTag();
         if (xml.Eof) then
           break;
-        if (xml.TagType = 4) then
+        if (xml.TagType = TAG_TYPE_START) then
         begin
           if (xml.TagName = 'font') then
             _ReadDFFont()
@@ -4053,12 +4061,12 @@ var
     end; //_ReaddxfItem
 
   begin
-    while ((xml.TagType <> 6) or (xml.TagName <> 'dxfs')) do
+    while ((xml.TagType <> TAG_TYPE_END) or (xml.TagName <> 'dxfs')) do
     begin
       xml.ReadTag();
       if (xml.Eof) then
         break;
-      if ((xml.TagType = 4) and (xml.TagName = 'dxf')) then
+      if ((xml.TagType = TAG_TYPE_START) and (xml.TagName = 'dxf')) then
         _ReaddxfItem();
     end; //while
   end; //_Readdxfs
@@ -4269,32 +4277,32 @@ begin
     begin
       xml.ReadTag();
 
-      if ((xml.TagName = 'fonts') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'fonts') and (xml.TagType = TAG_TYPE_START)) then
         _ReadFonts()
       else
-      if ((xml.TagName = 'borders') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'borders') and (xml.TagType = TAG_TYPE_START)) then
         _ReadBorders()
       else
-      if ((xml.TagName = 'fills') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'fills') and (xml.TagType = TAG_TYPE_START)) then
         _ReadFills()
       else
       //TODO: разобраться, чем отличаются cellStyleXfs и cellXfs. Что за cellStyles?
-      if ((xml.TagName = 'cellStyleXfs') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'cellStyleXfs') and (xml.TagType = TAG_TYPE_START)) then
         _ReadCellCommonStyles('cellStyleXfs', CellStyleArray, CellStyleCount)//_ReadCellStyleXfs()
       else
-      if ((xml.TagName = 'cellXfs') and (xml.TagType = 4)) then  //сами стили?
+      if ((xml.TagName = 'cellXfs') and (xml.TagType = TAG_TYPE_START)) then  //сами стили?
         _ReadCellCommonStyles('cellXfs', CellXfsArray, CellXfsCount) //_ReadCellXfs()
       else
-      if ((xml.TagName = 'cellStyles') and (xml.TagType = 4)) then //??
+      if ((xml.TagName = 'cellStyles') and (xml.TagType = TAG_TYPE_START)) then //??
         _ReadCellStyles()
       else
-      if ((xml.TagName = 'colors') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'colors') and (xml.TagType = TAG_TYPE_START)) then
         _ReadColors()
       else
-      if ((xml.TagType = 4) and (xml.TagName = 'dxfs')) then
+      if ((xml.TagType = TAG_TYPE_START) and (xml.TagName = 'dxfs')) then
         _Readdxfs()
       else
-      if ((xml.TagType = 4) and (xml.TagName = 'numFmts')) then
+      if ((xml.TagType = TAG_TYPE_START) and (xml.TagName = 'numFmts')) then
         ReadHelper.NumberFormats.ReadNumFmts(xml);
     end; //while
 
@@ -4394,7 +4402,7 @@ begin
     begin
       xml.ReadTag();
 
-      if ((xml.TagName = 'sheet') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'sheet') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         s := xml.Attributes.ItemsByName['r:id'];
         for i := 0 to RelationsCount - 1 do
@@ -4409,7 +4417,7 @@ begin
             break;
           end;
       end else
-      if ((xml.TagName = 'workbookView') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'workbookView') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         s := xml.Attributes.ItemsByName['activeTab'];
         s := xml.Attributes.ItemsByName['firstSheet'];
@@ -4484,7 +4492,7 @@ begin
     begin
       xml.ReadTag();
 
-      if ((xml.TagName = 'Relationship') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'Relationship') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         SetLength(Relations, RelationsCount + 1);
         Relations[RelationsCount].id := xml.Attributes.ItemsByName['Id'];
@@ -4530,13 +4538,13 @@ var
 
   procedure _ReadAuthors();
   begin
-    while (not((xml.TagName = 'authors') and (xml.TagType = 6))) do
+    while (not((xml.TagName = 'authors') and (xml.TagType = TAG_TYPE_END))) do
     begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
 
-      if ((xml.TagName = 'author') and (xml.TagType = 6)) then
+      if ((xml.TagName = 'author') and (xml.TagType = TAG_TYPE_END)) then
       begin
         SetLength(_authors, _authorsCount + 1);
         _authors[_authorsCount] := xml.TextBeforeTag;
@@ -4570,12 +4578,12 @@ var
 
       _comment := '';
       _kol := 0;
-      while (not((xml.TagName = 'comment') and (xml.TagType = 6))) do
+      while (not((xml.TagName = 'comment') and (xml.TagType = TAG_TYPE_END))) do
       begin
         xml.ReadTag();
         if (xml.Eof()) then
           break;
-        if ((xml.TagName = 't') and (xml.TagType = 6)) then
+        if ((xml.TagName = 't') and (xml.TagType = TAG_TYPE_END)) then
         begin
           if (_kol > 0) then
             _comment := _comment + {$IFDEF FPC} LineEnding {$ELSE} sLineBreak {$ENDIF} + xml.TextBeforeTag
@@ -4606,10 +4614,10 @@ begin
     begin
       xml.ReadTag();
 
-      if ((xml.TagName = 'authors') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'authors') and (xml.TagType = TAG_TYPE_START)) then
         _ReadAuthors()
       else
-      if ((xml.TagName = 'comment') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'comment') and (xml.TagType = TAG_TYPE_START)) then
         _ReadComment();
         
     end; //while
@@ -5002,7 +5010,6 @@ begin
   end;
 end; //ReadXLSXPath
 
-{$IFDEF FPC}
 //Читает xlsx
 //INPUT
 //  var XMLSS: TZEXMLSS - хранилище
@@ -5113,8 +5120,8 @@ begin
       for i := 0 to u_zip.Entries.Count - 1 do
         ZH.AddArchFile(u_zip.Entries[i].ArchiveFileName);
 
-      u_zip.OnCreateStream := @ZH.DoCreateOutZipStream;
-      u_zip.OnDoneStream := @ZH.DoDoneOutZipStream;
+      u_zip.OnCreateStream := ZH.DoCreateOutZipStream;
+      u_zip.OnDoneStream := ZH.DoDoneOutZipStream;
       ZH.FileType := -2;
       u_zip.UnZipFiles(lst);
       if (ZH.RetCode <> 0) then
@@ -5241,7 +5248,6 @@ begin
        FreeAndNil(ZH);
   end;
 end; //ReadXLSX
-{$ENDIF}
 
 /////////////////////////////////////////////////////////////////////////////
 /////////////                    запись                         /////////////
@@ -5505,7 +5511,7 @@ begin
     _xml.TabLength := 1;
     _xml.TextConverter := TextConverter;
     _xml.TabSymbol := ' ';
-    _xml.NewLine := false;
+    //_xml.NewLine := false;
     if (not _xml.BeginSaveToStream(Stream)) then
     begin
       result := 2;
@@ -6083,7 +6089,7 @@ var
   {$IFDEF ZUSE_DRAWINGS}
   procedure WriteXLSXSheetDrawings();
   var
-    i, rId: Integer;
+    rId: Integer;
   begin
     // drawings
     if (not _sheet.Drawing.IsEmpty) then
@@ -7279,154 +7285,186 @@ end; //ZEXLSXCreateDocPropsCore
 //      BOM: ansistring                   - Byte Order Mark
 //RETURN
 //      integer
-function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers:array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string;
-                         BOM: ansistring = '';
-                         AllowUnzippedFolder: boolean = false;
-                         ZipGenerator: CZxZipGens = nil): integer;
+function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string;
+  const SheetsNumbers:array of integer;
+  const SheetsNames: array of string;
+  TextConverter: TAnsiToCPConverter;
+  CodePageName: string;
+  BOM: ansistring = '';
+  AllowUnzippedFolder: boolean = false): integer;
 var
   _pages: TIntegerDynArray;      //номера страниц
   _names: TStringDynArray;      //названия страниц
-  kol, i: integer;
-  Stream: TStream;
+  kol, i, ii: integer;
+  zip: TZipper;
+  _WriteHelper: TZEXLSXWriteHelper;
   path_xl, path_sheets, path_relsmain, path_relsw, path_docprops: string;
   _commentArray: TIntegerDynArray;
+  StreamList: TStreamList;
+  TmpStream: TStream;
+  {$IFDEF ZUSE_DRAWINGS}
+  iDrawingsCount: Integer;
+  path_draw, path_draw_rel, path_media: string;
+  _drawing: TZEDrawing;
+  _pic: TZEPicture;
+  {$ENDIF} // ZUSE_DRAWINGS
 
-  _WriteHelper: TZEXLSXWriteHelper;
+  function _AddFile(const AStreamFileName: string): TStream;
+  var
+    sFullFileName: string;
+    sFullFilePath: string;
+  begin
+    if AllowUnzippedFolder then
+    begin
+      sFullFileName := IncludeTrailingPathDelimiter(FileName) + AStreamFileName;
+      if PathDelim <> '/' then
+      begin
+        // make copy of string to avoid problems with old Delphi
+        sFullFileName := StringReplace(Copy(sFullFileName, 1, Maxint), '/', PathDelim, [rfReplaceAll]);
+      end;
+      sFullFilePath := ExtractFilePath(sFullFileName);
+      if (not DirectoryExists(sFullFilePath)) then
+        ForceDirectories(sFullFilePath);
 
-  azg: TZxZipGen; // Actual Zip Generator
+      Result := TFileStream.Create(sFullFileName, fmCreate);
+    end
+    else
+    begin
+      {$ifdef MSWINDOWS}
+      Result := TTmpFileStream.Create();
+      {$else}
+      Result := TMemoryStream.Create();
+      {$endif}
+      StreamList.Add(Result);
+      //Result := TFileStream.Create(AStreamFileName, fmCreate);
+      zip.Entries.AddFileEntry(Result, AStreamFileName);
+    end;
+  end;
 
 begin
-  Result := 0;
-  Stream := nil;
-  kol := 0;
-  _WriteHelper := nil;
-
-  azg := nil;
+  StreamList := TStreamList.Create();
+  _WriteHelper := TZEXLSXWriteHelper.Create();
+  zip := TZipper.Create();
   try
+
     if (not ZECheckTablesTitle(XMLSS, SheetsNumbers, SheetsNames, _pages, _names, kol)) then
     begin
       result := 2;
       exit;
     end;
 
-    if nil = ZipGenerator then begin
-      ZipGenerator := TZxZipGen.QueryZipGen;
-      if nil = ZipGenerator then
-        if AllowUnzippedFolder
-           then ZipGenerator := TZxZipGen.QueryDummyZipGen
-           else raise EZxZipGen.Create('No zip generators registered, folder output disabled.');
-           // result := 3 ????
-    end;
+    zip.FileName := FileName;
 
-    azg := ZipGenerator.Create(PathName);
+    path_xl := 'xl/';
 
-    _WriteHelper := TZEXLSXWriteHelper.Create();
-
-//    if (not ZE_CheckDirExist(PathName)) then
-//    begin
-//      result := 3;
-//      exit;
-//    end;
-
-//    path_xl := PathName + 'xl' + PathDelim;
-//    if (not DirectoryExists(path_xl)) then
-//      ForceDirectories(path_xl);
-
-    path_xl := 'xl' + PathDelim;
     //стили
-    Stream := azg.NewStream(path_xl + 'styles.xml');
-    ZEXLSXCreateStyles(XMLSS, Stream, TextConverter, CodePageName, BOM);
-    azg.SealStream(Stream);   Stream := nil;
-//    FreeAndNil(Stream);
+    TmpStream := _AddFile(path_xl + 'styles.xml');
+    ZEXLSXCreateStyles(XMLSS, TmpStream, TextConverter, CodePageName, BOM);
 
     //sharedStrings.xml
-    Stream := azg.NewStream(path_xl + 'sharedStrings.xml');
-    ZEXLSXCreateSharedStrings(XMLSS, Stream, TextConverter, CodePageName, BOM);
-    azg.SealStream(Stream);    Stream := nil;
-//    FreeAndNil(Stream);
+    TmpStream := _AddFile(path_xl + 'sharedStrings.xml');
+    ZEXLSXCreateSharedStrings(XMLSS, TmpStream, TextConverter, CodePageName, BOM);
 
     // _rels/.rels
-    path_relsmain := {PathName + PathDelim +} '_rels' + PathDelim;
-//    if (not DirectoryExists(path_relsmain)) then
-//      ForceDirectories(path_relsmain);
-    Stream := azg.NewStream(path_relsmain + '.rels');
-    ZEXLSXCreateRelsMain(Stream, TextConverter, CodePageName, BOM);
-    azg.SealStream(Stream);   Stream := nil;
+    path_relsmain := '_rels/';
+    TmpStream := _AddFile(path_relsmain + '.rels');
+    ZEXLSXCreateRelsMain(TmpStream, TextConverter, CodePageName, BOM);
 
-    // xl/_rels/workbook.xml.rels 
-    path_relsw := path_xl + {PathDelim +} '_rels' + PathDelim;
-//    if (not DirectoryExists(path_relsw)) then
-//      ForceDirectories(path_relsw);
-    Stream := azg.NewStream(path_relsw + 'workbook.xml.rels');
-    ZEXLSXCreateRelsWorkBook(kol, Stream, TextConverter, CodePageName, BOM);
-    azg.SealStream(Stream);   Stream := nil;
+    // xl/_rels/workbook.xml.rels
+    path_relsw := path_xl + '_rels/';
+    TmpStream := _AddFile(path_relsw + 'workbook.xml.rels');
+    ZEXLSXCreateRelsWorkBook(kol, TmpStream, TextConverter, CodePageName, BOM);
 
-    path_sheets := path_xl + 'worksheets' + PathDelim;
-//    if (not DirectoryExists(path_sheets)) then
-//      ForceDirectories(path_sheets);
-
+    path_sheets := path_xl + 'worksheets/';
     SetLength(_commentArray, kol);
+
+    {$IFDEF ZUSE_DRAWINGS}
+    iDrawingsCount := XMLSS.DrawingCount();
+    {$ENDIF} // ZUSE_DRAWINGS
 
     //Листы документа
     for i := 0 to kol - 1 do
     begin
       _commentArray[i] := 0;
-      Stream := azg.NewStream(path_sheets + 'sheet' + IntToStr(i + 1) + '.xml');
-      ZEXLSXCreateSheet(XMLSS, Stream, _pages[i], TextConverter, CodePageName, BOM, _WriteHelper);
-      if (_WriteHelper.isHaveComments) then
-        _commentArray[i] := 1;
-      azg.SealStream(Stream);   Stream := nil;
+      TmpStream := _AddFile(path_sheets + 'sheet' + IntToStr(i + 1) + '.xml');
+      ZEXLSXCreateSheet(XMLSS, TmpStream, _pages[i], TextConverter, CodePageName, BOM, _WriteHelper);
 
       if (_WriteHelper.HyperLinksCount > 0) then
       begin
         _WriteHelper.AddSheetHyperlink(i);
-        Stream := azg.NewStream(path_sheets + '_rels' + PathDelim + 'sheet' + IntToStr(i + 1) + '.xml.rels');
-        _WriteHelper.CreateSheetRels(Stream, TextConverter, CodePageName, BOM);
-        azg.SealStream(Stream);
-        Stream := nil;
+        TmpStream := _AddFile(path_sheets + '_rels/sheet' + IntToStr(i + 1) + '.xml.rels');
+        _WriteHelper.CreateSheetRels(TmpStream, TextConverter, CodePageName, BOM);
       end;
 
       if (_WriteHelper.isHaveComments) then
       begin
+        _commentArray[i] := 1;
         //создать файл с комментариями
-      end;  
+      end;
     end; //for i
 
+    {$IFDEF ZUSE_DRAWINGS}
+    //iDrawingsCount := XMLSS.DrawingCount();
+    if iDrawingsCount <> 0 then
+    begin
+      path_draw := path_xl + 'drawings/';
+      path_draw_rel := path_draw + '_rels/';
+      path_media := path_xl + 'media/';
+
+      for i := 0 to iDrawingsCount - 1 do
+      begin
+        _drawing := XMLSS.GetDrawing(i);
+        // drawings/drawingN.xml
+        TmpStream := _AddFile(path_draw + 'drawing' + IntToStr(_drawing.Id) + '.xml');
+        ZEXLSXCreateDrawing(XMLSS, TmpStream, _drawing, TextConverter, CodePageName, BOM);
+
+        // drawings/_rels/drawingN.xml.rels
+        TmpStream := _AddFile(path_draw_rel + 'drawing' + IntToStr(i + 1) + '.xml.rels');
+        ZEXLSXCreateDrawingRels(XMLSS, TmpStream, _drawing, TextConverter, CodePageName, BOM);
+
+        // media/imageN.png
+        for ii := 0 to _drawing.PictureStore.Count - 1 do
+        begin
+          _pic := _drawing.PictureStore[ii];
+          if not Assigned(_pic.DataStream) then Continue;
+          TmpStream := _AddFile(path_media + _pic.Name);
+          _pic.DataStream.Position := 0;
+          TmpStream.CopyFrom(_pic.DataStream, _pic.DataStream.Size);
+        end;
+      end;
+    end;
+    {$ENDIF} // ZUSE_DRAWINGS
+
     //workbook.xml - список листов
-    Stream := azg.NewStream(path_xl + 'workbook.xml');
-    ZEXLSXCreateWorkBook(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM);
-    azg.SealStream(Stream);  Stream := nil;
+    TmpStream := _AddFile(path_xl + 'workbook.xml');
+    ZEXLSXCreateWorkBook(XMLSS, TmpStream, _pages, _names, kol, TextConverter, CodePageName, BOM);
 
     //[Content_Types].xml
-    Stream := azg.NewStream({PathName +} '[Content_Types].xml');
-    ZEXLSXCreateContentTypes(XMLSS, Stream, kol, 0, nil, TextConverter, CodePageName, BOM, _WriteHelper);
-    azg.SealStream(Stream);  Stream := nil;
+    TmpStream := _AddFile('[Content_Types].xml');
+    ZEXLSXCreateContentTypes(XMLSS, TmpStream, kol, 0, nil, TextConverter, CodePageName, BOM, _WriteHelper);
 
-    path_docprops := {PathName +} 'docProps' + PathDelim;
-//    if (not DirectoryExists(path_docprops)) then
-//      ForceDirectories(path_docprops);
-
+    path_docprops :='docProps/';
     // docProps/app.xml
-    Stream := azg.NewStream(path_docprops + 'app.xml');
-    ZEXLSXCreateDocPropsApp(Stream, TextConverter, CodePageName, BOM);
-    azg.SealStream(Stream);  Stream := nil;
+    TmpStream := _AddFile(path_docprops + 'app.xml');
+    ZEXLSXCreateDocPropsApp(TmpStream, TextConverter, CodePageName, BOM);
 
     // docProps/core.xml
-    Stream := azg.NewStream(path_docprops + 'core.xml');
-    ZEXLSXCreateDocPropsCore(XMLSS, Stream, TextConverter, CodePageName, BOM);
-    azg.SealStream(Stream); Stream := nil;
+    TmpStream := _AddFile(path_docprops + 'core.xml');
+    ZEXLSXCreateDocPropsCore(XMLSS, TmpStream, TextConverter, CodePageName, BOM);
 
-    azg.SaveAndSeal;
+    zip.ZipAllFiles();
   finally
+    StreamList.Free();
     ZESClearArrays(_pages, _names);
-    FreeAndNil(_WriteHelper);
-    if (Assigned(Stream)) then
-      FreeAndNil(Stream);
+    if (Assigned(zip)) then
+      FreeAndNil(zip);
+
     SetLength(_commentArray, 0);
     _commentArray := nil;
-    azg.Free;
+
+    FreeAndNil(_WriteHelper);
   end;
+  Result := 0;
 end;
 
 //Сохраняет незапакованный документ в формате Office Open XML (OOXML)
@@ -7443,192 +7481,8 @@ end;
 //      integer
 function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
-var
-  _pages: TIntegerDynArray;      //номера страниц
-  _names: TStringDynArray;      //названия страниц
-  kol, i, ii: integer;
-  Stream: TStream;
-  _WriteHelper: TZEXLSXWriteHelper;
-  path_xl, path_sheets, path_relsmain, path_relsw, path_docprops: string;
-  _commentArray: TIntegerDynArray;
-  s: string;
-  {$IFDEF ZUSE_DRAWINGS}
-  iDrawingsCount: Integer;
-  path_draw, path_draw_rel, path_media: string;
-  _drawing: TZEDrawing;
-  _pic: TZEPicture;
-  {$ENDIF} // ZUSE_DRAWINGS
-
 begin
-  Result := 0;
-  Stream := nil;
-  _WriteHelper := nil;
-  kol := 0;
-  try
-    if (not ZE_CheckDirExist(PathName)) then
-    begin
-      result := 3;
-      exit;
-    end;
-
-    if (not ZECheckTablesTitle(XMLSS, SheetsNumbers, SheetsNames, _pages, _names, kol)) then
-    begin
-      result := 2;
-      exit;
-    end;
-
-    _WriteHelper := TZEXLSXWriteHelper.Create();
-
-    path_xl := PathName + 'xl' + PathDelim;
-    if (not DirectoryExists(path_xl)) then
-      ForceDirectories(path_xl);
-
-    //стили
-    Stream := TFileStream.Create(path_xl + 'styles.xml', fmCreate);
-    ZEXLSXCreateStyles(XMLSS, Stream, TextConverter, CodePageName, BOM);
-    FreeAndNil(Stream);
-
-    //sharedStrings.xml
-    Stream := TFileStream.Create(path_xl + 'sharedStrings.xml', fmCreate);
-    ZEXLSXCreateSharedStrings(XMLSS, Stream, TextConverter, CodePageName, BOM);
-    FreeAndNil(Stream);
-
-    // _rels/.rels
-    path_relsmain := PathName + PathDelim + '_rels' + PathDelim;
-    if (not DirectoryExists(path_relsmain)) then
-      ForceDirectories(path_relsmain);
-    Stream := TFileStream.Create(path_relsmain + '.rels', fmCreate);
-    ZEXLSXCreateRelsMain(Stream, TextConverter, CodePageName, BOM);
-    FreeAndNil(Stream);
-
-    // xl/_rels/workbook.xml.rels 
-    path_relsw := path_xl + '_rels' + PathDelim;
-    if (not DirectoryExists(path_relsw)) then
-      ForceDirectories(path_relsw);
-    Stream := TFileStream.Create(path_relsw + 'workbook.xml.rels', fmCreate);
-    ZEXLSXCreateRelsWorkBook(kol, Stream, TextConverter, CodePageName, BOM);
-    FreeAndNil(Stream);
-
-    path_sheets := path_xl + 'worksheets' + PathDelim;
-    if (not DirectoryExists(path_sheets)) then
-      ForceDirectories(path_sheets);
-
-    SetLength(_commentArray, kol);
-
-    {$IFDEF ZUSE_DRAWINGS}
-    iDrawingsCount := XMLSS.DrawingCount();
-    {$ENDIF} // ZUSE_DRAWINGS
-
-    //Листы документа
-    for i := 0 to kol - 1 do
-    begin
-      _commentArray[i] := 0;
-      Stream := TFileStream.Create(path_sheets + 'sheet' + IntToStr(i + 1) + '.xml', fmCreate);
-      ZEXLSXCreateSheet(XMLSS, Stream, _pages[i], TextConverter, CodePageName, BOM, _WriteHelper);
-      FreeAndNil(Stream);
-
-      if (_WriteHelper.HyperLinksCount > 0) then
-      begin
-        _WriteHelper.AddSheetHyperlink(i);
-        s := path_sheets + '_rels' + PathDelim;
-        if (not DirectoryExists(s)) then
-          ForceDirectories(s);
-        Stream := TFileStream.Create(s + 'sheet' + IntToStr(i + 1) + '.xml.rels', fmCreate);
-        _WriteHelper.CreateSheetRels(Stream, TextConverter, CodePageName, BOM);
-        FreeAndNil(Stream);
-      end;
-
-      if (_WriteHelper.isHaveComments) then
-      begin
-        _commentArray[i] := 1;
-        //создать файл с комментариями
-      end;  
-    end; //for i
-
-    {$IFDEF ZUSE_DRAWINGS}
-    //iDrawingsCount := XMLSS.DrawingCount();
-    if iDrawingsCount <> 0 then
-    begin
-      path_draw := path_xl + PathDelim + 'drawings' + PathDelim;
-      if (not DirectoryExists(path_draw)) then
-        ForceDirectories(path_draw);
-
-      path_draw_rel := path_draw + '_rels' + PathDelim;
-      if (not DirectoryExists(path_draw_rel)) then
-        ForceDirectories(path_draw_rel);
-
-      path_media := path_xl + PathDelim + 'media' + PathDelim;
-      if (not DirectoryExists(path_media)) then
-        ForceDirectories(path_media);
-
-      for i := 0 to iDrawingsCount - 1 do
-      begin
-        _drawing := XMLSS.GetDrawing(i);
-        // drawings/drawingN.xml
-        Stream := TFileStream.Create(path_draw + 'drawing' + IntToStr(_drawing.Id) + '.xml', fmCreate);
-        try
-          ZEXLSXCreateDrawing(XMLSS, Stream, _drawing, TextConverter, CodePageName, BOM);
-        finally
-          FreeAndNil(Stream);
-        end;
-
-        // drawings/_rels/drawingN.xml.rels
-        Stream := TFileStream.Create(path_draw_rel + 'drawing' + IntToStr(i + 1) + '.xml.rels', fmCreate);
-        try
-          ZEXLSXCreateDrawingRels(XMLSS, Stream, _drawing, TextConverter, CodePageName, BOM);
-        finally
-          FreeAndNil(Stream);
-        end;
-
-        // media/imageN.png
-        for ii := 0 to _drawing.PictureStore.Count - 1 do
-        begin
-          _pic := _drawing.PictureStore[ii];
-          if not Assigned(_pic.DataStream) then Continue;
-          Stream := TFileStream.Create(path_media + _pic.Name, fmCreate);
-          try
-            _pic.DataStream.Position := 0;
-            Stream.CopyFrom(_pic.DataStream, _pic.DataStream.Size);
-          finally
-            FreeAndNil(Stream);
-          end;
-        end;
-      end;
-    end;
-    {$ENDIF} // ZUSE_DRAWINGS
-
-    //workbook.xml - список листов
-    Stream := TFileStream.Create(path_xl + 'workbook.xml', fmCreate);
-    ZEXLSXCreateWorkBook(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM);
-    FreeAndNil(Stream);
-
-    //[Content_Types].xml
-    Stream := TFileStream.Create(PathName + '[Content_Types].xml', fmCreate);
-    ZEXLSXCreateContentTypes(XMLSS, Stream, kol, 0, nil, TextConverter, CodePageName, BOM, _WriteHelper);
-    FreeAndNil(Stream);
-
-    path_docprops := PathName + 'docProps' + PathDelim;
-    if (not DirectoryExists(path_docprops)) then
-      ForceDirectories(path_docprops);
-
-    // docProps/app.xml
-    Stream := TFileStream.Create(path_docprops + 'app.xml', fmCreate);
-    ZEXLSXCreateDocPropsApp(Stream, TextConverter, CodePageName, BOM);
-    FreeAndNil(Stream);
-
-    // docProps/core.xml
-    Stream := TFileStream.Create(path_docprops + 'core.xml', fmCreate);
-    ZEXLSXCreateDocPropsCore(XMLSS, Stream, TextConverter, CodePageName, BOM);
-    FreeAndNil(Stream);
-
-  finally
-    ZESClearArrays(_pages, _names);
-    if (Assigned(Stream)) then
-      FreeAndNil(Stream);
-    SetLength(_commentArray, 0);
-    _commentArray := nil;
-    FreeAndNil(_WriteHelper);
-  end;
+  Result := ExportXmlssToXLSX(XMLSS, PathName, SheetsNumbers, SheetsNames, TextConverter, CodePageName, BOM, True);
 end; //SaveXmlssToXLSXPath
 
 //SaveXmlssToXLSXPath
@@ -7657,10 +7511,9 @@ end; //SaveXmlssToXLSXPath
 //      integer
 function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string): integer; overload;
 begin
-  result := SaveXmlssToXLSXPath(XMLSS, PathName, [], []);
+  Result := SaveXmlssToXLSXPath(XMLSS, PathName, [], []);
 end; //SaveXmlssToXLSXPath
 
-{$IFDEF FPC}
 //Сохраняет документ в формате Open Office XML (xlsx)
 //INPUT
 //  var XMLSS: TZEXMLSS                   - хранилище
@@ -7675,172 +7528,8 @@ end; //SaveXmlssToXLSXPath
 //      integer
 function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
-var
-  _pages: TIntegerDynArray;      //номера страниц
-  _names: TStringDynArray;      //названия страниц
-  kol, i: integer;
-  zip: TZipper;
-  Stream: array of TStream;
-  StreamCount: integer;
-  MaxStreamCount: integer;
-  _WriteHelper: TZEXLSXWriteHelper;
-  path_xl, path_sheets, path_relsmain, path_relsw, path_docprops: string;
-  _commentArray: TIntegerDynArray;
-  {$IFDEF ZUSE_DRAWINGS}
-  iDrawingsCount: Integer;
-  path_draw, path_draw_rel: string;
-  {$ENDIF} // ZUSE_DRAWINGS
-
-  procedure _AddFile(const _fname: string);
-  begin
-    Stream[StreamCount - 1].Position := 0;
-    zip.Entries.AddFileEntry(Stream[StreamCount - 1], _fname);
-  end;
-
-  procedure _AddStream();
-  var
-    i: integer;
-
-  begin
-    inc(StreamCount);
-    if (StreamCount >= MaxStreamCount) then
-    begin
-      MaxStreamCount := StreamCount + 100;
-      SetLength(Stream, MaxStreamCount);
-      for i := StreamCount - 1 to MaxStreamCount - 1 do
-        Stream[i] := nil;
-    end;
-    Stream[StreamCount - 1] := TMemoryStream.Create();
-  end;
-
 begin
-  zip := nil;
-  StreamCount := 0;
-  MaxStreamCount := -1;
-  _WriteHelper := nil;
-  try
-
-    if (not ZECheckTablesTitle(XMLSS, SheetsNumbers, SheetsNames, _pages, _names, kol)) then
-    begin
-      result := 2;
-      exit;
-    end;
-
-    _WriteHelper := TZEXLSXWriteHelper.Create();
-
-    zip := TZipper.Create();
-    zip.FileName := FileName;
-
-    path_xl := 'xl/';
-
-    //стили
-    _AddStream();
-    ZEXLSXCreateStyles(XMLSS, Stream[StreamCount - 1], TextConverter, CodePageName, BOM);
-    _AddFile(path_xl + 'styles.xml');
-
-    //sharedStrings.xml
-    _AddStream();
-    ZEXLSXCreateSharedStrings(XMLSS, Stream[StreamCount - 1], TextConverter, CodePageName, BOM);
-    _AddFile(path_xl + 'sharedStrings.xml');
-
-    // _rels/.rels
-    path_relsmain := '_rels/';
-    _AddStream();
-    ZEXLSXCreateRelsMain(Stream[StreamCount - 1], TextConverter, CodePageName, BOM);
-    _AddFile(path_relsmain + '.rels');
-
-    // xl/_rels/workbook.xml.rels
-    path_relsw := path_xl + '_rels/';
-    _AddStream();
-    ZEXLSXCreateRelsWorkBook(kol, Stream[StreamCount - 1], TextConverter, CodePageName, BOM);
-    _AddFile(path_relsw + 'workbook.xml.rels');
-
-    path_sheets := path_xl + 'worksheets/';
-    SetLength(_commentArray, kol);
-
-    //Листы документа
-    for i := 0 to kol - 1 do
-    begin
-      _commentArray[i] := 0;
-      _AddStream();
-      ZEXLSXCreateSheet(XMLSS, Stream[StreamCount - 1], _pages[i], TextConverter, CodePageName, BOM, _WriteHelper);
-      _AddFile(path_sheets + 'sheet' + IntToStr(i + 1) + '.xml');
-
-      if (_WriteHelper.HyperLinksCount > 0) then
-      begin
-        _WriteHelper.AddSheetHyperlink(i);
-        _AddStream();
-        _WriteHelper.CreateSheetRels(Stream[StreamCount - 1], TextConverter, CodePageName, BOM);
-        _AddFile(path_sheets + '_rels/sheet' + IntToStr(i + 1) + '.xml.rels');
-      end;
-
-      if (_WriteHelper.isHaveComments) then
-      begin
-        _commentArray[i] := 1;
-        //создать файл с комментариями
-      end;
-    end; //for i
-
-    {$IFDEF ZUSE_DRAWINGS}
-    iDrawingsCount := XMLSS.DrawingCount();
-    if iDrawingsCount <> 0 then
-    begin
-      path_draw := path_xl + 'drawings/';
-      path_draw_rel := path_draw + '_rels/';
-
-      for i := 0 to iDrawingsCount - 1 do
-      begin
-        // drawings/drawingN.xml
-        _AddStream();
-        ZEXLSXCreateDrawing(XMLSS, Stream[StreamCount - 1], i, TextConverter, CodePageName, BOM);
-        _AddFile(path_draw + 'drawing' + IntToStr(i + 1) + '.xml');
-
-        // drawings/_rels/drawingN.xml.rels
-        _AddStream();
-        ZEXLSXCreateDrawingRels(XMLSS, Stream[StreamCount - 1], i, TextConverter, CodePageName, BOM);
-        _AddFile(path_draw_rel + 'drawing' + IntToStr(i + 1) + '.xml.rels');
-      end;
-    end;
-    {$ENDIF} // ZUSE_DRAWINGS
-
-    //workbook.xml - список листов
-    _AddStream();
-    ZEXLSXCreateWorkBook(XMLSS, Stream[StreamCount - 1], _pages, _names, kol, TextConverter, CodePageName, BOM);
-    _AddFile(path_xl + 'workbook.xml');
-
-    //[Content_Types].xml
-    _AddStream();
-    ZEXLSXCreateContentTypes(XMLSS, Stream[StreamCount - 1], kol, 0, nil, TextConverter, CodePageName, BOM, _WriteHelper);
-    _AddFile('[Content_Types].xml');
-
-    path_docprops :='docProps/';
-    // docProps/app.xml
-    _AddStream();
-    ZEXLSXCreateDocPropsApp(Stream[StreamCount - 1], TextConverter, CodePageName, BOM);
-    _AddFile(path_docprops + 'app.xml');
-
-    // docProps/core.xml
-    _AddStream();
-    ZEXLSXCreateDocPropsCore(XMLSS, Stream[StreamCount - 1], TextConverter, CodePageName, BOM);
-    _AddFile(path_docprops + 'core.xml');
-
-    zip.ZipAllFiles();
-  finally
-    ZESClearArrays(_pages, _names);
-    if (Assigned(zip)) then
-      FreeAndNil(zip);
-
-    SetLength(_commentArray, 0);
-    _commentArray := nil;
-
-    for i := 0 to StreamCount - 1 do
-    if (Assigned(Stream[i])) then
-      FreeAndNil(Stream[i]);
-    SetLength(Stream, 0);
-    Stream := nil;
-    FreeAndNil(_WriteHelper);
-  end;
-  Result := 0;
+  Result := ExportXmlssToXLSX(XMLSS, FileName, SheetsNumbers, SheetsNames, TextConverter, CodePageName, BOM, False);
 end; //SaveXmlssToXSLX
 
 //Сохраняет документ в формате Open Office XML (xlsx)
@@ -7869,8 +7558,6 @@ begin
   result := SaveXmlssToXLSX(XMLSS, FileName, [], []);
 end; //SaveXmlssToXLSX
 
-{$ENDIF}
-
 //Перепутал малость названия ^_^
 
 function ReadXSLXPath(var XMLSS: TZEXMLSS; DirName: string): integer; //deprecated 'Use ReadXLSXPath!';
@@ -7878,15 +7565,23 @@ begin
   result := ReadXLSXPath(XMLSS, DirName);
 end;
 
-{$IFDEF FPC}
 function ReadXSLX(var XMLSS: TZEXMLSS; FileName: string): integer; //deprecated 'Use ReadXLSX!';
 begin
   result := ReadXLSX(XMLSS, FileName);
 end;
-{$ENDIF}
 
-{$IFNDEF FPC}
-{$I xlsxzipfuncimpl.inc}
-{$ENDIF}
+{ TStreamList }
+
+function TStreamList.GetItem(AIndex: Integer): TStream;
+begin
+  Result := TStream(Get(AIndex));
+end;
+
+procedure TStreamList.Notify(Ptr: Pointer; Action: TListNotification);
+begin
+  if Action = lnDeleted then
+    TStream(Ptr).Free();
+  inherited;
+end;
 
 end.
