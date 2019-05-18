@@ -6040,9 +6040,6 @@ begin
 end;
 
 function TZEPictureStore.Delete(num: integer): boolean;
-var
-  i: integer;
-
 begin
   Result := (num >= 0) and (num < Count);
   if (Result) then

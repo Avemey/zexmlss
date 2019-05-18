@@ -1,3 +1,38 @@
+(*
+Delphi freeware Zip Project
+Copyright (c) 2005 by Kiril Antonov
+
+=== DESCRIPTTION ===
+KAZIP is fast, simple zip archiver/dearchiver which uses most popular
+Inflate/Deflate zip compression format. KAZip is totaly based on Delphi
+VCL - no dll, ActiveX or other external libraries. KAZip is totaly stream
+oriented so you can deal with data only in memory without creating temporary
+files, etc. If you need to add zip/unzip functionality to your application,
+KAZIP is the right solution.
+
+=== INSTALLATION ===
+If you want to enable BZIP2 functionality:
+- Download BZIP2 pas files and put them in the KAZIP folder or folder in the delphi search path
+- Open KAZip.Pas and change {DEFINE USE_BZIP2} to {$DEFINE USE_BZIP2} Open KZ.DPK and press Install
+
+=== LICENCE ===
+KAZIP IS FREE FOR COMMERICAL AND NON COMMERICAL USE! if you want to support
+free coding purchase KADBZIP - a database-oriented version od KAZip
+
+=== DISCLAIMER OF WARRANTY ===
+COMPONENTS ARE SUPPLIED "AS IS" WITHOUT WARRANTY OF ANY KIND. THE AUTHOR
+DISCLAIMS ALL WARRANTIES, EXPRESSED OR IMPLIED, INCLUDING, WITHOUT LIMITATION,
+THE WARRANTIES OF MERCHANTABILITY AND OF FITNESS FOR ANY PURPOSE. THE AUTHOR
+ASSUMES NO LIABILITY FOR DAMAGES, DIRECT OR CONSEQUENTIAL, WHICH MAY RESULT
+FROM THE USE OF COMPONENTS. USE THIS COMPONENTS AT YOUR OWN RISK
+
+For contacts:
+my e-mail: kiril at pari.bg, kirila at abv.bg
+my site: http://kadao.dir.bg/
+
+Best regards Kiril Antonov Sofia Bulgaria
+
+*)
 unit KAZip;
 
 {
@@ -124,6 +159,15 @@ const
   ZipCompressionMethod_WavPack=     97; //WavPack compressed data
   ZipCompressionMethod_PPMd =       98; //PPMd version I, Rev 1
 
+  { DoChange Events }
+  ZIP_CLOSED       = 0; // Zip is Closed;
+  ZIP_OPENED       = 1; // Zip is Opened;
+  ZIP_ITEM_ADDED   = 2; // Item is added to the zip
+  ZIP_ITEM_REMOVED = 3; // Item is removed from the Zip
+  ZIP_ITEM_COMMENT = 4; // Item comment changed
+  ZIP_ITEM_NAME    = 5; // Item name changed (single item)
+  ZIP_ITEMS_NAME   = 6; // Item name changed  (multiple items)
+
   // for compatibility
   {$ifdef WIN32}
   faReadOnly  = $00000001;
@@ -145,94 +189,117 @@ type
   TKAZipEntries = class;
   TKAZip = class;
   TBytes = array of Byte;
+  TZipSignature = array[0..3] of AnsiChar;
 
-
-  {DoChange Events
-    0 - Zip is Closed;
-    1 - Zip is Opened;
-    2 - Item is added to the zip
-    3 - Item is removed from the Zip
-    4 - Item comment changed
-    5 - Item name changed
-    6 - Item name changed
-  }
-
-  TLocalFile = packed record
-    LocalFileHeaderSignature: Cardinal; //    4 bytes  = 0x04034b50 = 'PK'#03#04
-    VersionNeededToExtract: WORD; //    2 bytes
-    GeneralPurposeBitFlag: WORD; //    2 bytes
+  TLocalFileHeader = packed record
+    LocalFileHeaderSignature: TZipSignature; //    4 bytes  = 0x04034b50 = 'PK'#03#04
+    VersionNeededToExtract: WORD;       //    2 bytes
+    GeneralPurposeBitFlag: WORD;        //    2 bytes
     CompressionMethod: TZipCompressionMethod; //    2 bytes
-    LastModFileTimeDate: Cardinal; //    4 bytes
-    Crc32: Cardinal; //    4 bytes
-    CompressedSize: Cardinal; //    4 bytes
-    UncompressedSize: Cardinal; //    4 bytes
-    FilenameLength: WORD; //    2 bytes
-    ExtraFieldLength: WORD; //    2 bytes
-    //Data layout up to this point matches the actual ZIP format. Remaining fields are extra
-    FileName: AnsiString; //    variable size
-    ExtraField: AnsiString; //    variable size
-    CompressedData: AnsiString; //    variable size
+    LastModFileTimeDate: LongWord;      //    4 bytes
+    Crc32: LongWord;                    //    4 bytes
+    CompressedSize: LongWord;           //    4 bytes
+    UncompressedSize: LongWord;         //    4 bytes
+    FilenameLength: WORD;               //    2 bytes
+    ExtraFieldLength: WORD;             //    2 bytes
+  end;
+
+  TZipExtraDataRecord = packed record
+    Signature: TZipSignature;           //    4 bytes 0x08064b50
+    FieldLength: LongWord;              //    4 bytes
   end;
 
   TDataDescriptor = packed record
-    DescriptorSignature: Cardinal; //    4 bytes UNDOCUMENTED
-    Crc32: Cardinal; //    4 bytes
-    CompressedSize: Cardinal; //    4 bytes
-    UncompressedSize: Cardinal; //    4 bytes
+    DescriptorSignature: LongWord; //    4 bytes OPTIONAL 0x08074b50
+    Crc32: LongWord; //    4 bytes
+    CompressedSize: LongWord; //    4 bytes
+    UncompressedSize: LongWord; //    4 bytes
+  end;
+
+  TDataDescriptor64 = packed record
+    DescriptorSignature: LongWord; //    8 bytes OPTIONAL 0x08074b50
+    Crc32: LongWord; //    4 bytes
+    CompressedSize: Int64; //    8 bytes
+    UncompressedSize: Int64; //    8 bytes
   end;
 
   TCentralDirectoryFile = packed record
-    CentralFileHeaderSignature: Cardinal; //    4 bytes = 0x02014b50 = 'PK'#01#02
+    CentralFileHeaderSignature: TZipSignature; //    4 bytes = 0x02014b50 = 'PK'#01#02
     VersionMadeBy: WORD; //    2 bytes
     VersionNeededToExtract: WORD; //    2 bytes
     GeneralPurposeBitFlag: WORD; //    2 bytes
     CompressionMethod: TZipCompressionMethod; //    2 bytes
-    LastModFileTimeDate: Cardinal; //    4 bytes
-    Crc32: Cardinal; //    4 bytes
-    CompressedSize: Cardinal; //    4 bytes
-    UncompressedSize: Cardinal; //    4 bytes
+    LastModFileTimeDate: LongWord; //    4 bytes
+    Crc32: LongWord; //    4 bytes
+    CompressedSize: LongWord; //    4 bytes
+    UncompressedSize: LongWord; //    4 bytes
     FilenameLength: WORD; //    2 bytes
     ExtraFieldLength: WORD; //    2 bytes
     FileCommentLength: WORD; //    2 bytes
     DiskNumberStart: WORD; //    2 bytes
     InternalFileAttributes: WORD; //    2 bytes
-    ExternalFileAttributes: Cardinal; //    4 bytes
-    RelativeOffsetOfLocalHeader: Cardinal; //    4 bytes
-    FileName: AnsiString; //    variable size
-    ExtraField: AnsiString; //    variable size
-    FileComment: AnsiString; //    variable size
+    ExternalFileAttributes: LongWord; //    4 bytes
+    RelativeOffsetOfLocalHeader: LongWord; //    4 bytes
+    //FileName: AnsiString; //    variable size
+    //ExtraField: AnsiString; //    variable size
+    //FileComment: AnsiString; //    variable size
   end;
 
   TEndOfCentralDir = packed record
-    EndOfCentralDirSignature: Cardinal; //    4 bytes = 0x06054b50 = 'PK'#05#06
+    EndOfCentralDirSignature: TZipSignature; //    4 bytes = 0x06054b50 = 'PK'#05#06
     NumberOfThisDisk: WORD; //    2 bytes
     NumberOfTheDiskWithTheStart: WORD; //    2 bytes
     TotalNumberOfEntriesOnThisDisk: WORD; //    2 bytes
     TotalNumberOfEntries: WORD; //    2 bytes
-    SizeOfTheCentralDirectory: Cardinal; //    4 bytes
-    OffsetOfStartOfCentralDirectory: Cardinal; //    4 bytes
+    SizeOfTheCentralDirectory: LongWord; //    4 bytes
+    OffsetOfStartOfCentralDirectory: LongWord; //    4 bytes
     ZipfileCommentLength: WORD; //    2 bytes
   end;
 
   TKAZipEntriesEntry = class(TCollectionItem)
   private
+    //FCentralDirectoryFile: TCentralDirectoryFile;
+    //FLocalFileHeader: TLocalFile;
     FParent: TKAZipEntries;
-    FCentralDirectoryFile: TCentralDirectoryFile;
-    FLocalFile: TLocalFile;
+    FVersionMadeBy: Word;
+    FVersionNeededToExtract: Word;
+    FFileName: AnsiString;
+    FFileComment: AnsiString;
+    FExtraField: AnsiString;
+    FLocalFileEntrySize: LongWord;
+    FCentralFileEntrySize: LongWord;
+    FCRC32: LongWord;
+    FSizeUncompressed: Int64;
+    FSizeCompressed: Int64;
+    FDiskNumber: Word;
+    FInternalFileAttributes: Word;
+    FExternalFileAttributes: LongWord;
+    FLocalFileHeaderOffset: Int64;
+    FGeneralPurposeBitFlag: Word;
+    FCompressionMethod: TZipCompressionMethod;
     FIsEncrypted: Boolean;
     FIsFolder: Boolean;
     FDate: TDateTime;
     FCompressionType: TZipCompressionType;
     FSelected: Boolean;
+    FCompressedDataPos: Int64;
 
     procedure SetSelected(const Value: Boolean);
-    function GetLocalEntrySize: Cardinal;
-    function GetCentralEntrySize: Cardinal;
+    function GetLocalEntrySize: LongWord;
+    function GetCentralEntrySize: LongWord;
+    function GetLocalHeadSize: LongWord;
     procedure SetComment(const Value: AnsiString);
     procedure SetFileName(const Value: AnsiString);
+    procedure UpdateProperties();
   public
     constructor Create(Collection: TCollection); override;
     destructor Destroy; override;
+
+    function ParseFromCentralDirectory(MS: TStream): Boolean;
+    function ParseFromLocalHeader(MS: TStream): Boolean;
+    procedure FillCentralDirectory(out CDFile: TCentralDirectoryFile);
+    procedure FillLocalHeader(out LFH: TLocalFileHeader);
+
     function GetCompressedData: AnsiString; overload;
     function GetCompressedData(Stream: TStream): Integer; overload;
     procedure ExtractToFile(FileName: string);
@@ -241,59 +308,41 @@ type
     procedure SaveToStream(Stream: TStream);
     function Test: Boolean;
 
-    property FileName: AnsiString read FCentralDirectoryFile.FileName write SetFileName;
-    property Comment: AnsiString read FCentralDirectoryFile.FileComment write SetComment;
-    property SizeUncompressed: Cardinal read FCentralDirectoryFile.UncompressedSize;
-    property SizeCompressed: Cardinal read FCentralDirectoryFile.CompressedSize;
-    property Date: TDateTime read FDate;
-    property CRC32: Cardinal read FCentralDirectoryFile.CRC32;
-    property Attributes: Cardinal read FCentralDirectoryFile.ExternalFileAttributes;
-    property LocalOffset: Cardinal read FCentralDirectoryFile.RelativeOffsetOfLocalHeader;
+    property Version: Word read FVersionMadeBy;
+    property VersionMin: Word read FVersionNeededToExtract;
+    property BitFlag: Word read FGeneralPurposeBitFlag;
+    property Date: TDateTime read FDate write FDate;
+    property CRC32: LongWord read FCRC32 write FCRC32;
+    property SizeUncompressed: Int64 read FSizeUncompressed write FSizeUncompressed;
+    property SizeCompressed: Int64 read FSizeCompressed write FSizeCompressed;
+    property FileName: AnsiString read FFileName write SetFileName;
+    property ExtraField: AnsiString read FExtraField write FExtraField;
+    property Comment: AnsiString read FFileComment write SetComment;
+    property DiskNumber: Word read FDiskNumber;
+    property InternalAttributes: Word read FInternalFileAttributes;
+    property Attributes: LongWord read FExternalFileAttributes write FExternalFileAttributes;
+    property LocalOffset: Int64 read FLocalFileHeaderOffset write FLocalFileHeaderOffset;
     property IsEncrypted: Boolean read FIsEncrypted;
     property IsFolder: Boolean read FIsFolder;
-    property BitFlag: Word read FCentralDirectoryFile.GeneralPurposeBitFlag;
-    property CompressionMethod: TZipCompressionMethod read FCentralDirectoryFile.CompressionMethod;
+    property CompressionMethod: TZipCompressionMethod read FCompressionMethod write FCompressionMethod;
     property CompressionType: TZipCompressionType read FCompressionType;
-    property LocalEntrySize: Cardinal read GetLocalEntrySize;
-    property CentralEntrySize: Cardinal read GetCentralEntrySize;
+    property LocalEntrySize: LongWord read GetLocalEntrySize;
+    property CentralEntrySize: LongWord read GetCentralEntrySize;
     property Selected: Boolean read FSelected write SetSelected;
+    property CompressedDataPos: Int64 read FCompressedDataPos;
   end;
 
   TKAZipEntries = class(TCollection)
   private
     { Private declarations }
     FParent: TKAZip;
-    FIsZipFile: Boolean;
-    FLocalHeaderNumFiles: Integer;
 
     function GetHeaderEntry(Index: Integer): TKAZipEntriesEntry;
     procedure SetHeaderEntry(Index: Integer; const Value: TKAZipEntriesEntry);
   protected
     { Protected declarations }
-    function ReadBA(MS: TStream; Sz, Poz: Integer): TBytes;
-    function Adler32(adler: uLong; buf: pByte; len: uInt): uLong;
-    function CalcCRC32(const UncompressedData: string): Cardinal;
-    function CalculateCRCFromStream(Stream: TStream): Cardinal;
-    function RemoveRootName(const FileName, RootName: string): string;
     procedure SortList(List: TList);
     function FileTime2DateTime(FileTime: TFileTime): TDateTime;
-    //**************************************************************************
-    function FindCentralDirectory(MS: TStream): Boolean;
-    function ParseCentralHeaders(MS: TStream): Boolean;
-    function GetLocalEntry(MS: TStream; Offset: Integer; HeaderOnly: Boolean): TLocalFile;
-    procedure LoadLocalHeaders(MS: TStream);
-    function ParseLocalHeaders(MS: TStream): Boolean;
-
-    //**************************************************************************
-    procedure Remove(ItemIndex: Integer; Flush: Boolean); overload;
-    procedure RemoveBatch(Files: TList);
-    procedure InternalExtractToFile(Item: TKAZipEntriesEntry; FileName: string);
-    //**************************************************************************
-    function AddStreamFast(ItemName: string; FileAttr: Word; FileDate: TDateTime; Stream: TStream): TKAZipEntriesEntry; overload;
-    function AddStreamRebuild(ItemName: string; FileAttr: Word; FileDate: TDateTime; Stream: TStream): TKAZipEntriesEntry;
-    function AddFolderChain(ItemName: string): Boolean; overload;
-    function AddFolderChain(ItemName: string; FileAttr: Word; FileDate: TDateTime): Boolean; overload;
-    function AddFolderEx(FolderName: string; RootFolder: string; WildCard: string; WithSubFolders: Boolean): Boolean;
     //**************************************************************************
   public
     { Public declarations }
@@ -358,6 +407,7 @@ type
     FRebuildECDP: Cardinal;
     FRebuildCP: Cardinal;
 
+    FLocalHeaderNumFiles: Integer;
     FIsZipFile: Boolean;
     FHasBadEntries: Boolean;
     FFileName: string;
@@ -374,8 +424,6 @@ type
     FOnZipChange: TOnZipChange;
     FBatchMode: Boolean;
 
-    NewLHOffsets: array of Cardinal;
-    NewEndOfCentralDir: TEndOfCentralDir;
     FOnZipOpen: TOnZipOpen;
     FUseTempFiles: Boolean;
     FStoreFolders: Boolean;
@@ -410,18 +458,33 @@ type
   protected
     FZipStream: TStream;
     //**************************************************************************
+    procedure ParseZip(MS: TStream);
     procedure LoadFromFile(FileName: string);
     procedure LoadFromStream(MS: TStream);
     //**************************************************************************
     procedure RebuildLocalFiles(MS: TStream);
     procedure RebuildCentralDirectory(MS: TStream);
-    procedure RebuildEndOfCentralDirectory(MS: TStream);
     //**************************************************************************
     procedure OnDecompress(Sender: TObject);
     procedure OnCompress(Sender: TObject);
     procedure DoChange(Sender: TObject; const ChangeType: Integer); virtual;
     //**************************************************************************
-    procedure WriteCentralDirectory(TargetStream: TStream);
+    function FindCentralDirectory(MS: TStream): Boolean;
+    function ParseCentralHeaders(MS: TStream): Boolean;
+    //function GetLocalEntry(MS: TStream; Offset: Integer; HeaderOnly: Boolean): TLocalFile;
+    procedure LoadLocalHeaders(MS: TStream);
+    function ParseLocalHeaders(MS: TStream): Boolean;
+    //**************************************************************************
+    function AddStreamFast(ItemName: string; FileAttr: Word; FileDate: TDateTime; Stream: TStream): TKAZipEntriesEntry; overload;
+    function AddStreamRebuild(ItemName: string; FileAttr: Word; FileDate: TDateTime; Stream: TStream): TKAZipEntriesEntry;
+    function AddFolderChain(ItemName: string): Boolean; overload;
+    function AddFolderChain(ItemName: string; FileAttr: Word; FileDate: TDateTime): Boolean; overload;
+    function AddFolderEx(FolderName: string; RootFolder: string; WildCard: string; WithSubFolders: Boolean): Boolean;
+    //**************************************************************************
+    procedure Remove(ItemIndex: Integer; Flush: Boolean); overload;
+    procedure RemoveBatch(Files: TList);
+    procedure InternalExtractToFile(Item: TKAZipEntriesEntry; FileName: string);
+    //**************************************************************************
   public
     { Public declarations }
     constructor Create(AOwner: TComponent); override;
@@ -473,12 +536,13 @@ type
     procedure ExtractToFile(Item: TKAZipEntriesEntry; FileName: string); overload;
     procedure ExtractToFile(ItemIndex: Integer; FileName: string); overload;
     procedure ExtractToFile(FileName, DestinationFileName: string); overload;
-    procedure ExtractToStream(Item: TKAZipEntriesEntry; Stream: TStream);
+    procedure ExtractToStream(Item: TKAZipEntriesEntry; TargetStream: TStream);
     procedure ExtractAll(TargetDirectory: string);
     procedure ExtractSelected(TargetDirectory: string);
     //**************************************************************************
     property Entries: TKAZipEntries read FZipHeader;
     property HasBadEntries: Boolean read FHasBadEntries;
+    property ZipStream: TStream read FZipStream;
   published
     { Published declarations }
     property FileName: string read FFileName write SetFileName;
@@ -549,6 +613,14 @@ type
     function Seek(Offset: Longint; Origin: Word): Longint; override;
   end;
 
+(* for internal usage
+function ReadBA(MS: TStream; Sz, Poz: Integer): TBytes;
+*)
+function Adler32(adler: uLong; buf: pByte; len: uInt): uLong;
+function CalcCRC32(const UncompressedData: string): Cardinal;
+function CalculateCRCFromStream(Stream: TStream): Cardinal;
+function RemoveRootName(const FileName, RootName: string): string;
+
 
 procedure Register;
 function ToZipName(FileName: string): string;
@@ -605,12 +677,12 @@ const
   ZL_FLEVEL_MASK = $C0; { mask out leftmost 2 bits }
   ZL_CM_MASK = $0F; { mask out rightmost 4 bits }
 
-  SIG_CentralFile =         $02014B50; // 'PK'#1#2
-  SIG_LocalHeader =         $04034B50; // 'PK'#3#4
-  SIG_EndOfCentralDirectory =  $06054B50; // 'PK'#5#6
-  ZL_MULTIPLE_DISK_SIG =       $08074B50; // 'PK'#7#8
-  ZL_DATA_DESCRIPT_SIG =       $08074B50; // 'PK'#7#8
-
+  SIG_CentralFile: TZipSignature =            'PK'#1#2; // $02014B50
+  SIG_LocalHeader: TZipSignature =            'PK'#3#4; // $04034B50
+  SIG_EndOfCentralDirectory: TZipSignature =  'PK'#5#6; // $06054B50
+  SIG_ExtraDataRecord: TZipSignature =        'PK'#6#8; // $08064B50
+  ZL_MULTIPLE_DISK_SIG: TZipSignature =       'PK'#7#8; // $08074B50
+  ZL_DATA_DESCRIPT_SIG: TZipSignature =       'PK'#7#8; // $08074B50
 type
   TZLibStreamHeader = packed record
     CMF: Byte;
@@ -659,12 +731,102 @@ const
 
 const
   Default_TCentralDirectoryFile: TCentralDirectoryFile = ();
-  Default_TLocalFile: TLocalFile=();
 
 
 procedure Register;
 begin
   RegisterComponents('KA', [TKAZip]);
+end;
+
+function ReadBA(MS: TStream; Sz, Poz: Integer): TBytes;
+begin
+  SetLength(Result, SZ);
+  MS.Position := Poz;
+  MS.Read(Result[0], SZ);
+end;
+
+function Adler32(adler: uLong; buf: pByte; len: uInt): uLong;
+const
+  BASE = uLong(65521);
+  NMAX = 3854;
+var
+  s1, s2: uLong;
+  k: Integer;
+begin
+  s1 := adler and $FFFF;
+  s2 := (adler shr 16) and $FFFF;
+
+  if not Assigned(buf) then
+  begin
+    adler32 := uLong(1);
+    exit;
+  end;
+
+  while (len > 0) do
+  begin
+    if len < NMAX then
+      k := len
+    else
+      k := NMAX;
+    Dec(len, k);
+    while (k > 0) do
+    begin
+      Inc(s1, buf^);
+      Inc(s2, s1);
+      Inc(buf);
+      Dec(k);
+    end;
+    s1 := s1 mod BASE;
+    s2 := s2 mod BASE;
+  end;
+  adler32 := (s2 shl 16) or s1;
+end;
+
+function CalcCRC32(const UncompressedData: string): Cardinal;
+var
+  X: Integer;
+begin
+  Result := $FFFFFFFF;
+  for X := 0 to Length(UncompressedData) - 1 do
+  begin
+    Result := (Result shr 8) xor (CRCTable[Byte(Result) xor Ord(UncompressedData[X + 1])]);
+  end;
+  Result := Result xor $FFFFFFFF;
+end;
+
+function CalculateCRCFromStream(Stream: TStream): Cardinal;
+var
+  Buffer: array[1..8192] of Byte;
+  I, ReadCount: Integer;
+  TempResult: Longword;
+begin
+  TempResult := $FFFFFFFF;
+  while (Stream.Position <> Stream.Size) do
+  begin
+    ReadCount := Stream.Read(Buffer, SizeOf(Buffer));
+    for I := 1 to ReadCount do
+      TempResult := ((TempResult shr 8) and $FFFFFF) xor CRCTable[(TempResult xor Longword(Buffer[I])) and $FF];
+  end;
+  Result := not TempResult;
+end;
+
+function RemoveRootName(const FileName, RootName: string): string;
+var
+  P: Integer;
+  S: string;
+begin
+  Result := FileName;
+  P := Pos(AnsiLowerCase(RootName), AnsiLowerCase(FileName));
+  if P = 1 then
+  begin
+    System.Delete(Result, 1, Length(RootName));
+    S := Result;
+    if (Length(S) > 0) and (S[1] = '\') then
+    begin
+      System.Delete(S, 1, 1);
+      Result := S;
+    end;
+  end;
 end;
 
 function ToZipName(FileName: string): string;
@@ -720,6 +882,36 @@ begin
   Result := StringReplace(Result, '/', '\', [rfReplaceAll]);
 end;
 
+function SeekForSignature(MS: TStream; ASig: TZipSignature; var APos: Int64): Boolean;
+var
+  MaxPos: Int64;
+  TmpSig: TZipSignature;
+begin
+  MaxPos := MS.Size - SizeOf(TmpSig);
+  Result := False;
+  while APos <= MaxPos do
+  begin
+    MS.Position := APos;
+    MS.Read(TmpSig, SizeOf(TmpSig));
+    if TmpSig[0] = ASig[0] then
+    begin
+      if TmpSig = ASig then
+      begin
+        Result := True;
+        Exit;
+      end
+      else
+      begin
+        Inc(APos, 4);
+      end;
+    end
+    else
+    begin
+      Inc(APos);
+    end;
+  end;
+end;
+
 { TKAZipEntriesEntry }
 
 constructor TKAZipEntriesEntry.Create(Collection: TCollection);
@@ -727,12 +919,191 @@ begin
   inherited Create(Collection);
   FParent := TKAZipEntries(Collection);
   FSelected := False;
+  FVersionMadeBy := 20;
+  FVersionNeededToExtract := 20;
+  FGeneralPurposeBitFlag := 0;
+  //FDate := Now();
 end;
 
 destructor TKAZipEntriesEntry.Destroy;
 begin
 
   inherited Destroy;
+end;
+
+procedure TKAZipEntriesEntry.UpdateProperties();
+begin
+  FCompressionType := ctUnknown;
+  if (FCompressionMethod = ZipCompressionMethod_Deflate)
+  or (FCompressionMethod = ZipCompressionMethod_Deflate64) then
+  begin
+    case FGeneralPurposeBitFlag and 6 of
+      0: FCompressionType := ctNormal;
+      2: FCompressionType := ctMaximum;
+      4: FCompressionType := ctFast;
+      6: FCompressionType := ctSuperFast
+    end;
+  end;
+
+  if (FGeneralPurposeBitFlag and 1) > 0 then
+    FIsEncrypted := True
+  else
+    FIsEncrypted := False;
+
+  FIsFolder := (FExternalFileAttributes and faDirectory) > 0;
+end;
+
+function TKAZipEntriesEntry.ParseFromCentralDirectory(MS: TStream): Boolean;
+var
+  s: AnsiString;
+  CDFile: TCentralDirectoryFile;
+begin
+  Result := False;
+  try
+    //FillCh ar(CDFile, SizeOf(TCentralDirectoryFile), 0);
+    // 20140320: Filling a record containing managed types will cause a leak
+    CDFile := Default_TCentralDirectoryFile;
+    MS.Read(CDFile, SizeOf(CDFile));
+
+    if CDFile.CentralFileHeaderSignature <> SIG_CentralFile then
+      Exit;
+
+    FVersionMadeBy := CDFile.VersionMadeBy;
+    FVersionNeededToExtract := CDFile.VersionNeededToExtract;
+    FGeneralPurposeBitFlag := CDFile.GeneralPurposeBitFlag;
+    FCompressionMethod := CDFile.CompressionMethod;
+    FDate := FileDateToDateTime(CDFile.LastModFileTimeDate);
+    FCRC32 := CDFile.Crc32;
+    FSizeCompressed := CDFile.CompressedSize;
+    FSizeUncompressed := CDFile.UncompressedSize;
+    FDiskNumber := CDFile.DiskNumberStart;
+    FInternalFileAttributes := CDFile.InternalFileAttributes;
+    FExternalFileAttributes := CDFile.ExternalFileAttributes;
+    FLocalFileHeaderOffset := CDFile.RelativeOffsetOfLocalHeader;
+
+    if CDFile.FilenameLength > 0 then
+    begin
+      SetLength(s, CDFile.FilenameLength);
+      MS.Read(s[1], CDFile.FilenameLength);
+      FFileName := s;
+    end;
+    if CDFile.ExtraFieldLength > 0 then
+    begin
+      SetLength(s, CDFile.ExtraFieldLength);
+      MS.Read(s[1], CDFile.ExtraFieldLength);
+      FExtraField := s;
+    end;
+    if CDFile.FileCommentLength > 0 then
+    begin
+      SetLength(s, CDFile.FileCommentLength);
+      MS.Read(s[1], CDFile.FileCommentLength);
+      FFileComment := s;
+    end;
+
+    UpdateProperties();
+    Result := True;
+  except
+    Exit;
+  end;
+end;
+
+function TKAZipEntriesEntry.ParseFromLocalHeader(MS: TStream): Boolean;
+var
+  s: AnsiString;
+  HeaderPos, NextPos: Int64;
+  LFH: TLocalFileHeader;
+  DataDescriptor: TDataDescriptor;
+begin
+  Result := False;
+  try
+    // todo: check signature
+    HeaderPos := MS.Position;
+    MS.Read(LFH, SizeOf(LFH));
+    FVersionNeededToExtract := LFH.VersionNeededToExtract;
+    FGeneralPurposeBitFlag := LFH.GeneralPurposeBitFlag;
+    FCompressionMethod := LFH.CompressionMethod;
+    FDate := FileDateToDateTime(LFH.LastModFileTimeDate);
+    if LFH.Crc32 <> 0 then
+      FCRC32 := LFH.Crc32;
+    if LFH.CompressedSize <> 0 then
+      FSizeCompressed := LFH.CompressedSize;
+    if LFH.UncompressedSize <> 0 then
+      FSizeUncompressed := LFH.UncompressedSize;
+    if LFH.FilenameLength > 0 then
+    begin
+      SetLength(s, LFH.FilenameLength);
+      MS.Read(s[1], LFH.FilenameLength);
+      FFileName := s;
+
+      if FFileName[LFH.FilenameLength] = '/' then
+        FExternalFileAttributes := faDirectory;
+    end;
+    if LFH.ExtraFieldLength > 0 then
+    begin
+      SetLength(s, LFH.ExtraFieldLength);
+      MS.Read(s[1], LFH.ExtraFieldLength);
+      FExtraField := s;
+    end;
+    FCompressedDataPos := MS.Position;
+
+    if ((LFH.GeneralPurposeBitFlag and (1 shl 3)) > 0) and (FCrc32 = 0) then
+    begin
+      NextPos := HeaderPos + SizeOf(LFH);
+      if SeekForSignature(MS, SIG_LocalHeader, NextPos) then
+      begin
+        MS.Position := NextPos - SizeOf(TDataDescriptor);
+        { TODO: check optional signature }
+        MS.Read(DataDescriptor, SizeOf(TDataDescriptor));
+        FCrc32 := DataDescriptor.Crc32;
+        FSizeCompressed := DataDescriptor.CompressedSize;
+        FSizeUncompressed := DataDescriptor.UncompressedSize;
+      end;
+    end;
+
+    FLocalFileHeaderOffset := HeaderPos;
+
+    UpdateProperties();
+
+    Result := True;
+  except
+    Exit;
+  end;
+end;
+
+procedure TKAZipEntriesEntry.FillCentralDirectory(out CDFile: TCentralDirectoryFile);
+begin
+  UpdateProperties();
+  CDFile.CentralFileHeaderSignature := SIG_CentralFile;
+  CDFile.VersionMadeBy := FVersionMadeBy;
+  CDFile.VersionNeededToExtract := FVersionNeededToExtract;
+  CDFile.GeneralPurposeBitFlag := FGeneralPurposeBitFlag;
+  CDFile.CompressionMethod := FCompressionMethod;
+  CDFile.LastModFileTimeDate := LongWord(DateTimeToFileDate(FDate));
+  CDFile.Crc32 := FCRC32;
+  CDFile.CompressedSize := FSizeCompressed;
+  CDFile.UncompressedSize := FSizeUncompressed;
+  CDFile.FilenameLength := Length(FileName);
+  CDFile.ExtraFieldLength := Length(ExtraField);
+  CDFile.FileCommentLength := Length(Comment);
+  CDFile.DiskNumberStart := FDiskNumber;
+  CDFile.InternalFileAttributes := FInternalFileAttributes;
+  CDFile.ExternalFileAttributes := FExternalFileAttributes;
+  CDFile.RelativeOffsetOfLocalHeader := FLocalFileHeaderOffset;
+end;
+
+procedure TKAZipEntriesEntry.FillLocalHeader(out LFH: TLocalFileHeader);
+begin
+  UpdateProperties();
+  LFH.LocalFileHeaderSignature := SIG_LocalHeader; //'PK'#03#04
+  LFH.VersionNeededToExtract := FVersionNeededToExtract;
+  LFH.GeneralPurposeBitFlag := FGeneralPurposeBitFlag;
+  LFH.CompressionMethod := FCompressionMethod;
+  LFH.LastModFileTimeDate := LongWord(DateTimeToFileDate(FDate));
+  LFH.Crc32 := FCRC32;
+  LFH.CompressedSize := FSizeCompressed;
+  LFH.UncompressedSize := FSizeUncompressed;
+  LFH.FilenameLength := Length(FFileName);
+  LFH.ExtraFieldLength := Length(FExtraField);
 end;
 
 procedure TKAZipEntriesEntry.ExtractToFile(FileName: string);
@@ -758,7 +1129,6 @@ end;
 function TKAZipEntriesEntry.GetCompressedData(Stream: TStream): Integer;
 var
   ZLHeader: TZLibStreamHeader;
-  BA: TLocalFile;
   ZLH: Word;
   compress: Byte;
 begin
@@ -789,19 +1159,19 @@ begin
     Result := Result + Stream.Write(ZLHeader, SizeOf(ZLHeader));
   end;
 
-  BA := FParent.GetLocalEntry(FParent.FParent.FZipStream, LocalOffset, False);
-  if BA.LocalFileHeaderSignature <> $04034B50 then
-  begin
-    Result := 0;
-    Exit;
-  end;
   if SizeCompressed > 0 then
-    Result := Result + Stream.Write(BA.CompressedData[1], SizeCompressed);
+  begin
+    if FCompressedDataPos = 0 then
+      FCompressedDataPos := LocalOffset + GetLocalHeadSize();
+
+    FParent.FParent.ZipStream.Position := FCompressedDataPos;
+    Result := Result + Stream.CopyFrom(FParent.FParent.ZipStream, SizeCompressed);
+  end;
 end;
 
 function TKAZipEntriesEntry.GetCompressedData: AnsiString;
 var
-  BA: TLocalFile;
+  ResultSize: Integer;
   ZLHeader: TZLibStreamHeader;
   ZLH: Word;
   Compress: Byte;
@@ -809,32 +1179,38 @@ begin
   Result := '';
 
   case CompressionMethod of
-    ZipCompressionMethod_Store, ZipCompressionMethod_Deflate:
+    ZipCompressionMethod_Store,
+    ZipCompressionMethod_Deflate:
+    begin
+      if (CompressionMethod = ZipCompressionMethod_Deflate) then
       begin
-        BA := FParent.GetLocalEntry(FParent.FParent.FZipStream, LocalOffset, False);
-        if BA.LocalFileHeaderSignature <> $04034B50 then
-          Exit;
-        if (CompressionMethod = ZipCompressionMethod_Deflate) then
-        begin
-          ZLHeader.CMF := ZL_CompressionMethod_Deflate; { Deflate }
-          ZLHeader.CMF := ZLHeader.CMF or (ZL_Deflate_CompressionInfo_DefaultWindowSize shl 4); { 32k Window size }
-          Compress := ZL_DEFAULT_COMPRESSION;
-          case BitFlag and 6 of
-            0: Compress := ZL_DEFAULT_COMPRESSION;
-            2: Compress := ZL_MAXIMUM_COMPRESSION;
-            4: Compress := ZL_FAST_COMPRESSION;
-            6: Compress := ZL_FASTEST_COMPRESSION;
-          end;
-          ZLHeader.FLG := ZLHeader.FLG or (Compress shl 6);
-          ZLHeader.FLG := ZLHeader.FLG and not ZL_PRESET_DICT; { no preset dictionary}
-          ZLHeader.FLG := ZLHeader.FLG and not ZL_FCHECK_MASK;
-          ZLH := (ZLHeader.CMF * 256) + ZLHeader.FLG;
-          Inc(ZLHeader.FLG, 31 - (ZLH mod 31));
-          SetLength(Result, SizeOf(ZLHeader));
-          SetString(Result, PChar(@ZLHeader), SizeOf(ZLHeader));
+        ZLHeader.CMF := ZL_CompressionMethod_Deflate; { Deflate }
+        ZLHeader.CMF := ZLHeader.CMF or (ZL_Deflate_CompressionInfo_DefaultWindowSize shl 4); { 32k Window size }
+        Compress := ZL_DEFAULT_COMPRESSION;
+        case BitFlag and 6 of
+          0: Compress := ZL_DEFAULT_COMPRESSION;
+          2: Compress := ZL_MAXIMUM_COMPRESSION;
+          4: Compress := ZL_FAST_COMPRESSION;
+          6: Compress := ZL_FASTEST_COMPRESSION;
         end;
-        Result := Result + BA.CompressedData;
+        ZLHeader.FLG := ZLHeader.FLG or (Compress shl 6);
+        ZLHeader.FLG := ZLHeader.FLG and not ZL_PRESET_DICT; { no preset dictionary}
+        ZLHeader.FLG := ZLHeader.FLG and not ZL_FCHECK_MASK;
+        ZLH := (ZLHeader.CMF * 256) + ZLHeader.FLG;
+        Inc(ZLHeader.FLG, 31 - (ZLH mod 31));
+        SetLength(Result, SizeOf(ZLHeader));
+        SetString(Result, PChar(@ZLHeader), SizeOf(ZLHeader));
       end;
+      if SizeCompressed > 0 then
+      begin
+        if FCompressedDataPos = 0 then
+          FCompressedDataPos := LocalOffset + GetLocalHeadSize();
+        ResultSize := Length(Result);
+        SetLength(Result, ResultSize + SizeCompressed);
+        FParent.FParent.ZipStream.Position := CompressedDataPos;
+        FParent.FParent.ZipStream.Read(Result[ResultSize+1], CompressedDataPos);
+      end;
+    end;
   end;
 end;
 
@@ -843,24 +1219,31 @@ begin
   FSelected := Value;
 end;
 
-function TKAZipEntriesEntry.GetLocalEntrySize: Cardinal;
+function TKAZipEntriesEntry.GetLocalHeadSize: LongWord;
 begin
-  Result := SizeOf(TLocalFile) - 3 * SizeOf(string) +
-      FCentralDirectoryFile.CompressedSize +
-      FCentralDirectoryFile.FilenameLength +
-      FCentralDirectoryFile.ExtraFieldLength;
-  if (FCentralDirectoryFile.GeneralPurposeBitFlag and (1 shl 3)) > 0 then
-  begin
-    Result := Result + SizeOf(TDataDescriptor);
-  end;
+  Result := SizeOf(TLocalFileHeader) + Length(FFileName) + Length(FExtraField);
 end;
 
-function TKAZipEntriesEntry.GetCentralEntrySize: Cardinal;
+function TKAZipEntriesEntry.GetLocalEntrySize: LongWord;
 begin
-  Result := SizeOf(TCentralDirectoryFile) - 3 * SizeOf(string) +
-    FCentralDirectoryFile.FilenameLength +
-    FCentralDirectoryFile.ExtraFieldLength +
-    FCentralDirectoryFile.FileCommentLength;
+  if FLocalFileEntrySize = 0 then
+  begin
+    FLocalFileEntrySize := SizeOf(TLocalFileHeader) + FSizeCompressed
+            + Length(FFileName) + Length(FExtraField);
+    if (FGeneralPurposeBitFlag and (1 shl 3)) > 0 then
+    begin
+      FLocalFileEntrySize := FLocalFileEntrySize + SizeOf(TDataDescriptor);
+    end;
+  end;
+  Result := FLocalFileEntrySize;
+end;
+
+function TKAZipEntriesEntry.GetCentralEntrySize: LongWord;
+begin
+  if FCentralFileEntrySize = 0 then
+    FCentralFileEntrySize := SizeOf(TCentralDirectoryFile)
+      + Length(FFileName) + Length(FExtraField) + Length(FFileComment);
+  Result := FCentralFileEntrySize;
 end;
 
 function TKAZipEntriesEntry.Test: Boolean;
@@ -880,7 +1263,7 @@ begin
         try
           ExtractToStream(FS);
           FS.Position := 0;
-          Result := FParent.CalculateCRCFromStream(FS) = CRC32;
+          Result := CalculateCRCFromStream(FS) = CRC32;
         finally
           FS.Free;
           DeleteFile(FN);
@@ -892,7 +1275,7 @@ begin
         try
           ExtractToStream(MS);
           MS.Position := 0;
-          Result := FParent.CalculateCRCFromStream(MS) = CRC32;
+          Result := CalculateCRCFromStream(MS) = CRC32;
         finally
           MS.Free;
         end;
@@ -905,12 +1288,12 @@ end;
 
 procedure TKAZipEntriesEntry.SetComment(const Value: AnsiString);
 begin
-  FCentralDirectoryFile.FileComment := Value;
-  FCentralDirectoryFile.FileCommentLength := Length(FCentralDirectoryFile.FileComment);
-  FParent.Rebuild;
+  FFileComment := Value;
+  FCentralFileEntrySize := 0;
+  //FParent.Rebuild;
   if not FParent.FParent.FBatchMode then
   begin
-    FParent.FParent.DoChange(FParent, 4);
+    FParent.FParent.DoChange(FParent, ZIP_ITEM_COMMENT);
   end;
 end;
 
@@ -921,12 +1304,12 @@ begin
   FN := ToZipName(Value);
   if FParent.IndexOf(FN) > -1 then
     raise Exception.Create('File with same name already exists in Archive!');
-  FCentralDirectoryFile.FileName := ToZipName(Value);
-  FCentralDirectoryFile.FilenameLength := Length(FCentralDirectoryFile.FileName);
+  FFileName := FN;
+  FCentralFileEntrySize := 0;
   if not FParent.FParent.FBatchMode then
   begin
-    FParent.Rebuild;
-    FParent.FParent.DoChange(FParent, 5);
+    //FParent.Rebuild;
+    FParent.FParent.DoChange(FParent, ZIP_ITEM_NAME);
   end;
 end;
 
@@ -936,15 +1319,12 @@ constructor TKAZipEntries.Create(AOwner: TKAZip);
 begin
   inherited Create(TKAZipEntriesEntry);
   FParent := AOwner;
-  FIsZipFile := False;
 end;
 
 constructor TKAZipEntries.Create(AOwner: TKAZip; MS: TStream);
 begin
   inherited Create(TKAZipEntriesEntry);
   FParent := AOwner;
-  FIsZipFile := False;
-  FLocalHeaderNumFiles := 0;
   ParseZip(MS);
 end;
 
@@ -954,88 +1334,9 @@ begin
   inherited Destroy;
 end;
 
-function TKAZipEntries.Adler32(adler: uLong; buf: pByte; len: uInt): uLong;
-const
-  BASE = uLong(65521);
-  NMAX = 3854;
-var
-  s1, s2: uLong;
-  k: Integer;
+procedure TKAZipEntries.ParseZip(MS: TStream);
 begin
-  s1 := adler and $FFFF;
-  s2 := (adler shr 16) and $FFFF;
-
-  if not Assigned(buf) then
-  begin
-    adler32 := uLong(1);
-    exit;
-  end;
-
-  while (len > 0) do
-  begin
-    if len < NMAX then
-      k := len
-    else
-      k := NMAX;
-    Dec(len, k);
-    while (k > 0) do
-    begin
-      Inc(s1, buf^);
-      Inc(s2, s1);
-      Inc(buf);
-      Dec(k);
-    end;
-    s1 := s1 mod BASE;
-    s2 := s2 mod BASE;
-  end;
-  adler32 := (s2 shl 16) or s1;
-end;
-
-function TKAZipEntries.CalcCRC32(const UncompressedData: string): Cardinal;
-var
-  X: Integer;
-begin
-  Result := $FFFFFFFF;
-  for X := 0 to Length(UncompressedData) - 1 do
-  begin
-    Result := (Result shr 8) xor (CRCTable[Byte(Result) xor Ord(UncompressedData[X + 1])]);
-  end;
-  Result := Result xor $FFFFFFFF;
-end;
-
-function TKAZipEntries.CalculateCRCFromStream(Stream: TStream): Cardinal;
-var
-  Buffer: array[1..8192] of Byte;
-  I, ReadCount: Integer;
-  TempResult: Longword;
-begin
-  TempResult := $FFFFFFFF;
-  while (Stream.Position <> Stream.Size) do
-  begin
-    ReadCount := Stream.Read(Buffer, SizeOf(Buffer));
-    for I := 1 to ReadCount do
-      TempResult := ((TempResult shr 8) and $FFFFFF) xor CRCTable[(TempResult xor Longword(Buffer[I])) and $FF];
-  end;
-  Result := not TempResult;
-end;
-
-function TKAZipEntries.RemoveRootName(const FileName, RootName: string): string;
-var
-  P: Integer;
-  S: string;
-begin
-  Result := FileName;
-  P := Pos(AnsiLowerCase(RootName), AnsiLowerCase(FileName));
-  if P = 1 then
-  begin
-    System.Delete(Result, 1, Length(RootName));
-    S := Result;
-    if (Length(S) > 0) and (S[1] = '\') then
-    begin
-      System.Delete(S, 1, 1);
-      Result := S;
-    end;
-  end;
+  FParent.ParseZip(MS);
 end;
 
 procedure TKAZipEntries.SortList(List: TList);
@@ -1082,491 +1383,9 @@ begin
   inherited Items[Index] := TCollectionItem(Value);
 end;
 
-function TKAZipEntries.ReadBA(MS: TStream; Sz, Poz: Integer): TBytes;
-begin
-  SetLength(Result, SZ);
-  MS.Position := Poz;
-  MS.Read(Result[0], SZ);
-end;
-
-function TKAZipEntries.FindCentralDirectory(MS: TStream): Boolean;
-var
-  SeekStart: Integer;
-  Poz: Integer;
-  BR: Integer;
-  Byte_: array[0..3] of Byte;
-begin
-  Result := False;
-  if MS.Size < 22 then
-    Exit;
-  if MS.Size < 256 then
-    SeekStart := MS.Size
-  else
-    SeekStart := 256;
-  Poz := MS.Size - 22;
-  BR := SeekStart;
-  repeat
-    MS.Position := Poz;
-    MS.Read(Byte_, 4);
-    if Byte_[0] = $50 then
-    begin
-      if (Byte_[1] = $4B)
-        and (Byte_[2] = $05)
-        and (Byte_[3] = $06) then
-      begin
-        MS.Position := Poz;
-        FParent.FEndOfCentralDirPos := MS.Position;
-        MS.Read(FParent.FEndOfCentralDir, SizeOf(FParent.FEndOfCentralDir));
-        FParent.FZipCommentPos := MS.Position;
-        FParent.FZipComment.Clear;
-        Result := True;
-      end
-      else
-      begin
-        Dec(Poz, 4);
-        Dec(BR, 4);
-      end;
-    end
-    else
-    begin
-      Dec(Poz);
-      Dec(BR)
-    end;
-    if BR < 0 then
-    begin
-      case SeekStart of
-        256:
-          begin
-            SeekStart := 1024;
-            Poz := MS.Size - (256 + 22);
-            BR := SeekStart;
-          end;
-        1024:
-          begin
-            SeekStart := 65536;
-            Poz := MS.Size - (1024 + 22);
-            BR := SeekStart;
-          end;
-        65536:
-          begin
-            SeekStart := -1;
-          end;
-      end;
-    end;
-    if BR < 0 then
-      SeekStart := -1;
-    if MS.Size < SeekStart then
-      SeekStart := -1;
-  until (Result) or (SeekStart = -1);
-end;
-
-function TKAZipEntries.ParseCentralHeaders(MS: TStream): Boolean;
-var
-  X: Integer;
-  Entry: TKAZipEntriesEntry;
-  CDFile: TCentralDirectoryFile;
-begin
-  Result := False;
-  try
-    MS.Position := FParent.FEndOfCentralDir.OffsetOfStartOfCentralDirectory;
-    for X := 0 to FParent.FEndOfCentralDir.TotalNumberOfEntriesOnThisDisk - 1 do
-    begin
-      //FillCh ar(CDFile, SizeOf(TCentralDirectoryFile), 0);  20140320: Filling a record containing managed types will cause a leak
-      cdFile := Default_TCentralDirectoryFile;
-      MS.Read(CDFile, SizeOf(TCentralDirectoryFile) - 3 * SizeOf(string));
-      Entry := TKAZipEntriesEntry.Create(Self);
-      Entry.FDate := FileDateToDateTime(CDFile.LastModFileTimeDate);
-      if (CDFile.GeneralPurposeBitFlag and 1) > 0 then
-        Entry.FIsEncrypted := True
-      else
-        Entry.FIsEncrypted := False;
-      if CDFile.FilenameLength > 0 then
-      begin
-        SetLength(CDFile.FileName, CDFile.FilenameLength);
-        MS.Read(CDFile.FileName[1], CDFile.FilenameLength)
-      end;
-      if CDFile.ExtraFieldLength > 0 then
-      begin
-        SetLength(CDFile.ExtraField, CDFile.ExtraFieldLength);
-        MS.Read(CDFile.ExtraField[1], CDFile.ExtraFieldLength);
-      end;
-      if CDFile.FileCommentLength > 0 then
-      begin
-        SetLength(CDFile.FileComment, CDFile.FileCommentLength);
-        MS.Read(CDFile.FileComment[1], CDFile.FileCommentLength);
-      end;
-      Entry.FIsFolder := (CDFile.ExternalFileAttributes and faDirectory) > 0;
-
-      Entry.FCompressionType := ctUnknown;
-      if (CDFile.CompressionMethod = ZipCompressionMethod_Deflate) or (CDFile.CompressionMethod = ZipCompressionMethod_Deflate64) then
-      begin
-        case CDFile.GeneralPurposeBitFlag and 6 of
-          0: Entry.FCompressionType := ctNormal;
-          2: Entry.FCompressionType := ctMaximum;
-          4: Entry.FCompressionType := ctFast;
-          6: Entry.FCompressionType := ctSuperFast
-        end;
-      end;
-      Entry.FCentralDirectoryFile := CDFile;
-      if Assigned(FParent.FOnZipOpen) then
-        FParent.FOnZipOpen(FParent, X, FParent.FEndOfCentralDir.TotalNumberOfEntriesOnThisDisk);
-    end;
-  except
-    Exit;
-  end;
-  Result := Count = FParent.FEndOfCentralDir.TotalNumberOfEntriesOnThisDisk;
-end;
-
-procedure TKAZipEntries.ParseZip(MS: TStream);
-begin
-  FIsZipFile := False;
-  Clear;
-  if FindCentralDirectory(MS) then
-  begin
-    if ParseCentralHeaders(MS) then
-    begin
-      FIsZipFile := True;
-      LoadLocalHeaders(MS);
-    end;
-  end
-  else
-  begin
-    if ParseLocalHeaders(MS) then
-    begin
-      FIsZipFile := Count > 0;
-      if FIsZipFile then
-        FParent.FHasBadEntries := True;
-    end;
-  end;
-end;
-
-function TKAZipEntries.GetLocalEntry(MS: TStream; Offset: Integer; HeaderOnly: Boolean): TLocalFile;
-var
-  Byte_: array[0..4] of Byte;
-  DataDescriptor: TDataDescriptor;
-begin
-  //20140320 -- You cannot ZeroMe mory/FillCh ar a structure containing strings.
-  //It destroys some internal housekeeping and causes a leak.
-//  FillCh ar(Result, SizeOf(Result), 0);
-  Result := Default_TLocalFile;
-
-
-  MS.Position := Offset;
-  MS.Read(Byte_, 4);
-  if not (
-      (Byte_[0] = $50)
-      and (Byte_[1] = $4B)
-      and (Byte_[2] = $03)
-      and (Byte_[3] = $04)) then
-    Exit;
-
-  MS.Position := Offset;
-  MS.Read(Result, SizeOf(Result) - 3 * SizeOf(AnsiString));
-  if Result.FilenameLength > 0 then
-  begin
-    SetLength(Result.FileName, Result.FilenameLength);
-    MS.Read(Result.FileName[1], Result.FilenameLength);
-  end;
-  if Result.ExtraFieldLength > 0 then
-  begin
-    SetLength(Result.ExtraField, Result.ExtraFieldLength);
-    MS.Read(Result.ExtraField[1], Result.ExtraFieldLength);
-  end;
-  if (Result.GeneralPurposeBitFlag and (1 shl 3)) > 0 then
-  begin
-    MS.Read(DataDescriptor, SizeOf(TDataDescriptor));
-    Result.Crc32 := DataDescriptor.Crc32;
-    Result.CompressedSize := DataDescriptor.CompressedSize;
-    Result.UnCompressedSize := DataDescriptor.UnCompressedSize;
-  end;
-  if not HeaderOnly then
-  begin
-    if Result.CompressedSize > 0 then
-    begin
-      SetLength(Result.CompressedData, Result.CompressedSize);
-      MS.Read(Result.CompressedData[1], Result.CompressedSize);
-    end;
-  end;
-end;
-
-procedure TKAZipEntries.LoadLocalHeaders(MS: TStream);
-var
-  X: Integer;
-begin
-  FParent.FHasBadEntries := False;
-  for X := 0 to Count - 1 do
-  begin
-    if Assigned(FParent.FOnZipOpen) then
-      FParent.FOnZipOpen(FParent, X, FParent.FEndOfCentralDir.TotalNumberOfEntriesOnThisDisk);
-    Items[X].FLocalFile := GetLocalEntry(MS, Items[X].FCentralDirectoryFile.RelativeOffsetOfLocalHeader, True);
-    if Items[X].FLocalFile.LocalFileHeaderSignature <> $04034B50 then
-      FParent.FHasBadEntries := True;
-  end;
-end;
-
-function TKAZipEntries.ParseLocalHeaders(MS: TStream): Boolean;
-var
-  Poz: Integer;
-  NLE: Integer;
-  Byte_: array[0..4] of Byte;
-  LocalFile: TLocalFile;
-  DataDescriptor: TDataDescriptor;
-  Entry: TKAZipEntriesEntry;
-  CDFile: TCentralDirectoryFile;
-  CDSize: Cardinal;
-  L: Integer;
-  NoMore: Boolean;
-begin
-  Result := False;
-  FLocalHeaderNumFiles := 0;
-  Clear;
-  try
-    Poz := 0;
-    NLE := 0;
-    CDSize := 0;
-    repeat
-      NoMore := True;
-      MS.Position := Poz;
-      MS.Read(Byte_, 4);
-      if (Byte_[0] = $50)
-        and (Byte_[1] = $4B)
-        and (Byte_[2] = $03)
-        and (Byte_[3] = $04) then
-      begin
-        Result := True;
-        Inc(FLocalHeaderNumFiles);
-        NoMore := False;
-        MS.Position := Poz;
-        MS.Read(LocalFile, SizeOf(TLocalFile) - 3 * SizeOf(string));
-        if LocalFile.FilenameLength > 0 then
-        begin
-          SetLength(LocalFile.FileName, LocalFile.FilenameLength);
-          MS.Read(LocalFile.FileName[1], LocalFile.FilenameLength);
-        end;
-        if LocalFile.ExtraFieldLength > 0 then
-        begin
-          SetLength(LocalFile.ExtraField, LocalFile.ExtraFieldLength);
-          MS.Read(LocalFile.ExtraField[1], LocalFile.ExtraFieldLength);
-        end;
-        if (LocalFile.GeneralPurposeBitFlag and (1 shl 3)) > 0 then
-        begin
-          MS.Read(DataDescriptor, SizeOf(TDataDescriptor));
-          LocalFile.Crc32 := DataDescriptor.Crc32;
-          LocalFile.CompressedSize := DataDescriptor.CompressedSize;
-          LocalFile.UncompressedSize := DataDescriptor.UncompressedSize;
-        end;
-        MS.Position := MS.Position + LongInt(LocalFile.CompressedSize);
-
-        //FillCha r(CDFile, SizeOf(TCentralDirectoryFile), 0);  20140320 Cannot do FillCh ar on a structure containing managed types
-        CDFile := Default_TCentralDirectoryFile;
-        CDFile.CentralFileHeaderSignature := SIG_CentralFile;
-        CDFile.VersionMadeBy := 20;
-        CDFile.VersionNeededToExtract := LocalFile.VersionNeededToExtract;
-        CDFile.GeneralPurposeBitFlag := LocalFile.GeneralPurposeBitFlag;
-        CDFile.CompressionMethod := LocalFile.CompressionMethod;
-        CDFile.LastModFileTimeDate := LocalFile.LastModFileTimeDate;
-        CDFile.Crc32 := LocalFile.Crc32;
-        CDFile.CompressedSize := LocalFile.CompressedSize;
-        CDFile.UncompressedSize := LocalFile.UncompressedSize;
-        CDFile.FilenameLength := LocalFile.FilenameLength;
-        CDFile.ExtraFieldLength := LocalFile.ExtraFieldLength;
-        CDFile.FileCommentLength := 0;
-        CDFile.DiskNumberStart := 0;
-        CDFile.InternalFileAttributes := LocalFile.VersionNeededToExtract;
-        CDFile.ExternalFileAttributes := faArchive;
-        CDFile.RelativeOffsetOfLocalHeader := Poz;
-        CDFile.FileName := LocalFile.FileName;
-        L := Length(CDFile.FileName);
-        if L > 0 then
-        begin
-          if CDFile.FileName[L] = '/' then
-            CDFile.ExternalFileAttributes := faDirectory;
-        end;
-        CDFile.ExtraField := LocalFile.ExtraField;
-        CDFile.FileComment := '';
-
-        Entry := TKAZipEntriesEntry.Create(Self);
-        Entry.FDate := FileDateToDateTime(CDFile.LastModFileTimeDate);
-        if (CDFile.GeneralPurposeBitFlag and 1) > 0 then
-          Entry.FIsEncrypted := True
-        else
-          Entry.FIsEncrypted := False;
-        Entry.FIsFolder := (CDFile.ExternalFileAttributes and faDirectory) > 0;
-        Entry.FCompressionType := ctUnknown;
-        if (CDFile.CompressionMethod = ZipCompressionMethod_Deflate) or (CDFile.CompressionMethod = ZipCompressionMethod_Deflate64) then
-        begin
-          case CDFile.GeneralPurposeBitFlag and 6 of
-            0: Entry.FCompressionType := ctNormal;
-            2: Entry.FCompressionType := ctMaximum;
-            4: Entry.FCompressionType := ctFast;
-            6: Entry.FCompressionType := ctSuperFast
-          end;
-        end;
-        Entry.FCentralDirectoryFile := CDFile;
-        Poz := MS.Position;
-        Inc(NLE);
-        CDSize := CDSize + Entry.CentralEntrySize;
-      end;
-    until NoMore;
-
-    FParent.FEndOfCentralDir.EndOfCentralDirSignature := SIG_EndOfCentralDirectory; //PK 0x05 0x06
-    FParent.FEndOfCentralDir.NumberOfThisDisk := 0;
-    FParent.FEndOfCentralDir.NumberOfTheDiskWithTheStart := 0;
-    FParent.FEndOfCentralDir.TotalNumberOfEntriesOnThisDisk := NLE;
-    FParent.FEndOfCentralDir.SizeOfTheCentralDirectory := CDSize;
-    FParent.FEndOfCentralDir.OffsetOfStartOfCentralDirectory := MS.Position;
-    FParent.FEndOfCentralDir.ZipfileCommentLength := 0;
-  except
-    Exit;
-  end;
-end;
-
-procedure TKAZipEntries.Remove(ItemIndex: Integer; Flush: Boolean);
-var
-  TempStream: TFileStream;
-  TempMSStream: TMemoryStream;
-  TempFileName: string;
-//  BUF: string;
-  ZipComment: string;
-  OSL: Cardinal;
-  //*********************************************
-  X: Integer;
-  TargetPos: Cardinal;
-  Border: Cardinal;
-
-//  NR: Integer;
-//  NW: Integer;
-//  BufStart: Integer;
-//  BufLen: Integer;
-  ShiftSize: Cardinal;
-  NewSize: Cardinal;
-begin
-  TargetPos := Items[ItemIndex].FCentralDirectoryFile.RelativeOffsetOfLocalHeader;
-  ShiftSize := Items[ItemIndex].LocalEntrySize;
-//  BufStart := TargetPos + ShiftSize;
-//  BufLen := FParent.FZipStream.Size - BufStart;
-  Border := TargetPos;
-  Delete(ItemIndex);
-  if (FParent.FZipSaveMethod = FastSave) and (Count > 0) then
-  begin
-    ZipComment := FParent.Comment.Text;
-
-{
-    SetLength(BUF,BufLen);
-    FParent.FZipStream.Position := BufStart;
-    NR := FParent.FZipStream.Read(BUF[1],BufLen);
-
-    FParent.FZipStream.Position := TargetPos;
-    NW := FParent.FZipStream.Write(BUF[1],BufLen);
-    SetLength(BUF,0);
-  }
-
-    for X := 0 to Count - 1 do
-    begin
-      if Items[X].FCentralDirectoryFile.RelativeOffsetOfLocalHeader > Border then
-      begin
-        Dec(Items[X].FCentralDirectoryFile.RelativeOffsetOfLocalHeader, ShiftSize);
-        TargetPos := TargetPos + Items[X].LocalEntrySize;
-      end
-    end;
-
-    FParent.FZipStream.Position := TargetPos;
-    //************************************ MARK START OF CENTRAL DIRECTORY
-    FParent.FEndOfCentralDir.OffsetOfStartOfCentralDirectory := FParent.FZipStream.Position;
-    //************************************ SAVE CENTRAL DIRECTORY
-    for X := 0 to Count - 1 do
-    begin
-      FParent.FZipStream.Write(Self.Items[X].FCentralDirectoryFile, SizeOf(Self.Items[X].FCentralDirectoryFile) - 3 * SizeOf(string));
-      if Self.Items[X].FCentralDirectoryFile.FilenameLength > 0 then
-        FParent.FZipStream.Write(Self.Items[X].FCentralDirectoryFile.FileName[1], Self.Items[X].FCentralDirectoryFile.FilenameLength);
-      if Self.Items[X].FCentralDirectoryFile.ExtraFieldLength > 0 then
-        FParent.FZipStream.Write(Self.Items[X].FCentralDirectoryFile.ExtraField[1], Self.Items[X].FCentralDirectoryFile.ExtraFieldLength);
-      if Self.Items[X].FCentralDirectoryFile.FileCommentLength > 0 then
-        FParent.FZipStream.Write(Self.Items[X].FCentralDirectoryFile.FileComment[1], Self.Items[X].FCentralDirectoryFile.FileCommentLength);
-    end;
-    //************************************ SAVE END CENTRAL DIRECTORY RECORD
-    FParent.FEndOfCentralDirPos := FParent.FZipStream.Position;
-    FParent.FEndOfCentralDir.SizeOfTheCentralDirectory := FParent.FEndOfCentralDirPos - FParent.FEndOfCentralDir.OffsetOfStartOfCentralDirectory;
-    Dec(FParent.FEndOfCentralDir.TotalNumberOfEntriesOnThisDisk);
-    Dec(FParent.FEndOfCentralDir.TotalNumberOfEntries);
-    FParent.FZipStream.Write(FParent.FEndOfCentralDir, SizeOf(TEndOfCentralDir));
-    //************************************ SAVE ZIP COMMENT IF ANY
-    FParent.FZipCommentPos := FParent.FZipStream.Position;
-    if Length(ZipComment) > 0 then
-    begin
-      FParent.FZipStream.Write(ZipComment[1], Length(ZipComment));
-    end;
-    FParent.FZipStream.Size := FParent.FZipStream.Position;
-  end
-  else
-  begin
-    if FParent.FUseTempFiles then
-    begin
-      TempFileName := FParent.GetDelphiTempFileName;
-      TempStream := TFileStream.Create(TempFileName, fmOpenReadWrite or FmCreate);
-      try
-        FParent.SaveToStream(TempStream);
-        TempStream.Position := 0;
-        OSL := FParent.FZipStream.Size;
-        try
-          FParent.FZipStream.Size := TempStream.Size;
-        except
-          FParent.FZipStream.Size := OSL;
-          raise;
-        end;
-        FParent.FZipStream.Position := 0;
-        FParent.FZipStream.CopyFrom(TempStream, TempStream.Size);
-        //*********************************************************************
-        FParent.FZipHeader.ParseZip(FParent.FZipStream);
-        //*********************************************************************
-      finally
-        TempStream.Free;
-        DeleteFile(TempFileName)
-      end;
-    end
-    else
-    begin
-      NewSize := 0;
-      for X := 0 to Count - 1 do
-      begin
-        NewSize := NewSize + Items[X].LocalEntrySize + Items[X].CentralEntrySize;
-        if Assigned(FParent.FOnRemoveItems) then
-          FParent.FOnRemoveItems(FParent, X, Count - 1);
-      end;
-      NewSize := NewSize + SizeOf(FParent.FEndOfCentralDir) + FParent.FEndOfCentralDir.ZipfileCommentLength;
-      TempMSStream := TMemoryStream.Create;
-      try
-        TempMSStream.SetSize(NewSize);
-        TempMSStream.Position := 0;
-        FParent.SaveToStream(TempMSStream);
-        TempMSStream.Position := 0;
-        OSL := FParent.FZipStream.Size;
-        try
-          FParent.FZipStream.Size := TempMSStream.Size;
-        except
-          FParent.FZipStream.Size := OSL;
-          raise;
-        end;
-        FParent.FZipStream.Position := 0;
-        FParent.FZipStream.CopyFrom(TempMSStream, TempMSStream.Size);
-        //*********************************************************************
-        FParent.FZipHeader.ParseZip(FParent.FZipStream);
-        //*********************************************************************
-      finally
-        TempMSStream.Free;
-      end;
-    end;
-  end;
-  FParent.FIsDirty := True;
-  if not FParent.FBatchMode then
-  begin
-    FParent.DoChange(FParent, 3);
-  end;
-end;
-
 procedure TKAZipEntries.Remove(ItemIndex: Integer);
 begin
-  Remove(ItemIndex, True);
+  FParent.Remove(ItemIndex, True);
 end;
 
 procedure TKAZipEntries.Remove(Item: TKAZipEntriesEntry);
@@ -1592,79 +1411,6 @@ begin
     Remove(I);
 end;
 
-procedure TKAZipEntries.RemoveBatch(Files: TList);
-var
-  X: Integer;
-  OSL: Integer;
-  NewSize: Cardinal;
-  TempStream: TFileStream;
-  TempMSStream: TMemoryStream;
-  TempFileName: string;
-begin
-  for X := Files.Count - 1 downto 0 do
-  begin
-    Delete(Integer(Files.Items[X]));
-    if Assigned(FParent.FOnRemoveItems) then
-      FParent.FOnRemoveItems(FParent, Files.Count - X, Files.Count);
-  end;
-  NewSize := 0;
-  if FParent.FUseTempFiles then
-  begin
-    TempFileName := FParent.GetDelphiTempFileName;
-    TempStream := TFileStream.Create(TempFileName, fmOpenReadWrite or FmCreate);
-    try
-      FParent.SaveToStream(TempStream);
-      TempStream.Position := 0;
-      OSL := FParent.FZipStream.Size;
-      try
-        FParent.FZipStream.Size := TempStream.Size;
-      except
-        FParent.FZipStream.Size := OSL;
-        raise;
-      end;
-      FParent.FZipStream.Position := 0;
-      FParent.FZipStream.CopyFrom(TempStream, TempStream.Size);
-      //*********************************************************************
-      FParent.FZipHeader.ParseZip(FParent.FZipStream);
-      //*********************************************************************
-    finally
-      TempStream.Free;
-      DeleteFile(TempFileName)
-    end;
-  end
-  else
-  begin
-    for X := 0 to Count - 1 do
-    begin
-      NewSize := NewSize + Items[X].LocalEntrySize + Items[X].CentralEntrySize;
-      if Assigned(FParent.FOnRemoveItems) then
-        FParent.FOnRemoveItems(FParent, X, Count - 1);
-    end;
-    NewSize := NewSize + SizeOf(FParent.FEndOfCentralDir) + FParent.FEndOfCentralDir.ZipfileCommentLength;
-    TempMSStream := TMemoryStream.Create;
-    try
-      TempMSStream.SetSize(NewSize);
-      TempMSStream.Position := 0;
-      FParent.SaveToStream(TempMSStream);
-      TempMSStream.Position := 0;
-      OSL := FParent.FZipStream.Size;
-      try
-        FParent.FZipStream.Size := TempMSStream.Size;
-      except
-        FParent.FZipStream.Size := OSL;
-        raise;
-      end;
-      FParent.FZipStream.Position := 0;
-      FParent.FZipStream.CopyFrom(TempMSStream, TempMSStream.Size);
-      //*********************************************************************
-      FParent.FZipHeader.ParseZip(FParent.FZipStream);
-      //*********************************************************************
-    finally
-      TempMSStream.Free;
-    end;
-  end;
-end;
-
 function TKAZipEntries.IndexOf(const FileName: string): Integer;
 var
   X: Integer;
@@ -1674,7 +1420,7 @@ begin
   FN := ToZipName(FileName);
   for X := 0 to Count - 1 do
   begin
-    if AnsiCompareText(FN, ToZipName(Items[X].FCentralDirectoryFile.FileName)) = 0 then
+    if AnsiCompareText(FN, ToZipName(Items[X].FileName)) = 0 then
     begin
       Result := X;
       Exit;
@@ -1682,632 +1428,20 @@ begin
   end;
 end;
 
-function TKAZipEntries.AddStreamFast(ItemName: string; FileAttr: Word; FileDate: TDateTime; Stream: TStream): TKAZipEntriesEntry;
-var
-  compressor: TZCompressionStream;
-//  CS: TStringStream;
-  compressionMode: Word;
-//  S: string;
-  i: Integer;
-  uncompressedLength: Integer;
-  compressedLength: Integer;
-  dataCrc32: LongWord;
-//  sizeToAppend: Integer;
-  zipComment: string;
-  compressionLevel: TZCompressionLevel;
-  OBM: Boolean;
-  crc32Stream: TCRC32Stream;
-  newLocalEntryPosition: Int64;
-  startOfCompressedDataPosition: Int64;
-  centralDirectoryPosition: Int64;
+function TKAZipEntries.AddStream(FileName: string; FileAttr: Word;
+  FileDate: TDateTime; Stream: TStream): TKAZipEntriesEntry;
 begin
-  //*********************************** COMPRESS DATA
-  zipComment := FParent.Comment.Text;
-
-  if not FParent.FStoreRelativePath then
-    ItemName := ExtractFileName(ItemName);
-
-  ItemName := ToZipName(ItemName);
-
-  //If an item with this name already exists then remove it
-  i := Self.IndexOf(ItemName);
-  if i >= 0 then
-  begin
-    OBM := FParent.FBatchMode;
-    try
-      if OBM = False then
-        FParent.FBatchMode := True;
-      Remove(i);
-    finally
-      FParent.FBatchMode := OBM;
-    end;
-  end;
-
-  //This is where the new local entry starts (where the central directly is).
-  //We overwrite the central direct (and EOCD marker) and then re-write them after the end of the file
-  newLocalEntryPosition := FParent.FEndOfCentralDir.OffsetOfStartOfCentralDirectory;
-
-  uncompressedLength := Stream.Size - Stream.Position;
-  FParent.FCurrentDFS := uncompressedLength;
-
-
-  dataCrc32 := 0; //we don't know it yet; back-fill it
-//  compressedLength := 0; //we don't know it yet; back-fill it
-
-  if uncompressedLength > 0 then
-    compressionMode := ZipCompressionMethod_Deflate
-  else
-    compressionMode := ZipCompressionMethod_Store;
-
-  //Fill records
-  Result := TKAZipEntriesEntry(Self.Add);
-
-  //Local file entry
-  Result.FLocalFile.LocalFileHeaderSignature := SIG_LocalHeader; //'PK'#03#04
-  Result.FLocalFile.VersionNeededToExtract := 20;
-  Result.FLocalFile.GeneralPurposeBitFlag := 0;
-  Result.FLocalFile.CompressionMethod := compressionMode;
-  Result.FLocalFile.LastModFileTimeDate := DateTimeToFileDate(FileDate);
-  Result.FLocalFile.Crc32 := 0; //don't know it yet, will back-fill
-  Result.FLocalFile.CompressedSize := 0; //don't know it yet, will back-fill
-  Result.FLocalFile.UncompressedSize := uncompressedLength;
-  Result.FLocalFile.FilenameLength := Length(ItemName);
-  Result.FLocalFile.ExtraFieldLength := 0;
-  Result.FLocalFile.FileName := ItemName;
-  Result.FLocalFile.ExtraField := '';
-  Result.FLocalFile.CompressedData := ''; //not used
-
-  // Write Local file entry to stream
-  FParent.FZipStream.Position := newLocalEntryPosition;
-  FParent.FZipStream.Write(Result.FLocalFile, SizeOf(Result.FLocalFile) - 3 * SizeOf(string)); //excluding FileName, ExtraField, and CompressedData
-  if Result.FLocalFile.FilenameLength > 0 then
-    FParent.FZipStream.Write(Result.FLocalFile.FileName[1], Result.FLocalFile.FilenameLength);
-
-  //Now stream the compressed data
-  startOfCompressedDataPosition := FParent.FZipStream.Position;
-
-  if compressionMode = ZipCompressionMethod_Deflate then
-  begin
-    //The zlib compression level to use
-    case FParent.FZipCompressionType of
-      ctNormal: compressionLevel := zcDefault;
-      ctMaximum: compressionLevel := zcMax;
-      ctFast: compressionLevel := zcFastest;
-      ctSuperFast: compressionLevel := zcFastest;
-      ctNone: compressionLevel := zcNone;
-      else
-        compressionLevel := zcDefault;
-    end;
-
-    {
-      We don't have access to a DEFLATE compressor.
-      The best we have in ZLIB, which in turn uses DEFLATE.
-      But zlib added 2 leading bytes, and 4 trailing bytes, that we need to strip off
-        Skip first two zlib bytes  (RFC1950)
-            CMF (Compression Method and flags)
-            FLG (FLaGs)
-        and final four bytes
-            ADLER32 (Adler-32 checksum)
-    }
-//    OutputDebugString('SAMPLING ON');
-    compressor := TZCompressionStream.Create(FParent.FZipStream, compressionLevel,
-          -15, //windowBits - The default value is 15 if deflateInit is used instead.
-          8, //memLevel - The default value is 8
-          zsDefault); //strategy
-    try
-      compressor.OnProgress := FParent.OnCompress;
-
-      //A through-stream that calculates the crc32 of the uncompressed data streaming through it
-      crc32Stream := TCRC32Stream.Create(compressor);
-      try
-        crc32Stream.CopyFrom(Stream, uncompressedLength);
-        dataCrc32 := crc32Stream.CRC32;
-      finally
-        crc32Stream.Free;
-      end;
-    finally
-      compressor.Free;
-    end;
-//    OutputDebugString('SAMPLING OFF');
-  end;
-
-  //The central directory will start here; just after the file we just wrote
-  //Memorize it now, because we're going to backtrack and update the CRC and compressed size
-  //also because we can use it to figure out the compressed size
-  centralDirectoryPosition := FParent.FZipStream.Position;
-  try
-    compressedLength := (centralDirectoryPosition - startOfCompressedDataPosition);
-
-    //Now that we know the CRC and the compressed size, update them in the local file entry
-    Result.FLocalFile.Crc32 := dataCrc32;
-    Result.FLocalFile.CompressedSize := compressedLength;
-    FParent.FZipStream.Position := newLocalEntryPosition;
-    FParent.FZipStream.Write(Result.FLocalFile, SizeOf(Result.FLocalFile) - 3 * SizeOf(string)); //excluding FileName, ExtraField, and CompressedData
-  finally
-    //Return to where the central directory will be, and write it
-    FParent.FZipStream.Position := centralDirectoryPosition;
-  end;
-
-  //Create the Central Directory entry
-  Result.FCentralDirectoryFile.CentralFileHeaderSignature := SIG_CentralFile; //PK 0x01 0x02
-  Result.FCentralDirectoryFile.VersionMadeBy := 20;
-  Result.FCentralDirectoryFile.VersionNeededToExtract := 20;
-  Result.FCentralDirectoryFile.GeneralPurposeBitFlag := 0;
-  Result.FCentralDirectoryFile.CompressionMethod := compressionMode;
-  Result.FCentralDirectoryFile.LastModFileTimeDate := DateTimeToFileDate(FileDate);
-  Result.FCentralDirectoryFile.Crc32 := dataCrc32;
-  Result.FCentralDirectoryFile.CompressedSize := compressedLength;
-  Result.FCentralDirectoryFile.UncompressedSize := uncompressedLength;
-  Result.FCentralDirectoryFile.FilenameLength := Length(ItemName);
-  Result.FCentralDirectoryFile.ExtraFieldLength := 0;
-  Result.FCentralDirectoryFile.FileCommentLength := 0;
-  Result.FCentralDirectoryFile.DiskNumberStart := 0;
-  Result.FCentralDirectoryFile.InternalFileAttributes := 0;
-  Result.FCentralDirectoryFile.ExternalFileAttributes := FileAttr;
-  Result.FCentralDirectoryFile.RelativeOffsetOfLocalHeader := newLocalEntryPosition;
-  Result.FCentralDirectoryFile.FileName := ItemName;
-  Result.FCentralDirectoryFile.ExtraField := '';
-  Result.FCentralDirectoryFile.FileComment := '';
-
-  //Save the Central Directory entries (todo: split this into separate function)
-  for i := 0 to Self.Count-1 do
-  begin
-    //packed byte data
-    FParent.FZipStream.Write(Self.Items[i].FCentralDirectoryFile, SizeOf(Self.Items[i].FCentralDirectoryFile) - 3 * SizeOf(string));
-    //optional filenmae
-    if Self.Items[i].FCentralDirectoryFile.FilenameLength > 0 then
-      FParent.FZipStream.Write(Self.Items[i].FCentralDirectoryFile.FileName[1], Self.Items[i].FCentralDirectoryFile.FilenameLength);
-    //optional extra field
-    if Self.Items[i].FCentralDirectoryFile.ExtraFieldLength > 0 then
-      FParent.FZipStream.Write(Self.Items[i].FCentralDirectoryFile.ExtraField[1], Self.Items[i].FCentralDirectoryFile.ExtraFieldLength);
-    //optional file comment
-    if Self.Items[i].FCentralDirectoryFile.FileCommentLength > 0 then
-      FParent.FZipStream.Write(Self.Items[i].FCentralDirectoryFile.FileComment[1], Self.Items[i].FCentralDirectoryFile.FileCommentLength);
-  end;
-
-  //Save EOCD (End of Central Directory) record
-  FParent.FEndOfCentralDirPos := FParent.FZipStream.Position;
-  FParent.FEndOfCentralDir.OffsetOfStartOfCentralDirectory := centralDirectoryPosition;
-  FParent.FEndOfCentralDir.SizeOfTheCentralDirectory := FParent.FEndOfCentralDirPos - FParent.FEndOfCentralDir.OffsetOfStartOfCentralDirectory;
-  Inc(FParent.FEndOfCentralDir.TotalNumberOfEntriesOnThisDisk);
-  Inc(FParent.FEndOfCentralDir.TotalNumberOfEntries);
-  FParent.FZipStream.Write(FParent.FEndOfCentralDir, SizeOf(TEndOfCentralDir));
-
-  //Save ZIP comment (if any)
-  FParent.FZipCommentPos := FParent.FZipStream.Position;
-  if Length(zipComment) > 0 then
-    FParent.FZipStream.Write(zipComment[1], Length(zipComment));
-
-  Result.FDate := FileDate;
-
-  if (Result.FCentralDirectoryFile.GeneralPurposeBitFlag and 1) > 0 then
-    Result.FIsEncrypted := True
-  else
-    Result.FIsEncrypted := False;
-  Result.FIsFolder := (Result.FCentralDirectoryFile.ExternalFileAttributes and faDirectory) > 0;
-  Result.FCompressionType := ctUnknown;
-  if (Result.FCentralDirectoryFile.CompressionMethod = ZipCompressionMethod_Deflate) or (Result.FCentralDirectoryFile.CompressionMethod = ZipCompressionMethod_Deflate64) then
-  begin
-    case Result.FCentralDirectoryFile.GeneralPurposeBitFlag and 6 of
-      0: Result.FCompressionType := ctNormal;
-      2: Result.FCompressionType := ctMaximum;
-      4: Result.FCompressionType := ctFast;
-      6: Result.FCompressionType := ctSuperFast
-    end;
-  end;
-  FParent.FIsDirty := True;
-  if not FParent.FBatchMode then
-  begin
-    FParent.DoChange(FParent, 2);
-  end;
-end;
-
-function TKAZipEntries.AddStreamRebuild(ItemName: string;
-  FileAttr: Word;
-  FileDate: TDateTime;
-  Stream: TStream): TKAZipEntriesEntry;
-var
-  Compressor: TZCompressionStream;
-  CS: TStringStream;
-  cm: Word; //CompressionMethod to use
-  S: string;
-  UL: Integer;
-  CL: Integer;
-  I: Integer;
-  X: Integer;
-  FCRC32: Cardinal;
-  OSL: Cardinal;
-  NewSize: Cardinal;
-  ZipComment: string;
-  TempStream: TFileStream;
-  TempMSStream: TMemoryStream;
-  TempFileName: string;
-  Level: TZCompressionLevel;
-  OBM: Boolean;
-begin
-  if FParent.FUseTempFiles then
-  begin
-    TempFileName := FParent.GetDelphiTempFileName;
-    TempStream := TFileStream.Create(TempFileName, fmOpenReadWrite or FmCreate);
-    try
-      //*********************************** SAVE ALL OLD LOCAL ITEMS
-      FParent.RebuildLocalFiles(TempStream);
-      //*********************************** COMPRESS DATA
-      ZipComment := FParent.Comment.Text;
-      if not FParent.FStoreRelativePath then
-        ItemName := ExtractFileName(ItemName);
-      ItemName := ToZipName(ItemName);
-      I := IndexOf(ItemName);
-      if I > -1 then
-      begin
-        OBM := FParent.FBatchMode;
-        try
-          if OBM = False then
-            FParent.FBatchMode := True;
-          Remove(I);
-        finally
-          FParent.FBatchMode := OBM;
-        end;
-      end;
-
-      cm := 0;
-      CS := TStringStream.Create('');
-      CS.Position := 0;
-      try
-        UL := Stream.Size - Stream.Position;
-        SetLength(S, UL);
-        if UL > 0 then
-        begin
-          Stream.Read(S[1], UL);
-          cm := ZipCompressionMethod_Deflate;
-        end;
-        FCRC32 := CalcCRC32(S);
-        FParent.FCurrentDFS := UL;
-
-        case FParent.FZipCompressionType of
-          ctNormal: Level := zcDefault;
-          ctMaximum: Level := zcMax;
-          ctFast: Level := zcFastest;
-          ctSuperFast: Level := zcFastest;
-          ctNone: Level := zcNone;
-          else
-            Level := zcDefault;
-        end;
-
-        if cm = ZipCompressionMethod_Deflate then
-        begin
-          Compressor := TZCompressionStream.Create(CS, Level);
-          try
-            Compressor.OnProgress := FParent.OnCompress;
-            Compressor.Write(S[1], UL);
-          finally
-            Compressor.Free;
-          end;
-          S := Copy(CS.DataString, 3, Length(CS.DataString) - 6);
-        end;
-      finally
-        CS.Free;
-      end;
-      //************************************************************************
-      CL := Length(S);
-      //*********************************** FILL RECORDS
-      Result := TKAZipEntriesEntry(Self.Add);
-      with Result.FLocalFile do
-      begin
-        LocalFileHeaderSignature := SIG_LocalHeader;
-        VersionNeededToExtract := 20;
-        GeneralPurposeBitFlag := 0;
-        CompressionMethod := cm;
-        LastModFileTimeDate := DateTimeToFileDate(FileDate);
-        Crc32 := FCRC32;
-        CompressedSize := CL;
-        UncompressedSize := UL;
-        FilenameLength := Length(ItemName);
-        ExtraFieldLength := 0;
-        FileName := ItemName;
-        ExtraField := '';
-        CompressedData := '';
-      end;
-
-      with Result.FCentralDirectoryFile do
-      begin
-        CentralFileHeaderSignature := SIG_CentralFile;
-        VersionMadeBy := 20;
-        VersionNeededToExtract := 20;
-        GeneralPurposeBitFlag := 0;
-        CompressionMethod := CM;
-        LastModFileTimeDate := DateTimeToFileDate(FileDate);
-        Crc32 := FCRC32;
-        CompressedSize := CL;
-        UncompressedSize := UL;
-        FilenameLength := Length(ItemName);
-        ExtraFieldLength := 0;
-        FileCommentLength := 0;
-        DiskNumberStart := 0;
-        InternalFileAttributes := 0;
-        ExternalFileAttributes := FileAttr;
-        RelativeOffsetOfLocalHeader := TempStream.Position;
-        FileName := ItemName;
-        ExtraField := '';
-        FileComment := '';
-      end;
-
-      //************************************ SAVE LOCAL HEADER AND COMPRESSED DATA
-      TempStream.Write(Result.FLocalFile, SizeOf(Result.FLocalFile) - 3 * SizeOf(string));
-      if Result.FLocalFile.FilenameLength > 0 then
-        TempStream.Write(Result.FLocalFile.FileName[1], Result.FLocalFile.FilenameLength);
-      if CL > 0 then
-        TempStream.Write(S[1], CL);
-      //************************************
-      FParent.NewLHOffsets[Count - 1] := Result.FCentralDirectoryFile.RelativeOffsetOfLocalHeader;
-      FParent.RebuildCentralDirectory(TempStream);
-      FParent.RebuildEndOfCentralDirectory(TempStream);
-      //************************************
-      TempStream.Position := 0;
-      OSL := FParent.FZipStream.Size;
-      try
-        FParent.FZipStream.Size := TempStream.Size;
-      except
-        FParent.FZipStream.Size := OSL;
-        raise;
-      end;
-      FParent.FZipStream.Position := 0;
-      FParent.FZipStream.CopyFrom(TempStream, TempStream.Size);
-    finally
-      TempStream.Free;
-      DeleteFile(TempFileName)
-    end;
-  end
-  else
-  begin
-    TempMSStream := TMemoryStream.Create;
-    NewSize := 0;
-    for X := 0 to Count - 1 do
-    begin
-      NewSize := NewSize + Items[X].LocalEntrySize + Items[X].CentralEntrySize;
-      if Assigned(FParent.FOnRemoveItems) then
-        FParent.FOnRemoveItems(FParent, X, Count - 1);
-    end;
-    NewSize := NewSize + SizeOf(FParent.FEndOfCentralDir) + FParent.FEndOfCentralDir.ZipfileCommentLength;
-    try
-      TempMSStream.SetSize(NewSize);
-      TempMSStream.Position := 0;
-      //*********************************** SAVE ALL OLD LOCAL ITEMS
-      FParent.RebuildLocalFiles(TempMSStream);
-      //*********************************** COMPRESS DATA
-      ZipComment := FParent.Comment.Text;
-      if not FParent.FStoreRelativePath then
-        ItemName := ExtractFileName(ItemName);
-      ItemName := ToZipName(ItemName);
-      I := IndexOf(ItemName);
-      if I > -1 then
-      begin
-        OBM := FParent.FBatchMode;
-        try
-          if OBM = False then
-            FParent.FBatchMode := True;
-          Remove(I);
-        finally
-          FParent.FBatchMode := OBM;
-        end;
-      end;
-
-      CM := 0;
-      CS := TStringStream.Create('');
-      CS.Position := 0;
-      try
-        UL := Stream.Size - Stream.Position;
-        SetLength(S, UL);
-        if UL > 0 then
-        begin
-          Stream.Read(S[1], UL);
-          CM := ZipCompressionMethod_Deflate;
-        end;
-        FCRC32 := CalcCRC32(S);
-        FParent.FCurrentDFS := UL;
-
-        case FParent.FZipCompressionType of
-          ctNormal: Level := zcDefault;
-          ctMaximum: Level := zcMax;
-          ctFast: Level := zcFastest;
-          ctSuperFast: Level := zcFastest;
-          ctNone: Level := zcNone;
-          else
-            Level := zcDefault;
-        end;
-
-        if CM = ZipCompressionMethod_Deflate then
-        begin
-          Compressor := TZCompressionStream.Create(CS, Level);
-          try
-            Compressor.OnProgress := FParent.OnCompress;
-            Compressor.Write(S[1], UL);
-          finally
-            Compressor.Free;
-          end;
-          S := Copy(CS.DataString, 3, Length(CS.DataString) - 6);
-        end;
-      finally
-        CS.Free;
-      end;
-      //************************************************************************
-      CL := Length(S);
-      //*********************************** FILL RECORDS
-      Result := TKAZipEntriesEntry(Self.Add);
-      with Result.FLocalFile do
-      begin
-        LocalFileHeaderSignature := SIG_LocalHeader;
-        VersionNeededToExtract := 20;
-        GeneralPurposeBitFlag := 0;
-        CompressionMethod := CM;
-        LastModFileTimeDate := DateTimeToFileDate(FileDate);
-        Crc32 := FCRC32;
-        CompressedSize := CL;
-        UncompressedSize := UL;
-        FilenameLength := Length(ItemName);
-        ExtraFieldLength := 0;
-        FileName := ItemName;
-        ExtraField := '';
-        CompressedData := '';
-      end;
-
-      with Result.FCentralDirectoryFile do
-      begin
-        CentralFileHeaderSignature := SIG_CentralFile;
-        VersionMadeBy := 20;
-        VersionNeededToExtract := 20;
-        GeneralPurposeBitFlag := 0;
-        CompressionMethod := CM;
-        LastModFileTimeDate := DateTimeToFileDate(FileDate);
-        Crc32 := FCRC32;
-        CompressedSize := CL;
-        UncompressedSize := UL;
-        FilenameLength := Length(ItemName);
-        ExtraFieldLength := 0;
-        FileCommentLength := 0;
-        DiskNumberStart := 0;
-        InternalFileAttributes := 0;
-        ExternalFileAttributes := FileAttr;
-        RelativeOffsetOfLocalHeader := TempMSStream.Position;
-        FileName := ItemName;
-        ExtraField := '';
-        FileComment := '';
-      end;
-
-      //************************************ SAVE LOCAL HEADER AND COMPRESSED DATA
-      TempMSStream.Write(Result.FLocalFile, SizeOf(Result.FLocalFile) - 3 * SizeOf(string));
-      if Result.FLocalFile.FilenameLength > 0 then
-        TempMSStream.Write(Result.FLocalFile.FileName[1], Result.FLocalFile.FilenameLength);
-      if CL > 0 then
-        TempMSStream.Write(S[1], CL);
-      //************************************
-      FParent.NewLHOffsets[Count - 1] := Result.FCentralDirectoryFile.RelativeOffsetOfLocalHeader;
-      FParent.RebuildCentralDirectory(TempMSStream);
-      FParent.RebuildEndOfCentralDirectory(TempMSStream);
-      //************************************
-      TempMSStream.Position := 0;
-      OSL := FParent.FZipStream.Size;
-      try
-        FParent.FZipStream.Size := TempMSStream.Size;
-      except
-        FParent.FZipStream.Size := OSL;
-        raise;
-      end;
-      FParent.FZipStream.Position := 0;
-      FParent.FZipStream.CopyFrom(TempMSStream, TempMSStream.Size);
-    finally
-      TempMSStream.Free;
-    end;
-  end;
-
-  Result.FDate := FileDateToDateTime(Result.FCentralDirectoryFile.LastModFileTimeDate);
-  if (Result.FCentralDirectoryFile.GeneralPurposeBitFlag and 1) > 0 then
-    Result.FIsEncrypted := True
-  else
-    Result.FIsEncrypted := False;
-  Result.FIsFolder := (Result.FCentralDirectoryFile.ExternalFileAttributes and faDirectory) > 0;
-  Result.FCompressionType := ctUnknown;
-  if (Result.FCentralDirectoryFile.CompressionMethod = ZipCompressionMethod_Deflate) or (Result.FCentralDirectoryFile.CompressionMethod = ZipCompressionMethod_Deflate64) then
-  begin
-    case Result.FCentralDirectoryFile.GeneralPurposeBitFlag and 6 of
-      0: Result.FCompressionType := ctNormal;
-      2: Result.FCompressionType := ctMaximum;
-      4: Result.FCompressionType := ctFast;
-      6: Result.FCompressionType := ctSuperFast
-    end;
-  end;
-  FParent.FIsDirty := True;
-  if not FParent.FBatchMode then
-  begin
-    FParent.DoChange(FParent, 2);
-  end;
-end;
-
-function TKAZipEntries.AddFolderChain(ItemName: string; FileAttr: Word;
-  FileDate: TDateTime): Boolean;
-var
-  FN: string;
-  TN: string;
-  INCN: string;
-  P: Integer;
-  MS: TMemoryStream;
-  NoMore: Boolean;
-begin
-  //  Result := False;
-  FN := ExtractFilePath(ToDosName(ToZipName(ItemName)));
-  TN := FN;
-  INCN := '';
-  MS := TMemoryStream.Create;
-  try
-    repeat
-      NoMore := True;
-      P := Pos('\', TN);
-      if P > 0 then
-      begin
-        INCN := INCN + Copy(TN, 1, P);
-        System.Delete(TN, 1, P);
-        MS.Position := 0;
-        MS.Size := 0;
-        if IndexOf(INCN) = -1 then
-        begin
-          if FParent.FZipSaveMethod = FastSave then
-            AddStreamFast(INCN, FileAttr, FileDate, MS)
-          else if FParent.FZipSaveMethod = RebuildAll then
-            AddStreamRebuild(INCN, FileAttr, FileDate, MS);
-        end;
-        NoMore := False;
-      end;
-    until NoMore;
-    Result := True;
-  finally
-    MS.Free;
-  end;
-end;
-
-function TKAZipEntries.AddFolderChain(ItemName: string): Boolean;
-begin
-  Result := AddFolderChain(ItemName, faDirectory, Now);
-end;
-
-function TKAZipEntries.AddStream(FileName: string; FileAttr: Word; FileDate: TDateTime; Stream: TStream): TKAZipEntriesEntry;
-begin
-  Result := nil;
-  if (FParent.FStoreFolders) and (FParent.FStoreRelativePath) then
-    AddFolderChain(FileName);
-
-  if FParent.FZipSaveMethod = FastSave then
-    Result := AddStreamFast(FileName, FileAttr, FileDate, Stream)
-  else if FParent.FZipSaveMethod = RebuildAll then
-    Result := AddStreamRebuild(FileName, FileAttr, FileDate, Stream);
-
-  if Assigned(FParent.FOnAddItem) then
-    FParent.FOnAddItem(FParent, FileName);
+  Result := FParent.AddStream(FileName, FileAttr, FileDate, Stream);
 end;
 
 function TKAZipEntries.AddStream(FileName: string; Stream: TStream): TKAZipEntriesEntry;
 begin
-  Result := AddStream(FileName, faArchive, Now, Stream);
+  Result := FParent.AddStream(FileName, faArchive, Now, Stream);
 end;
 
 function TKAZipEntries.AddFile(FileName, NewFileName: string): TKAZipEntriesEntry;
-var
-  FS: TFileStream;
-  Dir: TSearchRec;
-  Res: Integer;
 begin
-  Result := nil;
-  Res := FindFirst(FileName, faAnyFile, Dir);
-  if Res = 0 then
-  begin
-    FS := TFileStream.Create(FileName, fmOpenRead or fmShareDenyNone);
-    try
-      FS.Position := 0;
-      Result := AddStream(NewFileName, Dir.Attr, FileDateToDateTime(Dir.Time), FS)
-    finally
-      FS.Free;
-    end;
-  end;
-  FindClose(Dir);
+  Result := FParent.AddFile(FileName, NewFileName);
 end;
 
 function TKAZipEntries.AddFile(FileName: string): TKAZipEntriesEntry;
@@ -2316,417 +1450,58 @@ begin
 end;
 
 function TKAZipEntries.AddFiles(FileNames: TStrings): Boolean;
-var
-  X: Integer;
 begin
-  Result := False;
-  FParent.FBatchMode := True;
-  try
-    for X := 0 to FileNames.Count - 1 do
-      AddFile(FileNames.Strings[X]);
-  except
-    FParent.FBatchMode := False;
-    FParent.DoChange(FParent, 2);
-    Exit;
-  end;
-  FParent.FBatchMode := False;
-  FParent.DoChange(FParent, 2);
-  Result := True;
-end;
-
-function TKAZipEntries.AddFolderEx(FolderName: string; RootFolder: string; WildCard: string; WithSubFolders: Boolean): Boolean;
-var
-  Res: Integer;
-  Dir: TSearchRec;
-  FN: string;
-begin
-  Res := FindFirst(FolderName + '\*.*', faAnyFile, Dir);
-  while Res = 0 do
-  begin
-    if (Dir.Attr and faDirectory) > 0 then
-    begin
-      if (Dir.Name <> '..') and (Dir.Name <> '.') then
-      begin
-        FN := FolderName + '\' + Dir.Name;
-        if (FParent.FStoreFolders) and (FParent.FStoreRelativePath) then
-          AddFolderChain(RemoveRootName(FN + '\', RootFolder), Dir.Attr, FileDateToDateTime(Dir.Time));
-        if WithSubFolders then
-        begin
-          AddFolderEx(FN, RootFolder, WildCard, WithSubFolders);
-        end;
-      end
-      else
-      begin
-        if (Dir.Name = '.') then
-          AddFolderChain(RemoveRootName(FolderName + '\', RootFolder), Dir.Attr, FileDateToDateTime(Dir.Time));
-      end;
-    end
-    else
-    begin
-      FN := FolderName + '\' + Dir.Name;
-      if MatchesMask(FN, WildCard) then
-      begin
-        AddFile(FN, RemoveRootName(FN, RootFolder));
-      end;
-    end;
-    Res := FindNext(Dir);
-  end;
-  FindClose(Dir);
-  Result := True;
+  Result := FParent.AddFiles(FileNames);
 end;
 
 function TKAZipEntries.AddFolder(FolderName: string; RootFolder: string; WildCard: string; WithSubFolders: Boolean): Boolean;
 begin
-  FParent.FBatchMode := True;
-  try
-    Result := AddFolderEx(FolderName, RootFolder, WildCard, WithSubFolders);
-  finally
-    FParent.FBatchMode := False;
-    FParent.DoChange(FParent, 2);
-  end;
+  Result := FParent.AddFolder(FolderName, RootFolder, WildCard, WithSubFolders);
 end;
 
 function TKAZipEntries.AddFilesAndFolders(FileNames: TStrings; RootFolder: string; WithSubFolders: Boolean): Boolean;
-var
-  X: Integer;
-  Res: Integer;
-  Dir: TSearchRec;
 begin
-  FParent.FBatchMode := True;
-  try
-    for X := 0 to FileNames.Count - 1 do
-    begin
-      Res := FindFirst(FileNames.Strings[X], faAnyFile, Dir);
-      if Res = 0 then
-      begin
-        if (Dir.Attr and faDirectory) > 0 then
-        begin
-          if (Dir.Name <> '..') and (Dir.Name <> '.') then
-          begin
-            AddFolderEx(FileNames.Strings[X], RootFolder, '*.*', WithSubFolders);
-          end;
-        end
-        else
-        begin
-          AddFile(FileNames.Strings[X], RemoveRootName(FileNames.Strings[X], RootFolder));
-        end;
-      end;
-      FindClose(Dir);
-    end;
-  finally
-    FParent.FBatchMode := False;
-    FParent.DoChange(FParent, 2);
-  end;
-  Result := True;
+  Result := FParent.AddFilesAndFolders(FileNames, RootFolder, WithSubFolders);
 end;
 
 procedure TKAZipEntries.RemoveFiles(List: TList);
 begin
-  if List.Count = 1 then
-  begin
-    Remove(Integer(List.Items[0]));
-  end
-  else
-  begin
-    SortList(List);
-    FParent.FBatchMode := True;
-    try
-      RemoveBatch(List);
-    finally
-      FParent.FBatchMode := False;
-      FParent.DoChange(Self, 3);
-    end;
-  end;
+  FParent.RemoveFiles(List);
 end;
 
 procedure TKAZipEntries.RemoveSelected;
-var
-  X: Integer;
-  List: TList;
 begin
-  FParent.FBatchMode := True;
-  List := TList.Create;
-  try
-    for X := 0 to Count - 1 do
-    begin
-      if Self.Items[X].Selected then
-        List.Add(Pointer(X));
-    end;
-    RemoveBatch(List);
-  finally
-    List.Free;
-    FParent.FBatchMode := False;
-    FParent.DoChange(Self, 3);
-  end;
+  FParent.RemoveSelected;
 end;
 
 procedure TKAZipEntries.ExtractToStream(Item: TKAZipEntriesEntry; TargetStream: TStream);
-var
-  sourceStream: TMemoryStream;
-  buf: AnsiString;
-  NR: Cardinal;
-  decompressor: TZDecompressionStream;
-{$IFDEF USE_BZIP2}
-  DecompressorBZ2: TBZDecompressionStream;
-{$ENDIF}
 begin
-  if (Item.FIsEncrypted) then
-    raise Exception.Create('Cannot process file "' + Item.FileName + '": File is encrypted');
-
-  if (Item.CompressionMethod <> ZipCompressionMethod_Deflate)
-{$IFDEF USE_BZIP2}
-    and (Item.CompressionMethod <> ZipCompressionMethod_bzip2)
-{$ENDIF}
-    and (Item.CompressionMethod <> ZipCompressionMethod_Store) then
-  begin
-    raise Exception.Create('Cannot process file "' + Item.FileName + '": Unknown compression method '+IntToStr(Item.CompressionMethod));
-  end;
-
-  sourceStream := TMemoryStream.Create;
-  try
-    if Item.GetCompressedData(sourceStream) <= 0 then
-      Exit;
-
-    sourceStream.Position := 0;
-    FParent.FCurrentDFS := Item.SizeUncompressed;
-
-    case Item.CompressionMethod of
-      ZipCompressionMethod_Deflate:
-        begin
-          decompressor := TZDecompressionStream.Create(sourceStream);
-          decompressor.OnProgress := FParent.OnDecompress;
-          SetLength(BUF, FParent.FCurrentDFS);
-          try
-            NR := Decompressor.Read(BUF[1], FParent.FCurrentDFS);
-            if NR = FParent.FCurrentDFS then
-              targetStream.Write(BUF[1], FParent.FCurrentDFS);
-          finally
-            decompressor.Free;
-          end;
-        end;
-{$IFDEF USE_BZIP2}
-      ZipCompressionMethod_bzip2:
-        begin
-          DecompressorBZ2 := TBZDecompressionStream.Create(sourceStream);
-          DecompressorBZ2.OnProgress := FParent.OnDecompress;
-          SetLength(BUF, FParent.FCurrentDFS);
-          try
-            NR := DecompressorBZ2.Read(BUF[1], FParent.FCurrentDFS);
-            if NR = FParent.FCurrentDFS then
-              targetStream.Write(BUF[1], FParent.FCurrentDFS);
-          finally
-            DecompressorBZ2.Free;
-          end;
-        end
-{$ENDIF}
-      ZipCompressionMethod_Store:
-        begin
-          targetStream.CopyFrom(sourceStream, FParent.FCurrentDFS);
-        end;
-    end;
-  finally
-    sourceStream.Free;
-  end;
-end;
-
-procedure TKAZipEntries.InternalExtractToFile(Item: TKAZipEntriesEntry; FileName: string);
-var
-  TFS: TFileStream;
-  Attr: Integer;
-begin
-  if Item.IsFolder then
-  begin
-    ForceDirectories(FileName);
-  end
-  else
-  begin
-    TFS := TFileStream.Create(FileName, fmCreate or fmOpenReadWrite or fmShareDenyNone);
-    try
-      ExtractToStream(Item, TFS);
-    finally
-      TFS.Free;
-    end;
-    if FParent.FApplyAttributes then
-    begin
-      Attr := faArchive;
-      if Item.FCentralDirectoryFile.ExternalFileAttributes and faHidden > 0 then
-        Attr := Attr or faHidden;
-      if Item.FCentralDirectoryFile.ExternalFileAttributes and faSysFile > 0 then
-        Attr := Attr or faSysFile;
-      if Item.FCentralDirectoryFile.ExternalFileAttributes and faReadOnly > 0 then
-        Attr := Attr or faReadOnly;
-      FileSetAttr(FileName, Attr);
-    end;
-  end;
+  FParent.ExtractToStream(Item, TargetStream);
 end;
 
 procedure TKAZipEntries.ExtractToFile(Item: TKAZipEntriesEntry; FileName: string);
-var
-  Can: Boolean;
-  OA: TOverwriteAction;
 begin
-  OA := FParent.FOverwriteAction;
-  Can := True;
-  if ((OA <> oaOverwriteAll) and (OA <> oaSkipAll)) and (Assigned(FParent.FOnOverwriteFile)) then
-  begin
-    if FileExists(FileName) then
-    begin
-      FParent.FOnOverwriteFile(FParent, FileName, OA);
-    end
-    else
-    begin
-      OA := oaOverwrite;
-    end;
-  end;
-  case OA of
-    oaSkip: Can := False;
-    oaSkipAll: Can := False;
-    oaOverwrite: Can := True;
-    oaOverwriteAll: Can := True;
-  end;
-  if Can then
-    InternalExtractToFile(Item, FileName);
+  FParent.ExtractToFile(Item, FileName);
 end;
 
 procedure TKAZipEntries.ExtractToFile(ItemIndex: Integer; FileName: string);
-var
-  Can: Boolean;
-  OA: TOverwriteAction;
 begin
-  OA := FParent.FOverwriteAction;
-  Can := True;
-  if ((OA <> oaOverwriteAll) and (OA <> oaSkipAll)) and (Assigned(FParent.FOnOverwriteFile)) then
-  begin
-    if FileExists(FileName) then
-    begin
-      FParent.FOnOverwriteFile(FParent, FileName, OA);
-    end
-    else
-    begin
-      OA := oaOverwrite;
-    end;
-  end;
-  case OA of
-    oaSkip: Can := False;
-    oaSkipAll: Can := False;
-    oaOverwrite: Can := True;
-    oaOverwriteAll: Can := True;
-  end;
-  if Can then
-    InternalExtractToFile(Items[ItemIndex], FileName);
+  FParent.ExtractToFile(ItemIndex, FileName);
 end;
 
 procedure TKAZipEntries.ExtractToFile(FileName, DestinationFileName: string);
-var
-  I: Integer;
-  Can: Boolean;
-  OA: TOverwriteAction;
 begin
-  OA := FParent.FOverwriteAction;
-  Can := True;
-  if ((OA <> oaOverwriteAll) and (OA <> oaSkipAll)) and (Assigned(FParent.FOnOverwriteFile)) then
-  begin
-    if FileExists(DestinationFileName) then
-    begin
-      FParent.FOnOverwriteFile(FParent, DestinationFileName, OA);
-    end
-    else
-    begin
-      OA := oaOverwrite;
-    end;
-  end;
-  case OA of
-    oaSkip: Can := False;
-    oaSkipAll: Can := False;
-    oaOverwrite: Can := True;
-    oaOverwriteAll: Can := True;
-  end;
-  if Can then
-  begin
-    I := IndexOf(FileName);
-    InternalExtractToFile(Items[I], DestinationFileName);
-  end;
+  FParent.ExtractToFile(FileName, DestinationFileName);
 end;
 
 procedure TKAZipEntries.ExtractAll(TargetDirectory: string);
-var
-  FN: string;
-  DN: string;
-  X: Integer;
-  Can: Boolean;
-  OA: TOverwriteAction;
-  FileName: string;
 begin
-  OA := FParent.FOverwriteAction;
-  Can := True;
-  try
-    for X := 0 to Count - 1 do
-    begin
-      FN := FParent.GetFileName(Items[X].FileName);
-      DN := FParent.GetFilePath(Items[X].FileName);
-      if DN <> '' then
-        ForceDirectories(TargetDirectory + '\' + DN);
-      FileName := TargetDirectory + '\' + DN + FN;
-      if ((OA <> oaOverwriteAll) and (OA <> oaSkipAll)) and (Assigned(FParent.FOnOverwriteFile)) then
-      begin
-        if FileExists(FileName) then
-        begin
-          FParent.FOnOverwriteFile(FParent, FileName, OA);
-        end;
-      end;
-      case OA of
-        oaSkip: Can := False;
-        oaSkipAll: Can := False;
-        oaOverwrite: Can := True;
-        oaOverwriteAll: Can := True;
-      end;
-      if Can then
-        InternalExtractToFile(Items[X], FileName);
-    end;
-  finally
-  end;
+  FParent.ExtractAll(TargetDirectory);
 end;
 
 procedure TKAZipEntries.ExtractSelected(TargetDirectory: string);
-var
-  FN: string;
-  DN: string;
-  X: Integer;
-  OA: TOverwriteAction;
-  Can: Boolean;
-  FileName: string;
 begin
-  OA := FParent.FOverwriteAction;
-  Can := True;
-  try
-    for X := 0 to Count - 1 do
-    begin
-      if Items[X].FSelected then
-      begin
-        FN := FParent.GetFileName(Items[X].FileName);
-        DN := FParent.GetFilePath(Items[X].FileName);
-        if DN <> '' then
-          ForceDirectories(TargetDirectory + '\' + DN);
-        FileName := TargetDirectory + '\' + DN + FN;
-        if ((OA <> oaOverwriteAll) and (OA <> oaSkipAll)) and (Assigned(FParent.FOnOverwriteFile)) then
-        begin
-          if FileExists(FileName) then
-          begin
-            FParent.FOnOverwriteFile(FParent, FileName, OA);
-          end;
-        end;
-        case OA of
-          oaSkip: Can := False;
-          oaSkipAll: Can := False;
-          oaOverwrite: Can := True;
-          oaOverwriteAll: Can := True;
-        end;
-        if Can then
-          InternalExtractToFile(Items[X], TargetDirectory + '\' + DN + FN);
-      end;
-    end;
-  finally
-  end;
+  FParent.ExtractSelected(TargetDirectory);
 end;
 
 procedure TKAZipEntries.DeSelectAll;
@@ -2766,7 +1541,7 @@ end;
 
 procedure TKAZipEntries.Rebuild;
 begin
-  FParent.Rebuild;
+  FParent.Rebuild();
 end;
 
 procedure TKAZipEntries.Rename(Item: TKAZipEntriesEntry; NewFileName: string);
@@ -2788,180 +1563,23 @@ begin
 end;
 
 procedure TKAZipEntries.CreateFolder(FolderName: string; FolderDate: TDateTime);
-var
-  FN: string;
 begin
-  FN := IncludeTrailingPathDelimiter(FolderName);
-  AddFolderChain(FN, faDirectory, FolderDate);
-  FParent.FIsDirty := True;
+  FParent.CreateFolder(FolderName, FolderDate);
 end;
 
 procedure TKAZipEntries.RenameFolder(FolderName: string; NewFolderName: string);
-var
-  FN: string;
-  NFN: string;
-  S: string;
-  X: Integer;
-  L: Integer;
 begin
-  FN := ToZipName(IncludeTrailingPathDelimiter(FolderName));
-  NFN := ToZipName(IncludeTrailingPathDelimiter(NewFolderName));
-  L := Length(FN);
-  if IndexOf(NFN) = -1 then
-  begin
-    for X := 0 to Count - 1 do
-    begin
-      S := Items[X].FileName;
-      if Pos(FN, S) = 1 then
-      begin
-        System.Delete(S, 1, L);
-        S := NFN + S;
-        Items[X].FileName := S;
-        FParent.FIsDirty := True;
-      end;
-    end;
-    if (FParent.FIsDirty) and (FParent.FBatchMode = False) then
-      Rebuild;
-  end;
+  FParent.RenameFolder(FolderName, NewFolderName);
 end;
 
 procedure TKAZipEntries.RenameMultiple(Names: TStringList; NewNames: TStringList);
-var
-  X: Integer;
-  BR: Integer;
-  L: Integer;
 begin
-  BR := 0;
-
-  if Names.Count <> NewNames.Count then
-  begin
-    raise Exception.Create('Names and NewNames must have equal count');
-  end
-  else
-  begin
-    FParent.FBatchMode := True;
-    try
-      for X := 0 to Names.Count - 1 do
-      begin
-        L := Length(Names.Strings[X]);
-        if (L > 0) and ((Names.Strings[X][L] = '\') or (Names.Strings[X][L] = '/')) then
-        begin
-          RenameFolder(Names.Strings[X], NewNames.Strings[X]);
-          Inc(BR);
-        end
-        else
-        begin
-          Rename(Names.Strings[X], NewNames.Strings[X]);
-          Inc(BR);
-        end;
-      end;
-    finally
-      FParent.FBatchMode := False;
-    end;
-    if BR > 0 then
-    begin
-      Rebuild;
-      FParent.DoChange(FParent, 6);
-    end;
-  end;
+  FParent.RenameMultiple(Names, NewNames);
 end;
 
 function TKAZipEntries.AddEntryThroughStream(FileName: string; FileDate: TDateTime; FileAttr: Word): TStream;
-var
-  itemName: string;
-  newEntry: TKAZIPEntriesEntry;
-  i: Integer;
-  zipComment: string;
-  OBM: Boolean;
-  newLocalEntryPosition: Int64;
 begin
-  if (FParent.FStoreFolders) and (FParent.FStoreRelativePath) then
-    AddFolderChain(FileName);
-
-  zipComment := FParent.Comment.Text;
-
-  itemName := Filename;
-
-  if not FParent.FStoreRelativePath then
-    itemName := ExtractFileName(itemName);
-
-  itemName := ToZipName(itemName);
-
-  //If an item with this name already exists then remove it
-  i := Self.IndexOf(itemName);
-  if i >= 0 then
-  begin
-    OBM := FParent.FBatchMode;
-    try
-      if OBM = False then
-        FParent.FBatchMode := True;
-      Remove(i);
-    finally
-      FParent.FBatchMode := OBM;
-    end;
-  end;
-
-  //This is where the new local entry starts (where the central directly is).
-  //We overwrite the central direct (and EOCD marker) and then re-write them after the end of the file
-  newLocalEntryPosition := FParent.FEndOfCentralDir.OffsetOfStartOfCentralDirectory;
-
-//  FParent.FCurrentDFS := uncompressedLength;
-
-  //Fill records
-  newEntry := TKAZipEntriesEntry(Self.Add);
-
-  //Local file entry
-  newEntry.FLocalFile.LocalFileHeaderSignature := SIG_LocalHeader; //'PK'#03#04
-  newEntry.FLocalFile.VersionNeededToExtract := 20;
-  newEntry.FLocalFile.GeneralPurposeBitFlag := 0;
-  newEntry.FLocalFile.CompressionMethod := ZipCompressionMethod_Deflate; //assume Deflate, but if the length is zero then it will be switched to Store (0)
-  newEntry.FLocalFile.LastModFileTimeDate := DateTimeToFileDate(FileDate);
-  newEntry.FLocalFile.Crc32 := 0; //don't know it yet, will back-fill
-  newEntry.FLocalFile.CompressedSize := 0; //don't know it yet, will back-fill
-  newEntry.FLocalFile.UncompressedSize := 0; //don't know it yet, will back-fill
-  newEntry.FLocalFile.FilenameLength := Length(ItemName);
-  newEntry.FLocalFile.ExtraFieldLength := 0;
-  newEntry.FLocalFile.FileName := ItemName;
-  newEntry.FLocalFile.ExtraField := '';
-  newEntry.FLocalFile.CompressedData := ''; //not used
-
-  //Create the Central Directory entry
-  newEntry.FCentralDirectoryFile.CentralFileHeaderSignature := SIG_CentralFile; //PK 0x01 0x02
-  newEntry.FCentralDirectoryFile.VersionMadeBy := 20;
-  newEntry.FCentralDirectoryFile.VersionNeededToExtract := 20;
-  newEntry.FCentralDirectoryFile.GeneralPurposeBitFlag := 0;
-  newEntry.FCentralDirectoryFile.CompressionMethod := ZipCompressionMethod_Deflate; //assume Deflate, but if the length is zero then it will be switched to Store (0)
-  newEntry.FCentralDirectoryFile.LastModFileTimeDate := DateTimeToFileDate(FileDate);
-  newEntry.FCentralDirectoryFile.Crc32 := 0; //don't know it yet, will back-fill
-  newEntry.FCentralDirectoryFile.CompressedSize := 0; //don't know it yet, will back-fill
-  newEntry.FCentralDirectoryFile.UncompressedSize := 0; //don't know it yet, will back-fill
-  newEntry.FCentralDirectoryFile.FilenameLength := Length(ItemName);
-  newEntry.FCentralDirectoryFile.ExtraFieldLength := 0;
-  newEntry.FCentralDirectoryFile.FileCommentLength := 0;
-  newEntry.FCentralDirectoryFile.DiskNumberStart := 0;
-  newEntry.FCentralDirectoryFile.InternalFileAttributes := 0;
-  newEntry.FCentralDirectoryFile.ExternalFileAttributes := FileAttr;
-  newEntry.FCentralDirectoryFile.RelativeOffsetOfLocalHeader := newLocalEntryPosition;
-  newEntry.FCentralDirectoryFile.FileName := ItemName;
-  newEntry.FCentralDirectoryFile.ExtraField := '';
-  newEntry.FCentralDirectoryFile.FileComment := '';
-
-  newEntry.FDate := FileDate;
-
-  if (newEntry.FCentralDirectoryFile.GeneralPurposeBitFlag and 1) > 0 then
-    newEntry.FIsEncrypted := True
-  else
-    newEntry.FIsEncrypted := False;
-  newEntry.FIsFolder := (newEntry.FCentralDirectoryFile.ExternalFileAttributes and faDirectory) > 0;
-
-
-  // Write Local file entry to stream
-  FParent.FZipStream.Position := newLocalEntryPosition;
-  FParent.FZipStream.Write(newEntry.FLocalFile, SizeOf(newEntry.FLocalFile) - 3 * SizeOf(string)); //excluding FileName, ExtraField, and CompressedData
-  if newEntry.FLocalFile.FilenameLength > 0 then
-    FParent.FZipStream.Write(newEntry.FLocalFile.FileName[1], newEntry.FLocalFile.FilenameLength);
-
-  Result := TKAZipStream.Create(FParent.FZipStream, newEntry, FParent.FZipCompressionType, FParent);
+  Result := FParent.AddEntryThroughStream(FileName, FileDate, FileAttr);
 end;
 
 { TKAZip }
@@ -2988,6 +1606,7 @@ begin
   FIsDirty := True;
   FHasBadEntries := False;
   FReadOnly := False;
+  FLocalHeaderNumFiles := 0;
 
   FApplyAttributes := True;
   FOverwriteAction := oaSkip;
@@ -3014,6 +1633,670 @@ begin
     FOnZipChange(Self, ChangeType);
 end;
 
+function TKAZip.FindCentralDirectory(MS: TStream): Boolean;
+var
+  SeekStart: Integer;
+  Poz: Integer;
+  BR: Integer;
+  Sig: TZipSignature;
+begin
+  Result := False;
+  if MS.Size < 22 then
+    Exit;
+  if MS.Size < 256 then
+    SeekStart := MS.Size
+  else
+    SeekStart := 256;
+  Poz := MS.Size - 22;
+  BR := SeekStart;
+  repeat
+    MS.Position := Poz;
+    MS.Read(Sig, SizeOf(Sig));
+    if Sig[0] = SIG_EndOfCentralDirectory[0] then
+    begin
+      if Sig = SIG_EndOfCentralDirectory then
+      begin
+        MS.Position := Poz;
+        FEndOfCentralDirPos := MS.Position;
+        MS.Read(FEndOfCentralDir, SizeOf(FEndOfCentralDir));
+        FZipCommentPos := MS.Position;
+        FZipComment.Clear;
+        Result := True;
+      end
+      else
+      begin
+        Dec(Poz, 4);
+        Dec(BR, 4);
+      end;
+    end
+    else
+    begin
+      Dec(Poz);
+      Dec(BR)
+    end;
+    if BR < 0 then
+    begin
+      case SeekStart of
+        256:
+        begin
+          SeekStart := 1024;
+          Poz := MS.Size - (256 + 22);
+          BR := SeekStart;
+        end;
+        1024:
+        begin
+          SeekStart := 65536;
+          Poz := MS.Size - (1024 + 22);
+          BR := SeekStart;
+        end;
+        65536:
+        begin
+          SeekStart := -1;
+        end;
+      end;
+    end;
+    if BR < 0 then
+      SeekStart := -1;
+    if MS.Size < SeekStart then
+      SeekStart := -1;
+  until (Result) or (SeekStart = -1);
+end;
+
+function TKAZip.ParseCentralHeaders(MS: TStream): Boolean;
+var
+  X: Integer;
+  Entry: TKAZipEntriesEntry;
+begin
+  Result := False;
+  try
+    MS.Position := FEndOfCentralDir.OffsetOfStartOfCentralDirectory;
+    for X := 0 to FEndOfCentralDir.TotalNumberOfEntriesOnThisDisk - 1 do
+    begin
+      Entry := TKAZipEntriesEntry.Create(Entries);
+      if not Entry.ParseFromCentralDirectory(MS) then
+      begin
+        Entry.Free();
+        Break;
+      end;
+      if Assigned(FOnZipOpen) then
+        FOnZipOpen(Self, X, FEndOfCentralDir.TotalNumberOfEntriesOnThisDisk);
+    end;
+  except
+    Exit;
+  end;
+  Result := (Entries.Count = FEndOfCentralDir.TotalNumberOfEntriesOnThisDisk);
+end;
+
+procedure TKAZip.ParseZip(MS: TStream);
+begin
+  FIsZipFile := False;
+  Entries.Clear();
+  if FindCentralDirectory(MS) then
+  begin
+    if ParseCentralHeaders(MS) then
+    begin
+      FIsZipFile := True;
+      LoadLocalHeaders(MS);
+    end;
+  end
+  else
+  begin
+    if ParseLocalHeaders(MS) then
+    begin
+      FIsZipFile := (Entries.Count > 0);
+      if FIsZipFile then
+        FHasBadEntries := True;
+    end;
+  end;
+end;
+
+(*
+function TKAZip.GetLocalEntry(MS: TStream; Offset: Integer; HeaderOnly: Boolean): TLocalFile;
+var
+  LFH: TLocalFileHeader;
+  EDR: TZipExtraDataRecord;
+  CurFilePos: Int64;
+  Sig: TZipSignature;
+  DataDescriptor: TDataDescriptor;
+  //Sig: LongWord;
+begin
+  //20140320 -- You cannot ZeroMe mory/FillCh ar a structure containing strings.
+  //It destroys some internal housekeeping and causes a leak.
+//  FillCh ar(Result, SizeOf(Result), 0);
+  Result := Default_TLocalFile;
+
+
+  MS.Position := Offset;
+  MS.Read(Sig, SizeOf(Sig));
+  if (Sig <> SIG_LocalHeader) then
+    Exit;
+
+  MS.Position := Offset;
+  MS.Read(LFH, SizeOf(LFH));
+  AssignLocalFileFromHeader(Result, LFH);
+  if Result.FilenameLength > 0 then
+  begin
+    SetLength(Result.FileName, Result.FilenameLength);
+    MS.Read(Result.FileName[1], Result.FilenameLength);
+  end;
+  if Result.ExtraFieldLength > 0 then
+  begin
+    SetLength(Result.ExtraField, Result.ExtraFieldLength);
+    MS.Read(Result.ExtraField[1], Result.ExtraFieldLength);
+  end;
+  // try to read TZipExtraDataRecord
+  CurFilePos := MS.Position;
+  MS.Read(EDR, SizeOf(EDR));
+  if EDR.Signature = SIG_ExtraDataRecord then
+  begin
+    if EDR.FieldLength > 0 then
+    begin
+      SetLength(Result.ExtraData, EDR.FieldLength);
+      MS.Read(Result.ExtraData[1], EDR.FieldLength);
+    end;
+  end
+  else
+  begin
+    // rewinf back
+    MS.Position := CurFilePos;
+  end;
+  // optional data descriptor written AFTER compressed data
+  {if (Result.GeneralPurposeBitFlag and (1 shl 3)) > 0 then
+  begin
+    MS.Read(DataDescriptor, SizeOf(TDataDescriptor));
+    Result.Crc32 := DataDescriptor.Crc32;
+    Result.CompressedSize := DataDescriptor.CompressedSize;
+    Result.UnCompressedSize := DataDescriptor.UnCompressedSize;
+  end;  }
+  if not HeaderOnly then
+  begin
+    if Result.CompressedSize > 0 then
+    begin
+      SetLength(Result.CompressedData, Result.CompressedSize);
+      MS.Read(Result.CompressedData[1], Result.CompressedSize);
+    end;
+  end;
+end;
+*)
+
+procedure TKAZip.LoadLocalHeaders(MS: TStream);
+var
+  i: Integer;
+begin
+  FHasBadEntries := False;
+  for i := 0 to Entries.Count - 1 do
+  begin
+    if Assigned(FOnZipOpen) then
+      FOnZipOpen(Self, i, FEndOfCentralDir.TotalNumberOfEntriesOnThisDisk);
+    MS.Position := Entries.Items[i].LocalOffset;
+    if not Entries.Items[i].ParseFromLocalHeader(MS) then
+      FHasBadEntries := True;
+  end;
+end;
+
+function TKAZip.ParseLocalHeaders(MS: TStream): Boolean;
+var
+  Poz: Integer;
+  NLE: Integer;
+  Sig: TZipSignature;
+  Entry: TKAZipEntriesEntry;
+  CDSize: Cardinal;
+  NoMore: Boolean;
+begin
+  Result := False;
+  FLocalHeaderNumFiles := 0;
+  Entries.Clear();
+  try
+    Poz := 0;
+    NLE := 0;
+    CDSize := 0;
+    repeat
+      NoMore := True;
+      MS.Position := Poz;
+      MS.Read(Sig, Sizeof(Sig));
+      if (Sig = SIG_LocalHeader) then
+      begin
+        Result := True;
+        Inc(FLocalHeaderNumFiles);
+        NoMore := False;
+        MS.Position := Poz;
+
+        Entry := TKAZipEntriesEntry.Create(Entries);
+        if not Entry.ParseFromLocalHeader(MS) then
+        begin
+          Entry.Free();
+        end;
+
+        MS.Position := MS.Position + Entry.SizeCompressed;
+
+        //FillCha r(CDFile, SizeOf(TCentralDirectoryFile), 0);  20140320 Cannot do FillCh ar on a structure containing managed types
+        CDSize := CDSize + Entry.CentralEntrySize;
+        Poz := MS.Position;
+        Inc(NLE);
+      end;
+    until NoMore;
+
+    FEndOfCentralDir.EndOfCentralDirSignature := SIG_EndOfCentralDirectory; //PK 0x05 0x06
+    FEndOfCentralDir.NumberOfThisDisk := 0;
+    FEndOfCentralDir.NumberOfTheDiskWithTheStart := 0;
+    FEndOfCentralDir.TotalNumberOfEntriesOnThisDisk := NLE;
+    FEndOfCentralDir.SizeOfTheCentralDirectory := CDSize;
+    FEndOfCentralDir.OffsetOfStartOfCentralDirectory := MS.Position;
+    FEndOfCentralDir.ZipfileCommentLength := 0;
+  except
+    Exit;
+  end;
+end;
+
+function TKAZip.AddStreamFast(ItemName: string; FileAttr: Word; FileDate: TDateTime; Stream: TStream): TKAZipEntriesEntry;
+var
+  compressor: TZCompressionStream;
+//  CS: TStringStream;
+  compressionMode: Word;
+//  S: string;
+  i: Integer;
+  uncompressedLength: Integer;
+  compressedLength: Integer;
+  dataCrc32: LongWord;
+//  sizeToAppend: Integer;
+  zipComment: string;
+  compressionLevel: TZCompressionLevel;
+  OBM: Boolean;
+  crc32Stream: TCRC32Stream;
+  newLocalEntryPosition: Int64;
+  startOfCompressedDataPosition: Int64;
+  centralDirectoryPosition: Int64;
+  LFH: TLocalFileHeader;
+begin
+  //*********************************** COMPRESS DATA
+  zipComment := Comment.Text;
+
+  if not FStoreRelativePath then
+    ItemName := ExtractFileName(ItemName);
+
+  ItemName := ToZipName(ItemName);
+
+  //If an item with this name already exists then remove it
+  i := Entries.IndexOf(ItemName);
+  if i >= 0 then
+  begin
+    OBM := FBatchMode;
+    try
+      if OBM = False then
+        FBatchMode := True;
+      Remove(i);
+    finally
+      FBatchMode := OBM;
+    end;
+  end;
+
+  //This is where the new local entry starts (where the central directly is).
+  //We overwrite the central direct (and EOCD marker) and then re-write them after the end of the file
+  newLocalEntryPosition := FEndOfCentralDir.OffsetOfStartOfCentralDirectory;
+
+  if Assigned(Stream) then
+    uncompressedLength := Stream.Size - Stream.Position
+  else
+    uncompressedLength := 0;
+  FCurrentDFS := uncompressedLength;
+
+
+  dataCrc32 := 0; //we don't know it yet; back-fill it
+//  compressedLength := 0; //we don't know it yet; back-fill it
+
+  if uncompressedLength > 0 then
+    compressionMode := ZipCompressionMethod_Deflate
+  else
+    compressionMode := ZipCompressionMethod_Store;
+
+  //Fill records
+  Result := TKAZipEntriesEntry(Entries.Add);
+  Result.FileName := ItemName;
+  Result.ExtraField := '';
+  Result.Attributes := FileAttr;
+  Result.Date := FileDate;
+  Result.SizeUncompressed := uncompressedLength;
+  Result.CompressionMethod := compressionMode;
+  Result.LocalOffset := newLocalEntryPosition;
+
+  //Local file entry
+  Result.FillLocalHeader(LFH);
+
+  // Write Local file entry to stream
+  FZipStream.Position := newLocalEntryPosition;
+  FZipStream.Write(LFH, SizeOf(LFH));
+  if LFH.FilenameLength > 0 then
+    FZipStream.Write(Result.FileName[1], LFH.FilenameLength);
+  // extra field was set to empty
+
+  //Now stream the compressed data
+  startOfCompressedDataPosition := FZipStream.Position;
+
+  if compressionMode = ZipCompressionMethod_Deflate then
+  begin
+    //The zlib compression level to use
+    case FZipCompressionType of
+      ctNormal: compressionLevel := zcDefault;
+      ctMaximum: compressionLevel := zcMax;
+      ctFast: compressionLevel := zcFastest;
+      ctSuperFast: compressionLevel := zcFastest;
+      ctNone: compressionLevel := zcNone;
+      else
+        compressionLevel := zcDefault;
+    end;
+
+    {
+      We don't have access to a DEFLATE compressor.
+      The best we have in ZLIB, which in turn uses DEFLATE.
+      But zlib added 2 leading bytes, and 4 trailing bytes, that we need to strip off
+        Skip first two zlib bytes  (RFC1950)
+            CMF (Compression Method and flags)
+            FLG (FLaGs)
+        and final four bytes
+            ADLER32 (Adler-32 checksum)
+    }
+//    OutputDebugString('SAMPLING ON');
+    compressor := TZCompressionStream.Create(FZipStream, compressionLevel,
+          -15, //windowBits - The default value is 15 if deflateInit is used instead.
+          8, //memLevel - The default value is 8
+          zsDefault); //strategy
+    try
+      compressor.OnProgress := OnCompress;
+
+      //A through-stream that calculates the crc32 of the uncompressed data streaming through it
+      crc32Stream := TCRC32Stream.Create(compressor);
+      try
+        crc32Stream.CopyFrom(Stream, uncompressedLength);
+        dataCrc32 := crc32Stream.CRC32;
+      finally
+        crc32Stream.Free;
+      end;
+    finally
+      compressor.Free;
+    end;
+//    OutputDebugString('SAMPLING OFF');
+  end;
+
+  //The central directory will start here; just after the file we just wrote
+  //Memorize it now, because we're going to backtrack and update the CRC and compressed size
+  //also because we can use it to figure out the compressed size
+  centralDirectoryPosition := FZipStream.Position;
+
+  if not Result.IsFolder then
+  begin
+    try
+      compressedLength := (centralDirectoryPosition - startOfCompressedDataPosition);
+
+      //Now that we know the CRC and the compressed size, update them in the local file entry
+      Result.Crc32 := dataCrc32;
+      Result.SizeCompressed := compressedLength;
+      Result.FillLocalHeader(LFH);
+      FZipStream.Position := newLocalEntryPosition;
+      FZipStream.Write(LFH, SizeOf(LFH));
+    finally
+      //Return to where the central directory will be, and write it
+      FZipStream.Position := centralDirectoryPosition;
+    end;
+  end;
+
+  //Save the Central Directory entries and EOCD (End of Central Directory) record
+  RebuildCentralDirectory(FZipStream);
+
+  FIsDirty := True;
+  if not FBatchMode then
+  begin
+    DoChange(Self, ZIP_ITEM_ADDED);
+  end;
+end;
+
+function TKAZip.AddStreamRebuild(ItemName: string;
+  FileAttr: Word;
+  FileDate: TDateTime;
+  Stream: TStream): TKAZipEntriesEntry;
+var
+  Compressor: TZCompressionStream;
+  CS: TStringStream;
+  cm: Word; //CompressionMethod to use
+  S: AnsiString;
+  UL: Integer;
+  CL: Integer;
+  I: Integer;
+  X: Integer;
+  FCRC32: Cardinal;
+  OSL: Cardinal;
+  NewSize: Cardinal;
+  ZipComment: string;
+  TempStream: TStream;
+  TempFileName: string;
+  Level: TZCompressionLevel;
+  OBM: Boolean;
+  LFH: TLocalFileHeader;
+begin
+  if FUseTempFiles then
+  begin
+    TempFileName := GetDelphiTempFileName;
+    TempStream := TFileStream.Create(TempFileName, fmOpenReadWrite or FmCreate);
+  end
+  else
+  begin
+    TempStream := TMemoryStream.Create();
+  end;
+
+  try
+    NewSize := 0;
+    for X := 0 to Entries.Count - 1 do
+    begin
+      NewSize := NewSize + Entries.Items[X].LocalEntrySize + Entries.Items[X].CentralEntrySize;
+      if Assigned(FOnRemoveItems) then
+        FOnRemoveItems(Self, X, Entries.Count - 1);
+    end;
+    NewSize := NewSize + SizeOf(FEndOfCentralDir) + FEndOfCentralDir.ZipfileCommentLength;
+
+    TempStream.Size := NewSize;
+    TempStream.Position := 0;
+
+    //*********************************** SAVE ALL OLD LOCAL ITEMS
+    RebuildLocalFiles(TempStream);
+    //*********************************** COMPRESS DATA
+    ZipComment := Comment.Text;
+    if not FStoreRelativePath then
+      ItemName := ExtractFileName(ItemName);
+    ItemName := ToZipName(ItemName);
+    I := Entries.IndexOf(ItemName);
+    if I > -1 then
+    begin
+      OBM := FBatchMode;
+      try
+        if OBM = False then
+          FBatchMode := True;
+        Remove(I);
+      finally
+        FBatchMode := OBM;
+      end;
+    end;
+
+    cm := 0;
+    CS := TStringStream.Create('');
+    CS.Position := 0;
+    try
+      if Assigned(Stream) then
+        UL := Stream.Size - Stream.Position
+      else
+        UL := 0;
+      SetLength(S, UL);
+      if UL > 0 then
+      begin
+        Stream.Read(S[1], UL);
+        cm := ZipCompressionMethod_Deflate;
+      end;
+      FCRC32 := CalcCRC32(S);
+      FCurrentDFS := UL;
+
+      case FZipCompressionType of
+        ctNormal: Level := zcDefault;
+        ctMaximum: Level := zcMax;
+        ctFast: Level := zcFastest;
+        ctSuperFast: Level := zcFastest;
+        ctNone: Level := zcNone;
+        else
+          Level := zcDefault;
+      end;
+
+      if cm = ZipCompressionMethod_Deflate then
+      begin
+        Compressor := TZCompressionStream.Create(CS, Level);
+        try
+          Compressor.OnProgress := OnCompress;
+          Compressor.Write(S[1], UL);
+        finally
+          Compressor.Free;
+        end;
+        S := Copy(CS.DataString, 3, Length(CS.DataString) - 6);
+      end;
+    finally
+      CS.Free;
+    end;
+
+    //************************************************************************
+    CL := Length(S);
+    //*********************************** FILL RECORDS
+    Result := TKAZipEntriesEntry(Entries.Add);
+    Result.Date := FileDate;
+    Result.CompressionMethod := cm;
+    Result.CRC32 := FCRC32;
+    Result.SizeCompressed := CL;
+    Result.SizeUncompressed := UL;
+    Result.FileName := ItemName;
+    Result.Attributes := FileAttr;
+    Result.LocalOffset := TempStream.Position;
+
+    //************************************ SAVE LOCAL HEADER AND COMPRESSED DATA
+    Result.FillLocalHeader(LFH);
+    TempStream.Write(LFH, SizeOf(LFH));
+    if LFH.FilenameLength > 0 then
+      TempStream.Write(Result.FileName[1], LFH.FilenameLength);
+    if CL > 0 then
+      TempStream.Write(S[1], CL);
+    //************************************
+    RebuildCentralDirectory(TempStream);
+    //************************************
+    TempStream.Position := 0;
+    OSL := FZipStream.Size;
+    try
+      FZipStream.Size := TempStream.Size;
+    except
+      FZipStream.Size := OSL;
+      raise;
+    end;
+    FZipStream.Position := 0;
+    FZipStream.CopyFrom(TempStream, TempStream.Size);
+  finally
+    TempStream.Free();
+    if FUseTempFiles then
+      DeleteFile(TempFileName)
+  end;
+
+  FIsDirty := True;
+  if not FBatchMode then
+  begin
+    DoChange(Self, ZIP_ITEM_ADDED);
+  end;
+end;
+
+function TKAZip.AddFolderChain(ItemName: string; FileAttr: Word;
+  FileDate: TDateTime): Boolean;
+var
+  FN: string;
+  TN: string;
+  INCN: string;
+  P: Integer;
+  NoMore: Boolean;
+begin
+  //  Result := False;
+  FN := ExtractFilePath(ToDosName(ToZipName(ItemName)));
+  TN := FN;
+  INCN := '';
+  repeat
+    NoMore := True;
+    P := Pos('\', TN);
+    if P > 0 then
+    begin
+      INCN := INCN + Copy(TN, 1, P);
+      System.Delete(TN, 1, P);
+      if Entries.IndexOf(INCN) = -1 then
+      begin
+        if FZipSaveMethod = FastSave then
+          AddStreamFast(INCN, FileAttr, FileDate, nil)
+        else if FZipSaveMethod = RebuildAll then
+          AddStreamRebuild(INCN, FileAttr, FileDate, nil);
+      end;
+      NoMore := False;
+    end;
+  until NoMore;
+  Result := True;
+end;
+
+function TKAZip.AddFolderChain(ItemName: string): Boolean;
+begin
+  Result := AddFolderChain(ItemName, faDirectory, Now);
+end;
+
+function TKAZip.AddFolderEx(FolderName: string; RootFolder: string; WildCard: string; WithSubFolders: Boolean): Boolean;
+var
+  Res: Integer;
+  Dir: TSearchRec;
+  FN: string;
+begin
+  Res := FindFirst(FolderName + '\*.*', faAnyFile, Dir);
+  while Res = 0 do
+  begin
+    if (Dir.Attr and faDirectory) > 0 then
+    begin
+      if (Dir.Name <> '..') and (Dir.Name <> '.') then
+      begin
+        FN := FolderName + '\' + Dir.Name;
+        if (FStoreFolders) and (FStoreRelativePath) then
+          AddFolderChain(RemoveRootName(FN + '\', RootFolder), Dir.Attr, FileDateToDateTime(Dir.Time));
+        if WithSubFolders then
+        begin
+          AddFolderEx(FN, RootFolder, WildCard, WithSubFolders);
+        end;
+      end
+      else
+      begin
+        if (Dir.Name = '.') then
+          AddFolderChain(RemoveRootName(FolderName + '\', RootFolder), Dir.Attr, FileDateToDateTime(Dir.Time));
+      end;
+    end
+    else
+    begin
+      FN := FolderName + '\' + Dir.Name;
+      if MatchesMask(FN, WildCard) then
+      begin
+        AddFile(FN, RemoveRootName(FN, RootFolder));
+      end;
+    end;
+    Res := FindNext(Dir);
+  end;
+  FindClose(Dir);
+  Result := True;
+end;
+
+function TKAZip.AddStream(FileName: string; FileAttr: Word; FileDate: TDateTime; Stream: TStream): TKAZipEntriesEntry;
+begin
+  Result := nil;
+  if (FStoreFolders) and (FStoreRelativePath) then
+    AddFolderChain(FileName);
+
+  if FZipSaveMethod = FastSave then
+    Result := AddStreamFast(FileName, FileAttr, FileDate, Stream)
+  else if FZipSaveMethod = RebuildAll then
+    Result := AddStreamRebuild(FileName, FileAttr, FileDate, Stream);
+
+  if Assigned(FOnAddItem) then
+    FOnAddItem(Self, FileName);
+end;
+
 function TKAZip.GetFileName(S: string): string;
 var
   FN: string;
@@ -3026,6 +2309,11 @@ begin
   if P > 0 then
     System.Delete(FN, 1, P + 1);
   Result := ExtractFileName(StringReplace(FN, '/', '\', [rfReplaceAll]));
+end;
+
+function TKAZip.AddStream(FileName: string; Stream: TStream): TKAZipEntriesEntry;
+begin
+  Result := AddStream(FileName, faArchive, Now, Stream);
 end;
 
 function TKAZip.GetFilePath(S: string): string;
@@ -3071,12 +2359,11 @@ end;
 procedure TKAZip.LoadFromStream(MS: TStream);
 begin
   FZipStream := MS;
-  FZipHeader.ParseZip(MS);
-  FIsZipFile := FZipHeader.FIsZipFile;
+  ParseZip(MS);
   if not FIsZipFile then
     Close;
   FIsDirty := True;
-  DoChange(Self, 1);
+  DoChange(Self, ZIP_OPENED);
 end;
 
 procedure TKAZip.Close;
@@ -3089,7 +2376,7 @@ begin
   FIsZipFile := False;
   FIsDirty := True;
   FReadOnly := False;
-  DoChange(Self, 0);
+  DoChange(Self, ZIP_CLOSED);
 end;
 
 procedure TKAZip.SetFileName(const Value: string);
@@ -3151,38 +2438,262 @@ begin
 end;
 
 procedure TKAZip.ExtractToFile(Item: TKAZipEntriesEntry; FileName: string);
+var
+  Can: Boolean;
+  OA: TOverwriteAction;
 begin
-  Entries.ExtractToFile(Item, FileName);
+  OA := FOverwriteAction;
+  Can := True;
+  if ((OA <> oaOverwriteAll) and (OA <> oaSkipAll)) and (Assigned(FOnOverwriteFile)) then
+  begin
+    if FileExists(FileName) then
+    begin
+      FOnOverwriteFile(Self, FileName, OA);
+    end
+    else
+    begin
+      OA := oaOverwrite;
+    end;
+  end;
+  case OA of
+    oaSkip: Can := False;
+    oaSkipAll: Can := False;
+    oaOverwrite: Can := True;
+    oaOverwriteAll: Can := True;
+  end;
+  if Can then
+    InternalExtractToFile(Item, FileName);
 end;
 
 procedure TKAZip.ExtractToFile(ItemIndex: Integer; FileName: string);
+var
+  Can: Boolean;
+  OA: TOverwriteAction;
 begin
-  Entries.ExtractToFile(ItemIndex, FileName);
+  OA := FOverwriteAction;
+  Can := True;
+  if ((OA <> oaOverwriteAll) and (OA <> oaSkipAll)) and (Assigned(FOnOverwriteFile)) then
+  begin
+    if FileExists(FileName) then
+    begin
+      FOnOverwriteFile(Self, FileName, OA);
+    end
+    else
+    begin
+      OA := oaOverwrite;
+    end;
+  end;
+  case OA of
+    oaSkip: Can := False;
+    oaSkipAll: Can := False;
+    oaOverwrite: Can := True;
+    oaOverwriteAll: Can := True;
+  end;
+  if Can then
+    InternalExtractToFile(Entries.Items[ItemIndex], FileName);
 end;
 
 procedure TKAZip.ExtractToFile(FileName, DestinationFileName: string);
+var
+  I: Integer;
+  Can: Boolean;
+  OA: TOverwriteAction;
 begin
-  Entries.ExtractToFile(FileName, DestinationFileName);
+  OA := FOverwriteAction;
+  Can := True;
+  if ((OA <> oaOverwriteAll) and (OA <> oaSkipAll)) and (Assigned(FOnOverwriteFile)) then
+  begin
+    if FileExists(DestinationFileName) then
+    begin
+      FOnOverwriteFile(Self, DestinationFileName, OA);
+    end
+    else
+    begin
+      OA := oaOverwrite;
+    end;
+  end;
+  case OA of
+    oaSkip: Can := False;
+    oaSkipAll: Can := False;
+    oaOverwrite: Can := True;
+    oaOverwriteAll: Can := True;
+  end;
+  if Can then
+  begin
+    I := Entries.IndexOf(FileName);
+    InternalExtractToFile(Entries.Items[I], DestinationFileName);
+  end;
 end;
 
-procedure TKAZip.ExtractToStream(Item: TKAZipEntriesEntry; Stream: TStream);
+procedure TKAZip.ExtractToStream(Item: TKAZipEntriesEntry; TargetStream: TStream);
+var
+  sourceStream: TMemoryStream;
+  buf: AnsiString;
+  NR: Cardinal;
+  decompressor: TZDecompressionStream;
+{$IFDEF USE_BZIP2}
+  DecompressorBZ2: TBZDecompressionStream;
+{$ENDIF}
 begin
-  Entries.ExtractToStream(Item, Stream);
+  if (Item.FIsEncrypted) then
+    raise Exception.Create('Cannot process file "' + Item.FileName + '": File is encrypted');
+
+  if (Item.CompressionMethod <> ZipCompressionMethod_Deflate)
+{$IFDEF USE_BZIP2}
+    and (Item.CompressionMethod <> ZipCompressionMethod_bzip2)
+{$ENDIF}
+    and (Item.CompressionMethod <> ZipCompressionMethod_Store) then
+  begin
+    raise Exception.Create('Cannot process file "' + Item.FileName + '": Unknown compression method '+IntToStr(Item.CompressionMethod));
+  end;
+
+  sourceStream := TMemoryStream.Create;
+  try
+    if Item.GetCompressedData(sourceStream) <= 0 then
+      Exit;
+
+    sourceStream.Position := 0;
+    FCurrentDFS := Item.SizeUncompressed;
+
+    case Item.CompressionMethod of
+      ZipCompressionMethod_Deflate:
+        begin
+          decompressor := TZDecompressionStream.Create(sourceStream);
+          decompressor.OnProgress := OnDecompress;
+          SetLength(BUF, FCurrentDFS);
+          try
+            NR := Decompressor.Read(BUF[1], FCurrentDFS);
+            if NR = FCurrentDFS then
+              TargetStream.Write(BUF[1], FCurrentDFS);
+          finally
+            decompressor.Free;
+          end;
+        end;
+{$IFDEF USE_BZIP2}
+      ZipCompressionMethod_bzip2:
+        begin
+          DecompressorBZ2 := TBZDecompressionStream.Create(sourceStream);
+          DecompressorBZ2.OnProgress := OnDecompress;
+          SetLength(BUF, FCurrentDFS);
+          try
+            NR := DecompressorBZ2.Read(BUF[1], FCurrentDFS);
+            if NR = FCurrentDFS then
+              TargetStream.Write(BUF[1], FCurrentDFS);
+          finally
+            DecompressorBZ2.Free;
+          end;
+        end
+{$ENDIF}
+      ZipCompressionMethod_Store:
+        begin
+          TargetStream.CopyFrom(sourceStream, FCurrentDFS);
+        end;
+    end;
+  finally
+    sourceStream.Free;
+  end;
 end;
 
 procedure TKAZip.ExtractAll(TargetDirectory: string);
+var
+  FN: string;
+  DN: string;
+  X: Integer;
+  Can: Boolean;
+  OA: TOverwriteAction;
+  FileName: string;
 begin
-  Entries.ExtractAll(TargetDirectory);
+  OA := FOverwriteAction;
+  Can := True;
+  try
+    for X := 0 to Entries.Count - 1 do
+    begin
+      FN := GetFileName(Entries.Items[X].FileName);
+      DN := GetFilePath(Entries.Items[X].FileName);
+      if DN <> '' then
+        ForceDirectories(TargetDirectory + '\' + DN);
+      FileName := TargetDirectory + '\' + DN + FN;
+      if ((OA <> oaOverwriteAll) and (OA <> oaSkipAll)) and (Assigned(FOnOverwriteFile)) then
+      begin
+        if FileExists(FileName) then
+        begin
+          FOnOverwriteFile(Self, FileName, OA);
+        end;
+      end;
+      case OA of
+        oaSkip: Can := False;
+        oaSkipAll: Can := False;
+        oaOverwrite: Can := True;
+        oaOverwriteAll: Can := True;
+      end;
+      if Can then
+        InternalExtractToFile(Entries.Items[X], FileName);
+    end;
+  finally
+  end;
 end;
 
 procedure TKAZip.ExtractSelected(TargetDirectory: string);
+var
+  FN: string;
+  DN: string;
+  X: Integer;
+  OA: TOverwriteAction;
+  Can: Boolean;
+  FileName: string;
 begin
-  Entries.ExtractSelected(TargetDirectory);
+  OA := FOverwriteAction;
+  Can := True;
+  try
+    for X := 0 to Entries.Count - 1 do
+    begin
+      if Entries.Items[X].Selected then
+      begin
+        FN := GetFileName(Entries.Items[X].FileName);
+        DN := GetFilePath(Entries.Items[X].FileName);
+        if DN <> '' then
+          ForceDirectories(TargetDirectory + '\' + DN);
+        FileName := TargetDirectory + '\' + DN + FN;
+        if ((OA <> oaOverwriteAll) and (OA <> oaSkipAll)) and (Assigned(FOnOverwriteFile)) then
+        begin
+          if FileExists(FileName) then
+          begin
+            FOnOverwriteFile(Self, FileName, OA);
+          end;
+        end;
+        case OA of
+          oaSkip: Can := False;
+          oaSkipAll: Can := False;
+          oaOverwrite: Can := True;
+          oaOverwriteAll: Can := True;
+        end;
+        if Can then
+          InternalExtractToFile(Entries.Items[X], TargetDirectory + '\' + DN + FN);
+      end;
+    end;
+  finally
+  end;
 end;
 
 function TKAZip.AddFile(FileName, NewFileName: string): TKAZipEntriesEntry;
+var
+  FS: TFileStream;
+  Dir: TSearchRec;
+  Res: Integer;
 begin
-  Result := Entries.AddFile(FileName, NewFileName);
+  Result := nil;
+  Res := FindFirst(FileName, faAnyFile, Dir);
+  if Res = 0 then
+  begin
+    FS := TFileStream.Create(FileName, fmOpenRead or fmShareDenyNone);
+    try
+      FS.Position := 0;
+      Result := AddStream(NewFileName, Dir.Attr, FileDateToDateTime(Dir.Time), FS)
+    finally
+      FS.Free;
+    end;
+  end;
+  FindClose(Dir);
 end;
 
 function TKAZip.AddFile(FileName: string): TKAZipEntriesEntry;
@@ -3191,30 +2702,318 @@ begin
 end;
 
 function TKAZip.AddFiles(FileNames: TStrings): Boolean;
+var
+  X: Integer;
 begin
-  Result := Entries.AddFiles(FileNames);
+  Result := False;
+  FBatchMode := True;
+  try
+    for X := 0 to FileNames.Count - 1 do
+      AddFile(FileNames.Strings[X]);
+  except
+    FBatchMode := False;
+    DoChange(Self, ZIP_ITEM_ADDED);
+    Exit;
+  end;
+  FBatchMode := False;
+  DoChange(Self, ZIP_ITEM_ADDED);
+  Result := True;
 end;
 
 function TKAZip.AddFolder(FolderName, RootFolder, WildCard: string;
   WithSubFolders: Boolean): Boolean;
 begin
-  Result := Entries.AddFolder(FolderName, RootFolder, WildCard, WithSubFolders);
+  FBatchMode := True;
+  try
+    Result := AddFolderEx(FolderName, RootFolder, WildCard, WithSubFolders);
+  finally
+    FBatchMode := False;
+    DoChange(Self, ZIP_ITEM_ADDED);
+  end;
 end;
 
 function TKAZip.AddFilesAndFolders(FileNames: TStrings; RootFolder: string;
   WithSubFolders: Boolean): Boolean;
+var
+  X: Integer;
+  Res: Integer;
+  Dir: TSearchRec;
 begin
-  Result := Entries.AddFilesAndFolders(FileNames, RootFolder, WithSubFolders);
+  FBatchMode := True;
+  try
+    for X := 0 to FileNames.Count - 1 do
+    begin
+      Res := FindFirst(FileNames.Strings[X], faAnyFile, Dir);
+      if Res = 0 then
+      begin
+        if (Dir.Attr and faDirectory) > 0 then
+        begin
+          if (Dir.Name <> '..') and (Dir.Name <> '.') then
+          begin
+            AddFolderEx(FileNames.Strings[X], RootFolder, '*.*', WithSubFolders);
+          end;
+        end
+        else
+        begin
+          AddFile(FileNames.Strings[X], RemoveRootName(FileNames.Strings[X], RootFolder));
+        end;
+      end;
+      FindClose(Dir);
+    end;
+  finally
+    FBatchMode := False;
+    DoChange(Self, ZIP_ITEM_ADDED);
+  end;
+  Result := True;
 end;
 
-function TKAZip.AddStream(FileName: string; FileAttr: Word; FileDate: TDateTime; Stream: TStream): TKAZipEntriesEntry;
+procedure TKAZip.Remove(ItemIndex: Integer; Flush: Boolean);
+var
+  TempStream: TFileStream;
+  TempMSStream: TMemoryStream;
+  TempFileName: string;
+//  BUF: string;
+  ZipComment: string;
+  OSL: Cardinal;
+  //*********************************************
+  X: Integer;
+  TargetPos: Cardinal;
+  Border: Cardinal;
+
+//  NR: Integer;
+//  NW: Integer;
+//  BufStart: Integer;
+//  BufLen: Integer;
+  ShiftSize: Cardinal;
+  NewSize: Cardinal;
+  CDFile: TCentralDirectoryFile;
 begin
-  Result := Entries.AddStream(FileName, FileAttr, FileDate, Stream);
+  TargetPos := Entries.Items[ItemIndex].LocalOffset;
+  ShiftSize := Entries.Items[ItemIndex].LocalEntrySize;
+//  BufStart := TargetPos + ShiftSize;
+//  BufLen := FZipStream.Size - BufStart;
+  Border := TargetPos;
+  Entries.Delete(ItemIndex);
+  if (FZipSaveMethod = FastSave) and (Entries.Count > 0) then
+  begin
+    ZipComment := Comment.Text;
+
+{
+    SetLength(BUF,BufLen);
+    FZipStream.Position := BufStart;
+    NR := FZipStream.Read(BUF[1],BufLen);
+
+    FZipStream.Position := TargetPos;
+    NW := FZipStream.Write(BUF[1],BufLen);
+    SetLength(BUF,0);
+  }
+
+    for X := 0 to Entries.Count - 1 do
+    begin
+      if Entries.Items[X].LocalOffset > Border then
+      begin
+        Entries.Items[X].LocalOffset := Entries.Items[X].LocalOffset - ShiftSize;
+        TargetPos := TargetPos + Entries.Items[X].LocalEntrySize;
+      end
+    end;
+
+    FZipStream.Position := TargetPos;
+    //************************************ MARK START OF CENTRAL DIRECTORY
+    FEndOfCentralDir.OffsetOfStartOfCentralDirectory := FZipStream.Position;
+    //************************************ SAVE CENTRAL DIRECTORY
+    for X := 0 to Entries.Count - 1 do
+    begin
+      Entries.Items[X].FillCentralDirectory(CDFile);
+      FZipStream.Write(CDFile, SizeOf(CDFile));
+      if CDFile.FilenameLength > 0 then
+        FZipStream.Write(Entries.Items[X].FileName[1], CDFile.FilenameLength);
+      if CDFile.ExtraFieldLength > 0 then
+        FZipStream.Write(Entries.Items[X].ExtraField[1], CDFile.ExtraFieldLength);
+      if CDFile.FileCommentLength > 0 then
+        FZipStream.Write(Entries.Items[X].Comment[1], CDFile.FileCommentLength);
+    end;
+    //************************************ SAVE END CENTRAL DIRECTORY RECORD
+    FEndOfCentralDirPos := FZipStream.Position;
+    FEndOfCentralDir.SizeOfTheCentralDirectory := FEndOfCentralDirPos - FEndOfCentralDir.OffsetOfStartOfCentralDirectory;
+    Dec(FEndOfCentralDir.TotalNumberOfEntriesOnThisDisk);
+    Dec(FEndOfCentralDir.TotalNumberOfEntries);
+    FZipStream.Write(FEndOfCentralDir, SizeOf(TEndOfCentralDir));
+    //************************************ SAVE ZIP COMMENT IF ANY
+    FZipCommentPos := FZipStream.Position;
+    if Length(ZipComment) > 0 then
+    begin
+      FZipStream.Write(ZipComment[1], Length(ZipComment));
+    end;
+    FZipStream.Size := FZipStream.Position;
+  end
+  else
+  begin
+    if FUseTempFiles then
+    begin
+      TempFileName := GetDelphiTempFileName;
+      TempStream := TFileStream.Create(TempFileName, fmOpenReadWrite or FmCreate);
+      try
+        SaveToStream(TempStream);
+        TempStream.Position := 0;
+        OSL := FZipStream.Size;
+        try
+          FZipStream.Size := TempStream.Size;
+        except
+          FZipStream.Size := OSL;
+          raise;
+        end;
+        FZipStream.Position := 0;
+        FZipStream.CopyFrom(TempStream, TempStream.Size);
+        //*********************************************************************
+        FZipHeader.ParseZip(FZipStream);
+        //*********************************************************************
+      finally
+        TempStream.Free;
+        DeleteFile(TempFileName)
+      end;
+    end
+    else
+    begin
+      NewSize := 0;
+      for X := 0 to Entries.Count - 1 do
+      begin
+        NewSize := NewSize + Entries.Items[X].LocalEntrySize + Entries.Items[X].CentralEntrySize;
+        if Assigned(FOnRemoveItems) then
+          FOnRemoveItems(Self, X, Entries.Count - 1);
+      end;
+      NewSize := NewSize + SizeOf(FEndOfCentralDir) + FEndOfCentralDir.ZipfileCommentLength;
+      TempMSStream := TMemoryStream.Create;
+      try
+        TempMSStream.SetSize(NewSize);
+        TempMSStream.Position := 0;
+        SaveToStream(TempMSStream);
+        TempMSStream.Position := 0;
+        OSL := FZipStream.Size;
+        try
+          FZipStream.Size := TempMSStream.Size;
+        except
+          FZipStream.Size := OSL;
+          raise;
+        end;
+        FZipStream.Position := 0;
+        FZipStream.CopyFrom(TempMSStream, TempMSStream.Size);
+        //*********************************************************************
+        FZipHeader.ParseZip(FZipStream);
+        //*********************************************************************
+      finally
+        TempMSStream.Free;
+      end;
+    end;
+  end;
+  FIsDirty := True;
+  if not FBatchMode then
+  begin
+    DoChange(Self, ZIP_ITEM_REMOVED);
+  end;
 end;
 
-function TKAZip.AddStream(FileName: string; Stream: TStream): TKAZipEntriesEntry;
+procedure TKAZip.RemoveBatch(Files: TList);
+var
+  X: Integer;
+  OSL: Integer;
+  NewSize: Cardinal;
+  TempStream: TFileStream;
+  TempMSStream: TMemoryStream;
+  TempFileName: string;
 begin
-  Result := Entries.AddStream(FileName, Stream);
+  for X := Files.Count - 1 downto 0 do
+  begin
+    Entries.Delete(Integer(Files.Items[X]));
+    if Assigned(FOnRemoveItems) then
+      FOnRemoveItems(Self, Files.Count - X, Files.Count);
+  end;
+  NewSize := 0;
+  if FUseTempFiles then
+  begin
+    TempFileName := GetDelphiTempFileName;
+    TempStream := TFileStream.Create(TempFileName, fmOpenReadWrite or FmCreate);
+    try
+      SaveToStream(TempStream);
+      TempStream.Position := 0;
+      OSL := FZipStream.Size;
+      try
+        FZipStream.Size := TempStream.Size;
+      except
+        FZipStream.Size := OSL;
+        raise;
+      end;
+      FZipStream.Position := 0;
+      FZipStream.CopyFrom(TempStream, TempStream.Size);
+      //*********************************************************************
+      FZipHeader.ParseZip(FZipStream);
+      //*********************************************************************
+    finally
+      TempStream.Free;
+      DeleteFile(TempFileName)
+    end;
+  end
+  else
+  begin
+    for X := 0 to Entries.Count - 1 do
+    begin
+      NewSize := NewSize + Entries.Items[X].LocalEntrySize + Entries.Items[X].CentralEntrySize;
+      if Assigned(FOnRemoveItems) then
+        FOnRemoveItems(Self, X, Entries.Count - 1);
+    end;
+    NewSize := NewSize + SizeOf(FEndOfCentralDir) + FEndOfCentralDir.ZipfileCommentLength;
+    TempMSStream := TMemoryStream.Create;
+    try
+      TempMSStream.SetSize(NewSize);
+      TempMSStream.Position := 0;
+      SaveToStream(TempMSStream);
+      TempMSStream.Position := 0;
+      OSL := FZipStream.Size;
+      try
+        FZipStream.Size := TempMSStream.Size;
+      except
+        FZipStream.Size := OSL;
+        raise;
+      end;
+      FZipStream.Position := 0;
+      FZipStream.CopyFrom(TempMSStream, TempMSStream.Size);
+      //*********************************************************************
+      FZipHeader.ParseZip(FZipStream);
+      //*********************************************************************
+    finally
+      TempMSStream.Free;
+    end;
+  end;
+end;
+
+procedure TKAZip.InternalExtractToFile(Item: TKAZipEntriesEntry; FileName: string);
+var
+  TFS: TFileStream;
+  Attr: Integer;
+begin
+  if Item.IsFolder then
+  begin
+    ForceDirectories(FileName);
+  end
+  else
+  begin
+    TFS := TFileStream.Create(FileName, fmCreate or fmOpenReadWrite or fmShareDenyNone);
+    try
+      ExtractToStream(Item, TFS);
+    finally
+      TFS.Free;
+    end;
+    if FApplyAttributes then
+    begin
+      Attr := faArchive;
+      if Item.Attributes and faHidden > 0 then
+        Attr := Attr or faHidden;
+      if Item.Attributes and faSysFile > 0 then
+        Attr := Attr or faSysFile;
+      if Item.Attributes and faReadOnly > 0 then
+        Attr := Attr or faReadOnly;
+      FileSetAttr(FileName, Attr);
+    end;
+  end;
 end;
 
 procedure TKAZip.Remove(Item: TKAZipEntriesEntry);
@@ -3234,13 +3033,42 @@ end;
 
 procedure TKAZip.RemoveFiles(List: TList);
 begin
-  Entries.RemoveFiles(List);
+  if List.Count = 1 then
+  begin
+    Remove(Integer(List.Items[0]));
+  end
+  else
+  begin
+    Entries.SortList(List);
+    FBatchMode := True;
+    try
+      RemoveBatch(List);
+    finally
+      FBatchMode := False;
+      DoChange(Self, ZIP_ITEM_REMOVED);
+    end;
+  end;
 end;
 
 procedure TKAZip.RemoveSelected;
+var
+  X: Integer;
+  List: TList;
 begin
-  Entries.RemoveSelected;
-  ;
+  FBatchMode := True;
+  List := TList.Create;
+  try
+    for X := 0 to Entries.Count - 1 do
+    begin
+      if Entries.Items[X].Selected then
+        List.Add(Pointer(X));
+    end;
+    RemoveBatch(List);
+  finally
+    List.Free;
+    FBatchMode := False;
+    DoChange(Self, ZIP_ITEM_REMOVED);
+  end;
 end;
 
 function TKAZip.GetComment: TStrings;
@@ -3313,21 +3141,25 @@ end;
 procedure TKAZip.RebuildLocalFiles(MS: TStream);
 var
   X: Integer;
-  LF: TLocalFile;
+  Entry: TKAZipEntriesEntry;
+  LFH: TLocalFileHeader;
 begin
   //************************************************* RESAVE ALL LOCAL BLOCKS
-  SetLength(NewLHOffsets, Entries.Count + 1);
   for X := 0 to Entries.Count - 1 do
   begin
-    NewLHOffsets[X] := MS.Position;
-    LF := Entries.GetLocalEntry(FZipStream, Entries.Items[X].LocalOffset, False);
-    MS.Write(LF, SizeOf(LF) - 3 * SizeOf(string));
-    if LF.FilenameLength > 0 then
-      MS.Write(LF.FileName[1], LF.FilenameLength);
-    if LF.ExtraFieldLength > 0 then
-      MS.Write(LF.ExtraField[1], LF.ExtraFieldLength);
-    if LF.CompressedSize > 0 then
-      MS.Write(LF.CompressedData[1], LF.CompressedSize);
+    Entry := Entries.Items[X];
+    Entry.LocalOffset := MS.Position;
+    Entry.FillLocalHeader(LFH);
+    MS.Write(LFH, SizeOf(LFH));
+    if LFH.FilenameLength > 0 then
+      MS.Write(Entry.FileName[1], LFH.FilenameLength);
+    if LFH.ExtraFieldLength > 0 then
+      MS.Write(Entry.ExtraField[1], LFH.ExtraFieldLength);
+    if LFH.CompressedSize > 0 then
+    begin
+      FZipStream.Position := Entry.CompressedDataPos;
+      MS.CopyFrom(FZipStream, LFH.CompressedSize);
+    end;
     if Assigned(FOnRebuildZip) then
       FOnRebuildZip(Self, X, Entries.Count - 1);
   end;
@@ -3335,41 +3167,41 @@ end;
 
 procedure TKAZip.RebuildCentralDirectory(MS: TStream);
 var
-  X: Integer;
+  i: Integer;
+  Entry: TKAZipEntriesEntry;
   CDF: TCentralDirectoryFile;
-begin
-  NewEndOfCentralDir := FEndOfCentralDir;
-  NewEndOfCentralDir.TotalNumberOfEntriesOnThisDisk := Entries.Count;
-  NewEndOfCentralDir.TotalNumberOfEntries := Entries.Count;
-  NewEndOfCentralDir.OffsetOfStartOfCentralDirectory := MS.Position;
-  for X := 0 to Entries.Count - 1 do
-  begin
-    CDF := Entries.Items[X].FCentralDirectoryFile;
-    CDF.RelativeOffsetOfLocalHeader := NewLHOffsets[X];
-    MS.Write(CDF, SizeOf(CDF) - 3 * SizeOf(string));
-    if CDF.FilenameLength > 0 then
-      MS.Write(CDF.FileName[1], CDF.FilenameLength);
-    if CDF.ExtraFieldLength > 0 then
-      MS.Write(CDF.ExtraField[1], CDF.ExtraFieldLength);
-    if CDF.FileCommentLength > 0 then
-      MS.Write(CDF.FileComment[1], CDF.FileCommentLength);
-    if Assigned(FOnRebuildZip) then
-      FOnRebuildZip(Self, X, Entries.Count - 1);
-  end;
-  NewEndOfCentralDir.SizeOfTheCentralDirectory := Cardinal(MS.Position) - NewEndOfCentralDir.OffsetOfStartOfCentralDirectory;
-end;
-
-procedure TKAZip.RebuildEndOfCentralDirectory(MS: TStream);
-var
   ZipComment: string;
 begin
-  ZipComment := Comment.Text;
-  FRebuildECDP := MS.Position;
-  MS.Write(NewEndOfCentralDir, SizeOf(NewEndOfCentralDir));
-  FRebuildCP := MS.Position;
-  if NewEndOfCentralDir.ZipfileCommentLength > 0 then
+  FEndOfCentralDir.TotalNumberOfEntriesOnThisDisk := Entries.Count;
+  FEndOfCentralDir.TotalNumberOfEntries := Entries.Count;
+  FEndOfCentralDir.OffsetOfStartOfCentralDirectory := MS.Position;
+  for i := 0 to Entries.Count - 1 do
   begin
-    MS.Write(ZipComment[1], NewEndOfCentralDir.ZipfileCommentLength);
+    Entry := Entries.Items[i];
+    Entry.FillCentralDirectory(CDF);
+    MS.Write(CDF, SizeOf(CDF));
+    if CDF.FilenameLength > 0 then
+      MS.Write(Entry.FileName[1], CDF.FilenameLength);
+    if CDF.ExtraFieldLength > 0 then
+      MS.Write(Entry.ExtraField[1], CDF.ExtraFieldLength);
+    if CDF.FileCommentLength > 0 then
+      MS.Write(Entry.Comment[1], CDF.FileCommentLength);
+    if Assigned(FOnRebuildZip) then
+      FOnRebuildZip(Self, i, Entries.Count - 1);
+  end;
+  FEndOfCentralDir.SizeOfTheCentralDirectory := Cardinal(MS.Position) - FEndOfCentralDir.OffsetOfStartOfCentralDirectory;
+
+  // Rebuild end of Central Directory
+  ZipComment := Comment.Text;
+  FEndOfCentralDir.ZipfileCommentLength := Length(ZipComment);
+  FEndOfCentralDirPos := FZipStream.Position;
+  FRebuildECDP := MS.Position;
+  MS.Write(FEndOfCentralDir, SizeOf(FEndOfCentralDir));
+  FRebuildCP := MS.Position;
+  if FEndOfCentralDir.ZipfileCommentLength > 0 then
+  begin
+    FZipCommentPos := FZipStream.Position;
+    MS.Write(ZipComment[1], FEndOfCentralDir.ZipfileCommentLength);
   end;
   if Assigned(FOnRebuildZip) then
     FOnRebuildZip(Self, 100, 100);
@@ -3380,33 +3212,40 @@ var
   X: Integer;
   Y: Integer;
   NewCount: Integer;
-  LF: TLocalFile;
+  Entry: TKAZipEntriesEntry;
+  LFH: TLocalFileHeader;
   CDF: TCentralDirectoryFile;
   ZipComment: string;
+  NewLHOffsets: array of Cardinal;
+  NewEndOfCentralDir: TEndOfCentralDir;
 begin
   ZipComment := Comment.Text;
   Y := 0;
   SetLength(NewLHOffsets, Entries.Count + 1);
   for X := 0 to Entries.Count - 1 do
   begin
-    LF := Entries.GetLocalEntry(FZipStream, Entries.Items[X].LocalOffset, False);
-    if (LF.LocalFileHeaderSignature = $04034B50) and (Entries.Items[X].Test) then
+    Entry := Entries.Items[X];
+    if Entry.Test() then
     begin
+      Entry.FillLocalHeader(LFH);
+      // good entry positions in new zip
       NewLHOffsets[Y] := MS.Position;
-      MS.Write(LF, SizeOf(LF) - 3 * SizeOf(string));
-      if LF.FilenameLength > 0 then
-        MS.Write(LF.FileName[1], LF.FilenameLength);
-      if LF.ExtraFieldLength > 0 then
-        MS.Write(LF.ExtraField[1], LF.ExtraFieldLength);
-      if LF.CompressedSize > 0 then
-        MS.Write(LF.CompressedData[1], LF.CompressedSize);
+      MS.Write(LFH, SizeOf(LFH));
+      if LFH.FilenameLength > 0 then
+        MS.Write(Entry.FileName[1], LFH.FilenameLength);
+      if LFH.ExtraFieldLength > 0 then
+        MS.Write(Entry.ExtraField[1], LFH.ExtraFieldLength);
+      if LFH.CompressedSize > 0 then
+      begin
+        FZipStream.Position := Entry.CompressedDataPos;
+        MS.CopyFrom(FZipStream, LFH.CompressedSize);
+      end;
       if Assigned(FOnRebuildZip) then
         FOnRebuildZip(Self, X, Entries.Count - 1);
       Inc(Y);
     end
     else
     begin
-      Entries.Items[X].FCentralDirectoryFile.CentralFileHeaderSignature := 0;
       if Assigned(FOnRebuildZip) then
         FOnRebuildZip(Self, X, Entries.Count - 1);
     end;
@@ -3420,21 +3259,20 @@ begin
   NewEndOfCentralDir.OffsetOfStartOfCentralDirectory := MS.Position;
   for X := 0 to Entries.Count - 1 do
   begin
-    CDF := Entries.Items[X].FCentralDirectoryFile;
-    if CDF.CentralFileHeaderSignature = SIG_CentralFile then
-    begin
-      CDF.RelativeOffsetOfLocalHeader := NewLHOffsets[Y];
-      MS.Write(CDF, SizeOf(CDF) - 3 * SizeOf(string));
-      if CDF.FilenameLength > 0 then
-        MS.Write(CDF.FileName[1], CDF.FilenameLength);
-      if CDF.ExtraFieldLength > 0 then
-        MS.Write(CDF.ExtraField[1], CDF.ExtraFieldLength);
-      if CDF.FileCommentLength > 0 then
-        MS.Write(CDF.FileComment[1], CDF.FileCommentLength);
-      if Assigned(FOnRebuildZip) then
-        FOnRebuildZip(Self, X, Entries.Count - 1);
-      Inc(Y);
-    end;
+    Entry := Entries.Items[X];
+    Entry.FillCentralDirectory(CDF);
+    // set entry position for new zip
+    CDF.RelativeOffsetOfLocalHeader := NewLHOffsets[Y];
+    MS.Write(CDF, SizeOf(CDF));
+    if CDF.FilenameLength > 0 then
+      MS.Write(Entry.FileName[1], CDF.FilenameLength);
+    if CDF.ExtraFieldLength > 0 then
+      MS.Write(Entry.ExtraField[1], CDF.ExtraFieldLength);
+    if CDF.FileCommentLength > 0 then
+      MS.Write(Entry.Comment[1], CDF.FileCommentLength);
+    if Assigned(FOnRebuildZip) then
+      FOnRebuildZip(Self, X, Entries.Count - 1);
+    Inc(Y);
   end;
   NewEndOfCentralDir.SizeOfTheCentralDirectory := Cardinal(MS.Position) - NewEndOfCentralDir.OffsetOfStartOfCentralDirectory;
 
@@ -3453,7 +3291,6 @@ procedure TKAZip.SaveToStream(Stream: TStream);
 begin
   RebuildLocalFiles(Stream);
   RebuildCentralDirectory(Stream);
-  RebuildEndOfCentralDirectory(Stream);
 end;
 
 procedure TKAZip.Rebuild;
@@ -3586,8 +3423,44 @@ begin
 end;
 
 procedure TKAZip.RenameMultiple(Names, NewNames: TStringList);
+var
+  X: Integer;
+  BR: Integer;
+  L: Integer;
 begin
-  Entries.RenameMultiple(Names, NewNames);
+  BR := 0;
+
+  if Names.Count <> NewNames.Count then
+  begin
+    raise Exception.Create('Names and NewNames must have equal count');
+  end
+  else
+  begin
+    FBatchMode := True;
+    try
+      for X := 0 to Names.Count - 1 do
+      begin
+        L := Length(Names.Strings[X]);
+        if (L > 0) and ((Names.Strings[X][L] = '\') or (Names.Strings[X][L] = '/')) then
+        begin
+          RenameFolder(Names.Strings[X], NewNames.Strings[X]);
+          Inc(BR);
+        end
+        else
+        begin
+          Rename(Names.Strings[X], NewNames.Strings[X]);
+          Inc(BR);
+        end;
+      end;
+    finally
+      FBatchMode := False;
+    end;
+    if BR > 0 then
+    begin
+      Rebuild();
+      DoChange(Self, ZIP_ITEMS_NAME);
+    end;
+  end;
 end;
 
 procedure TKAZip.SetStoreFolders(const Value: Boolean);
@@ -3626,13 +3499,41 @@ begin
 end;
 
 procedure TKAZip.CreateFolder(FolderName: string; FolderDate: TDateTime);
+var
+  FN: string;
 begin
-  Entries.CreateFolder(FolderName, FolderDate);
+  FN := IncludeTrailingPathDelimiter(FolderName);
+  AddFolderChain(FN, faDirectory, FolderDate);
+  FIsDirty := True;
 end;
 
 procedure TKAZip.RenameFolder(FolderName: string; NewFolderName: string);
+var
+  FN: string;
+  NFN: string;
+  S: string;
+  X: Integer;
+  L: Integer;
 begin
-  Entries.RenameFolder(FolderName, NewFolderName);
+  FN := ToZipName(IncludeTrailingPathDelimiter(FolderName));
+  NFN := ToZipName(IncludeTrailingPathDelimiter(NewFolderName));
+  L := Length(FN);
+  if Entries.IndexOf(NFN) = -1 then
+  begin
+    for X := 0 to Entries.Count - 1 do
+    begin
+      S := Entries.Items[X].FileName;
+      if Pos(FN, S) = 1 then
+      begin
+        System.Delete(S, 1, L);
+        S := NFN + S;
+        Entries.Items[X].FileName := S;
+        FIsDirty := True;
+      end;
+    end;
+    if (FIsDirty) and (FBatchMode = False) then
+      Rebuild;
+  end;
 end;
 
 procedure TKAZip.SetReadOnly(const Value: Boolean);
@@ -3645,41 +3546,74 @@ begin
   FApplyAttributes := Value;
 end;
 
-procedure TKAZip.WriteCentralDirectory(TargetStream: TStream);
-var
-  i: Integer;
-  entry: TKAZipEntriesEntry;
-begin
-  //Save the Central Directory entries
-  for i := 0 to Self.Entries.Count-1 do
-  begin
-    entry := Self.Entries.Items[i];
-
-    //packed byte data
-    FZipStream.Write(entry.FCentralDirectoryFile, SizeOf(entry.FCentralDirectoryFile) - 3 * SizeOf(string));
-
-    //optional filenmae
-    if entry.FCentralDirectoryFile.FilenameLength > 0 then
-      FZipStream.Write(entry.FCentralDirectoryFile.FileName[1], entry.FCentralDirectoryFile.FilenameLength);
-
-    //optional extra field
-    if entry.FCentralDirectoryFile.ExtraFieldLength > 0 then
-      FZipStream.Write(entry.FCentralDirectoryFile.ExtraField[1], entry.FCentralDirectoryFile.ExtraFieldLength);
-
-    //optional file comment
-    if entry.FCentralDirectoryFile.FileCommentLength > 0 then
-      FZipStream.Write(entry.FCentralDirectoryFile.FileComment[1], entry.FCentralDirectoryFile.FileCommentLength);
-  end;
-end;
-
 function TKAZip.AddEntryThroughStream(FileName: string; FileDate: TDateTime; FileAttr: Word): TStream;
+var
+  itemName: string;
+  newEntry: TKAZIPEntriesEntry;
+  i: Integer;
+  zipComment: string;
+  OBM: Boolean;
+  newLocalEntryPosition: Int64;
+  LFH: TLocalFileHeader;
 begin
-  Result := Entries.AddEntryThroughStream(FileName, FileDate, FileAttr);
+  if (FStoreFolders) and (FStoreRelativePath) then
+    AddFolderChain(FileName);
+
+  zipComment := Comment.Text;
+
+  itemName := Filename;
+
+  if not FStoreRelativePath then
+    itemName := ExtractFileName(itemName);
+
+  itemName := ToZipName(itemName);
+
+  //If an item with this name already exists then remove it
+  i := Entries.IndexOf(itemName);
+  if i >= 0 then
+  begin
+    OBM := FBatchMode;
+    try
+      if OBM = False then
+        FBatchMode := True;
+      Remove(i);
+    finally
+      FBatchMode := OBM;
+    end;
+  end;
+
+  //This is where the new local entry starts (where the central directly is).
+  //We overwrite the central direct (and EOCD marker) and then re-write them after the end of the file
+  newLocalEntryPosition := FEndOfCentralDir.OffsetOfStartOfCentralDirectory;
+
+//  FCurrentDFS := uncompressedLength;
+
+  //Fill records
+  newEntry := TKAZipEntriesEntry(Entries.Add);
+
+  //Local file entry
+  newEntry.Date := FileDate;
+  newEntry.CompressionMethod := ZipCompressionMethod_Deflate; //assume Deflate, but if the length is zero then it will be switched to Store (0)
+  newEntry.CRC32 := 0; //don't know it yet, will back-fill
+  newEntry.SizeCompressed := 0; //don't know it yet, will back-fill
+  newEntry.SizeUncompressed := 0; //don't know it yet, will back-fill
+  newEntry.FileName := ItemName;
+  newEntry.Attributes := FileAttr;
+  newEntry.LocalOffset := newLocalEntryPosition;
+
+  // Write Local file entry to stream
+  FZipStream.Position := newLocalEntryPosition;
+  newEntry.FillLocalHeader(LFH);
+  FZipStream.Write(LFH, SizeOf(LFH));
+  if LFH.FilenameLength > 0 then
+    FZipStream.Write(newEntry.FileName[1], LFH.FilenameLength);
+
+  Result := TKAZipStream.Create(FZipStream, newEntry, FZipCompressionType, Self);
 end;
 
 function TKAZip.AddEntryThroughStream(FileName: string): TStream;
 begin
-  Result := Entries.AddEntryThroughStream(FileName, Now, faArchive);
+  Result := AddEntryThroughStream(FileName, Now, faArchive);
 end;
 
 { TCRC32Stream }
@@ -3923,7 +3857,8 @@ var
   centralDirectoryPosition: Int64;
   compressedLength: Integer;
   compressionMethod: TZipCompressionMethod; //e.g. Store, Deflate
-  zipComment: string;
+  //zipComment: string;
+  LFH: TLocalFileHeader;
 begin
   //The central directory will start here; just after the file we just wrote
   //Memorize it now, because we're going to backtrack and update the CRC and compressed size
@@ -3939,62 +3874,42 @@ begin
     compressionMethod := ZipCompressionMethod_Store;
 
   //Now that we know the CRC, the uncompressed, compressed sizes update them in the local file entry
-  FEntry.FLocalFile.Crc32 := crc32;
-  FEntry.FLocalFile.UncompressedSize := uncompressedLength;
-  FEntry.FLocalFile.CompressedSize := compressedLength;
-  FEntry.FLocalFile.CompressionMethod := compressionMethod;
-  FEntry.FCentralDirectoryFile.Crc32 := crc32;
-  FEntry.FCentralDirectoryFile.UncompressedSize := uncompressedLength;
-  FEntry.FCentralDirectoryFile.CompressedSize := compressedLength;
-  FEntry.FCentralDirectoryFile.CompressionMethod := compressionMethod;
+  FEntry.Crc32 := crc32;
+  FEntry.SizeUncompressed := uncompressedLength;
+  FEntry.SizeCompressed := compressedLength;
+  FEntry.CompressionMethod := compressionMethod;
 
   //Re-write the (now complete) local header
   try
-    FTargetStream.Position := FEntry.FCentralDirectoryFile.RelativeOffsetOfLocalHeader;
-    FTargetStream.Write(FEntry.FLocalFile, SizeOf(FEntry.FLocalFile) - 3 * SizeOf(string)); //excluding FileName, ExtraField, and CompressedData
+    FTargetStream.Position := FEntry.LocalOffset;
+    FEntry.FillLocalHeader(LFH);
+    FTargetStream.Write(LFH, SizeOf(LFH));
   finally
     //Return to where the central directory will be, and write it
     FTargetStream.Position := centralDirectoryPosition;
   end;
 
-  //Save the Central Directory entries (todo: split this into separate function)
-  FParent.WriteCentralDirectory(FParent.FZipStream);
-
+  //Save the Central Directory entries
+  FParent.RebuildCentralDirectory(FParent.ZipStream);
+  {
   //Save EOCD (End of Central Directory) record
-  FParent.FEndOfCentralDirPos := FParent.FZipStream.Position;
+  FParent.FEndOfCentralDirPos := FParent.ZipStream.Position;
   FParent.FEndOfCentralDir.OffsetOfStartOfCentralDirectory := centralDirectoryPosition;
   FParent.FEndOfCentralDir.SizeOfTheCentralDirectory := FParent.FEndOfCentralDirPos - FParent.FEndOfCentralDir.OffsetOfStartOfCentralDirectory;
   Inc(FParent.FEndOfCentralDir.TotalNumberOfEntriesOnThisDisk);
   Inc(FParent.FEndOfCentralDir.TotalNumberOfEntries);
-  FParent.FZipStream.Write(FParent.FEndOfCentralDir, SizeOf(TEndOfCentralDir));
+  FParent.ZipStream.Write(FParent.FEndOfCentralDir, SizeOf(TEndOfCentralDir));
 
   //Save ZIP comment (if any)
   zipComment := FParent.Comment.Text;
-  FParent.FZipCommentPos := FParent.FZipStream.Position;
+  FParent.FZipCommentPos := FParent.ZipStream.Position;
   if Length(zipComment) > 0 then
-    FParent.FZipStream.Write(zipComment[1], Length(zipComment));
-
-
-  if (FEntry.FCentralDirectoryFile.CompressionMethod = ZipCompressionMethod_Deflate) or (FEntry.FCentralDirectoryFile.CompressionMethod = ZipCompressionMethod_Deflate64) then
-  begin
-    case FEntry.FCentralDirectoryFile.GeneralPurposeBitFlag and 6 of
-      0: FEntry.FCompressionType := ctNormal;
-      2: FEntry.FCompressionType := ctMaximum;
-      4: FEntry.FCompressionType := ctFast;
-      6: FEntry.FCompressionType := ctSuperFast
-      else
-        FEntry.FCompressionType := ctUnknown;
-    end;
-  end
-  else
-    FEntry.FCompressionType := ctUnknown;
-
-
+    FParent.ZipStream.Write(zipComment[1], Length(zipComment));  }
 
   FParent.FIsDirty := True;
   if not FParent.FBatchMode then
   begin
-    FParent.DoChange(FParent, 2);
+    FParent.DoChange(FParent, ZIP_ITEM_ADDED);
   end;
 
 end;
