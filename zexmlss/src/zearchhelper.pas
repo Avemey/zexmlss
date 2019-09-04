@@ -34,11 +34,24 @@ unit zearchhelper;
 interface
 
 uses
-  sysutils;
+  {$ifndef FPC}Windows,{$endif}
+  Classes,
+  SysUtils;
+
+{$ifdef MSWINDOWS}
+type
+  TTmpFileStream = class(THandleStream)
+  public
+    constructor Create();
+    destructor Destroy; override;
+  end;
+{$endif}
 
 function ZEGetTempDir(): string;
 function ZECreateUniqueTmpDir(const ADir: string; var retTmpDir: string): boolean;
 function ZEDelTree(ADir: string): boolean;
+// копирование файла
+function ZECopyFile(const ASource, ADest: TFileName): Boolean;
 
 implementation
 
@@ -126,5 +139,63 @@ function ZEDelTree(ADir: string): boolean;
 begin
   result := _DelTree(ADir{''});
 end;
+
+// копирование файла
+function ZECopyFile(const ASource, ADest: TFileName): Boolean;
+{$ifdef FPC}
+var
+  fs1, fs2: TFileStream;
+{$endif}
+begin
+  {$ifndef FPC}
+  Result := Windows.CopyFile(PChar(ASource), PChar(ADest), False);
+  {$else}
+  Result := False;
+  if not FileExists(ASource) then Exit;
+
+  if FileExists(ADest) then
+    DeleteFile(ADest);
+
+  fs1 := TFileStream.Create(ASource, fmOpenRead);
+  try
+    fs2 := TFileStream.Create(ADest, fmCreate);
+    try
+      fs2.CopyFrom(fs1, fs1.Size);
+    finally
+      fs2.Free();
+    end;
+  finally
+    fs1.Free();
+  end;
+  {$endif}
+end;
+
+{ TTmpFileStream }
+
+{$ifdef MSWINDOWS}
+constructor TTmpFileStream.Create;
+var
+  TmpGUID: TGuid;
+  FileName: string;
+  tempFolder: array[0..MAX_PATH] of Char;
+begin
+  GetTempPath(MAX_PATH, @tempFolder);
+  CreateGUID(TmpGuid);
+  FileName := StrPas(tempFolder) + GUIDToString(TmpGuid);
+
+  inherited Create(
+    CreateFile(PChar(FileName), GENERIC_READ or GENERIC_WRITE, 0, nil, CREATE_ALWAYS,
+    FILE_ATTRIBUTE_TEMPORARY or FILE_FLAG_DELETE_ON_CLOSE, 0)
+  );
+  if Handle < 0 then
+    raise EFCreateError.CreateFmt('Cannot create file "%s". %s', [ExpandFileName(FileName), SysErrorMessage(GetLastError)]);
+end;
+
+destructor TTmpFileStream.Destroy;
+begin
+  if Handle >= 0 then FileClose(Handle);
+  inherited Destroy;
+end;
+{$endif}
 
 end.
