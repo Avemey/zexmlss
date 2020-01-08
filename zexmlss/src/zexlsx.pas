@@ -57,21 +57,21 @@ uses
 
 type
   TZXLSXFileItem = record
-    name: string;     //путь к файлу
-    original: string; //исходная строка
-    ftype: integer;   //тип контента
+    name: string;     //ГЇГіГІГј ГЄ ГґГ Г©Г«Гі
+    original: string; //ГЁГ±ГµГ®Г¤Г­Г Гї Г±ГІГ°Г®ГЄГ 
+    ftype: integer;   //ГІГЁГЇ ГЄГ®Г­ГІГҐГ­ГІГ 
   end;
 
   TZXLSXFileArray = array of TZXLSXFileItem;
 
   TZXLSXRelations = record
     id: string;       //rID
-    ftype: integer;   //тип ссылки
-    target: string;   //ссылка на файла
-    fileid: integer;  //ссылка на запись
-    name: string;     //имя листа
-    state: byte;      //состояние
-    sheetid: integer; //номер листа
+    ftype: integer;   //ГІГЁГЇ Г±Г±Г»Г«ГЄГЁ
+    target: string;   //Г±Г±Г»Г«ГЄГ  Г­Г  ГґГ Г©Г«Г 
+    fileid: integer;  //Г±Г±Г»Г«ГЄГ  Г­Г  Г§Г ГЇГЁГ±Гј
+    name: string;     //ГЁГ¬Гї Г«ГЁГ±ГІГ 
+    state: byte;      //Г±Г®Г±ГІГ®ГїГ­ГЁГҐ
+    sheetid: integer; //Г­Г®Г¬ГҐГ° Г«ГЁГ±ГІГ 
   end;
 
   TZXLSXRelationsArray = array of TZXLSXRelations;
@@ -80,10 +80,10 @@ type
 
   TZXLSXDiffBorderItemStyle = class(TPersistent)
   private
-    FUseStyle: boolean;             //заменять ли стиль
-    FUseColor: boolean;             //заменять ли цвет
-    FColor: TColor;                 //цвет линий
-    FLineStyle: TZBorderType;       //стиль линий
+    FUseStyle: boolean;             //Г§Г Г¬ГҐГ­ГїГІГј Г«ГЁ Г±ГІГЁГ«Гј
+    FUseColor: boolean;             //Г§Г Г¬ГҐГ­ГїГІГј Г«ГЁ Г¶ГўГҐГІ
+    FColor: TColor;                 //Г¶ГўГҐГІ Г«ГЁГ­ГЁГ©
+    FLineStyle: TZBorderType;       //Г±ГІГЁГ«Гј Г«ГЁГ­ГЁГ©
     FWeight: byte;
   protected
   public
@@ -110,25 +110,25 @@ type
     property Border[Num: integer]: TZXLSXDiffBorderItemStyle read GetBorder write SetBorder; default;
   end;
 
-  //Итем для дифференцированного форматирования
+  //Г€ГІГҐГ¬ Г¤Г«Гї Г¤ГЁГґГґГҐГ°ГҐГ­Г¶ГЁГ°Г®ГўГ Г­Г­Г®ГЈГ® ГґГ®Г°Г¬Г ГІГЁГ°Г®ГўГ Г­ГЁГї
   //TODO:
-  //      возможно, для excel xml тоже понадобится (перенести?)
+  //      ГўГ®Г§Г¬Г®Г¦Г­Г®, Г¤Г«Гї excel xml ГІГ®Г¦ГҐ ГЇГ®Г­Г Г¤Г®ГЎГЁГІГ±Гї (ГЇГҐГ°ГҐГ­ГҐГ±ГІГЁ?)
   TZXLSXDiffFormattingItem = class(TPersistent)
   private
-    FUseFont: boolean;              //заменять ли шрифт
-    FUseFontColor: boolean;         //заменять ли цвет шрифта
-    FUseFontStyles: boolean;        //заменять ли стиль шрифта
-    FFontColor: TColor;             //цвет шрифта
-    FFontStyles: TFontStyles;       //стиль шрифта
-    FUseBorder: boolean;            //заменять ли рамку
-    FBorders: TZXLSXDiffBorder;     //Что менять в рамке
-    FUseFill: boolean;              //заменять ли заливку
-    FUseCellPattern: boolean;       //Заменять ли тип заливки
-    FCellPattern: TZCellPattern;    //тип заливки
-    FUseBGColor: boolean;           //заменять ли цвет заливки
-    FBGColor: TColor;               //цвет заливки
-    FUsePatternColor: boolean;      //Заменять ли цвет шаблона заливки
-    FPatternColor: TColor;          //Цвет шаблона заливки
+    FUseFont: boolean;              //Г§Г Г¬ГҐГ­ГїГІГј Г«ГЁ ГёГ°ГЁГґГІ
+    FUseFontColor: boolean;         //Г§Г Г¬ГҐГ­ГїГІГј Г«ГЁ Г¶ГўГҐГІ ГёГ°ГЁГґГІГ 
+    FUseFontStyles: boolean;        //Г§Г Г¬ГҐГ­ГїГІГј Г«ГЁ Г±ГІГЁГ«Гј ГёГ°ГЁГґГІГ 
+    FFontColor: TColor;             //Г¶ГўГҐГІ ГёГ°ГЁГґГІГ 
+    FFontStyles: TFontStyles;       //Г±ГІГЁГ«Гј ГёГ°ГЁГґГІГ 
+    FUseBorder: boolean;            //Г§Г Г¬ГҐГ­ГїГІГј Г«ГЁ Г°Г Г¬ГЄГі
+    FBorders: TZXLSXDiffBorder;     //Г—ГІГ® Г¬ГҐГ­ГїГІГј Гў Г°Г Г¬ГЄГҐ
+    FUseFill: boolean;              //Г§Г Г¬ГҐГ­ГїГІГј Г«ГЁ Г§Г Г«ГЁГўГЄГі
+    FUseCellPattern: boolean;       //Г‡Г Г¬ГҐГ­ГїГІГј Г«ГЁ ГІГЁГЇ Г§Г Г«ГЁГўГЄГЁ
+    FCellPattern: TZCellPattern;    //ГІГЁГЇ Г§Г Г«ГЁГўГЄГЁ
+    FUseBGColor: boolean;           //Г§Г Г¬ГҐГ­ГїГІГј Г«ГЁ Г¶ГўГҐГІ Г§Г Г«ГЁГўГЄГЁ
+    FBGColor: TColor;               //Г¶ГўГҐГІ Г§Г Г«ГЁГўГЄГЁ
+    FUsePatternColor: boolean;      //Г‡Г Г¬ГҐГ­ГїГІГј Г«ГЁ Г¶ГўГҐГІ ГёГ ГЎГ«Г®Г­Г  Г§Г Г«ГЁГўГЄГЁ
+    FPatternColor: TColor;          //Г–ГўГҐГІ ГёГ ГЎГ«Г®Г­Г  Г§Г Г«ГЁГўГЄГЁ
   protected
   public
     constructor Create();
@@ -151,7 +151,7 @@ type
     property PatternColor: TColor read FPatternColor write FPatternColor;
   end;
 
-  //Дифференцированное форматирование
+  //Г„ГЁГґГґГҐГ°ГҐГ­Г¶ГЁГ°Г®ГўГ Г­Г­Г®ГҐ ГґГ®Г°Г¬Г ГІГЁГ°Г®ГўГ Г­ГЁГҐ
   TZXLSXDiffFormatting = class(TPersistent)
   private
     FCount: integer;
@@ -281,7 +281,7 @@ function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string;
   BOM: AnsiString = '';
   AllowUnzippedFolder: boolean = false): integer;
 
-//Дополнительные функции, на случай чтения отдельного файла
+//Г„Г®ГЇГ®Г«Г­ГЁГІГҐГ«ГјГ­Г»ГҐ ГґГіГ­ГЄГ¶ГЁГЁ, Г­Г  Г±Г«ГіГ·Г Г© Г·ГІГҐГ­ГЁГї Г®ГІГ¤ГҐГ«ГјГ­Г®ГЈГ® ГґГ Г©Г«Г 
 function ZEXSLXReadTheme(var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer): boolean;
 function ZEXSLXReadContentTypes(var Stream: TStream; var FileArray: TZXLSXFileArray; var FilesCount: integer): boolean;
 function ZEXSLXReadSharedStrings(var Stream: TStream; out StrArray: TStringDynArray; out StrCount: integer): boolean;
@@ -291,7 +291,7 @@ function ZEXSLXReadWorkBook(var XMLSS: TZEXMLSS; var Stream: TStream; var Relati
 function ZEXSLXReadSheet(var XMLSS: TZEXMLSS; var Stream: TStream; const SheetName: string; var StrArray: TStringDynArray; StrCount: integer; var Relations: TZXLSXRelationsArray; RelationsCount: integer; ReadHelper: TZEXLSXReadHelper): boolean;
 function ZEXSLXReadComments(var XMLSS: TZEXMLSS; var Stream: TStream): boolean;
 
-//Дополнительные функции для экспорта отдельных файлов
+//Г„Г®ГЇГ®Г«Г­ГЁГІГҐГ«ГјГ­Г»ГҐ ГґГіГ­ГЄГ¶ГЁГЁ Г¤Г«Гї ГЅГЄГ±ГЇГ®Г°ГІГ  Г®ГІГ¤ГҐГ«ГјГ­Г»Гµ ГґГ Г©Г«Г®Гў
 function ZEXLSXCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateWorkBook(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
                               const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
@@ -348,7 +348,7 @@ const
   REL_TYPE_DRAWING = 9;
 
 type
-  //шрифт
+  //ГёГ°ГЁГґГІ
   TZEXLSXFont = record
     name: string;
     bold: boolean;
@@ -362,7 +362,7 @@ type
     fontsize: integer;
   end;
 
-  TZEXLSXFontArray = array of TZEXLSXFont; //массив шрифтов
+  TZEXLSXFontArray = array of TZEXLSXFont; //Г¬Г Г±Г±ГЁГў ГёГ°ГЁГґГІГ®Гў
 
   TStreamList = class(TList)
   protected
@@ -373,7 +373,7 @@ type
   end;
 
 
-  //Для распаковки в поток
+  //Г„Г«Гї Г°Г Г±ГЇГ ГЄГ®ГўГЄГЁ Гў ГЇГ®ГІГ®ГЄ
 
   procedure XLSXSortRelationArray(var arr: TZXLSXRelationsArray; count: integer); forward;
 
@@ -418,20 +418,20 @@ type
     procedure ClearCurrentSheetRelations();
     function GetCurrentPageCommentsNumber(): integer;
     procedure AddToFiles(const sname: string; ftype: integer);
-    property XMLSS: TZEXMLSS read FXMLSS write FXMLSS;                  //хранилище
-    property ListName: string read FListName write FListName;           //имя листа
-    property RetCode: integer read FRetCode;                            //код ошибки
-    property FileArray[num: integer]: TZXLSXFileItem read GetFileItem;  //файлы
+    property XMLSS: TZEXMLSS read FXMLSS write FXMLSS;                  //ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+    property ListName: string read FListName write FListName;           //ГЁГ¬Гї Г«ГЁГ±ГІГ 
+    property RetCode: integer read FRetCode;                            //ГЄГ®Г¤ Г®ГёГЁГЎГЄГЁ
+    property FileArray[num: integer]: TZXLSXFileItem read GetFileItem;  //ГґГ Г©Г«Г»
     property ArchFile[num: integer]: string read GetArchFileItem;
-    property ArchFilesCount: integer read FArchFilesCount;              //кол-во файлов в архиве
-    property FilesCount: integer read FFilesCount;                      //кол-во файлов
-    property FileType: integer read FFileType write FFileType;          //тип файла
-    property FileNumber: integer read FFileNumber write FFileNumber;    //номер
-    property RelationsCounts[num: integer]: integer read GetRelationsCounts; //кол-во в отношених
-    property RelationsCount: integer read FRelationsCount;                   //кол-во отношений
-    property RelationsArray[num: integer]: TZXLSXRelationsArray read GetRelationsArray; //отношения
+    property ArchFilesCount: integer read FArchFilesCount;              //ГЄГ®Г«-ГўГ® ГґГ Г©Г«Г®Гў Гў Г Г°ГµГЁГўГҐ
+    property FilesCount: integer read FFilesCount;                      //ГЄГ®Г«-ГўГ® ГґГ Г©Г«Г®Гў
+    property FileType: integer read FFileType write FFileType;          //ГІГЁГЇ ГґГ Г©Г«Г 
+    property FileNumber: integer read FFileNumber write FFileNumber;    //Г­Г®Г¬ГҐГ°
+    property RelationsCounts[num: integer]: integer read GetRelationsCounts; //ГЄГ®Г«-ГўГ® Гў Г®ГІГ­Г®ГёГҐГ­ГЁГµ
+    property RelationsCount: integer read FRelationsCount;                   //ГЄГ®Г«-ГўГ® Г®ГІГ­Г®ГёГҐГ­ГЁГ©
+    property RelationsArray[num: integer]: TZXLSXRelationsArray read GetRelationsArray; //Г®ГІГ­Г®ГёГҐГ­ГЁГї
     property SheetRelationNumber: integer read FSheetRelationNumber;
-    property isNeedReadComments: boolean read FNeedReadComments;        //нужно ли читать примечания
+    property isNeedReadComments: boolean read FNeedReadComments;        //Г­ГіГ¦Г­Г® Г«ГЁ Г·ГЁГІГ ГІГј ГЇГ°ГЁГ¬ГҐГ·Г Г­ГЁГї
   end;
 
 constructor TXSLXZipHelper.Create();
@@ -537,15 +537,15 @@ begin
     result := FRelationsArray[num];
 end;
 
-//Обнуляет SheetRelations для текущего листа (если небыло комментариев и/или ссылок)
+//ГЋГЎГ­ГіГ«ГїГҐГІ SheetRelations Г¤Г«Гї ГІГҐГЄГіГ№ГҐГЈГ® Г«ГЁГ±ГІГ  (ГҐГ±Г«ГЁ Г­ГҐГЎГ»Г«Г® ГЄГ®Г¬Г¬ГҐГ­ГІГ Г°ГЁГҐГў ГЁ/ГЁГ«ГЁ Г±Г±Г»Г«Г®ГЄ)
 procedure TXSLXZipHelper.ClearCurrentSheetRelations();
 begin
   FSheetRelationsCount := 0;
   FNeedReadComments := false;
 end;
 
-//Возвращат номер файла с примечаниями для текущего листа
-//Если возвращает отрицательное число - примечания не обноружены
+//Г‚Г®Г§ГўГ°Г Г№Г ГІ Г­Г®Г¬ГҐГ° ГґГ Г©Г«Г  Г± ГЇГ°ГЁГ¬ГҐГ·Г Г­ГЁГїГ¬ГЁ Г¤Г«Гї ГІГҐГЄГіГ№ГҐГЈГ® Г«ГЁГ±ГІГ 
+//Г…Г±Г«ГЁ ГўГ®Г§ГўГ°Г Г№Г ГҐГІ Г®ГІГ°ГЁГ¶Г ГІГҐГ«ГјГ­Г®ГҐ Г·ГЁГ±Г«Г® - ГЇГ°ГЁГ¬ГҐГ·Г Г­ГЁГї Г­ГҐ Г®ГЎГ­Г®Г°ГіГ¦ГҐГ­Г»
 function TXSLXZipHelper.GetCurrentPageCommentsNumber(): integer;
 var
   i, l: integer;
@@ -564,7 +564,7 @@ begin
     break;
   end;
 
-  //Если найдены примечания
+  //Г…Г±Г«ГЁ Г­Г Г©Г¤ГҐГ­Г» ГЇГ°ГЁГ¬ГҐГ·Г Г­ГЁГї
   if (b) then
   begin
     l := length(s);
@@ -674,7 +674,7 @@ begin
     try
       AStream.Position := 0;
       b := false;
-      //Список файлов
+      //Г‘ГЇГЁГ±Г®ГЄ ГґГ Г©Г«Г®Гў
       if (FileType = -2) then
       begin
         if (not ZEXSLXReadContentTypes(AStream,  FFileArray, FFilesCount)) then
@@ -684,8 +684,8 @@ begin
           if (FFileArray[j].name[1] = '/') then
             delete(FFileArray[j].name, 1, 1);
 
-        //Если в контент забыли добавить отношения, но они есть в архиве - добавляем.
-        //В теории такого быть не должно, но мало ли
+        //Г…Г±Г«ГЁ Гў ГЄГ®Г­ГІГҐГ­ГІ Г§Г ГЎГ»Г«ГЁ Г¤Г®ГЎГ ГўГЁГІГј Г®ГІГ­Г®ГёГҐГ­ГЁГї, Г­Г® Г®Г­ГЁ ГҐГ±ГІГј Гў Г Г°ГµГЁГўГҐ - Г¤Г®ГЎГ ГўГ«ГїГҐГ¬.
+        //Г‚ ГІГҐГ®Г°ГЁГЁ ГІГ ГЄГ®ГЈГ® ГЎГ»ГІГј Г­ГҐ Г¤Г®Г«Г¦Г­Г®, Г­Г® Г¬Г Г«Г® Г«ГЁ
         _AddAdditionalFiles();
 
       end else
@@ -723,7 +723,7 @@ begin
         if (not ZEXSLXReadSharedStrings(AStream, FStrArray, FStrCount)) then
           FRetCode := FRetCode or 3;
       end else
-      //стили
+      //Г±ГІГЁГ«ГЁ
       if (FileType = 1) then
       begin
         if (not ZEXSLXReadStyles(FXMLSS, AStream, FThemaColor, FThemaColorCount, FReadHelper)) then
@@ -741,13 +741,13 @@ begin
         if (not ZEXSLXReadSheet(FXMLSS, AStream, ListName, FStrArray, FStrCount, FSheetRelations, FSheetRelationsCount, FReadHelper)) then
           FRetCode := FRetCode or 4;
       end else
-      //Тема
+      //Г’ГҐГ¬Г 
       if (FileType = 5) then
       begin
         if (not ZEXSLXReadTheme(AStream, FThemaColor, FThemaColorCount)) then
           FRetCode := FRetCode or 6;
       end else
-      //SheetRelations для конкретного листа (чтение ссылок и примечаний)
+      //SheetRelations Г¤Г«Гї ГЄГ®Г­ГЄГ°ГҐГІГ­Г®ГЈГ® Г«ГЁГ±ГІГ  (Г·ГІГҐГ­ГЁГҐ Г±Г±Г»Г«Г®ГЄ ГЁ ГЇГ°ГЁГ¬ГҐГ·Г Г­ГЁГ©)
       if (FileType = 111) then
       begin
         if (not ZE_XSLXReadRelationships(AStream, FSheetRelations, FSheetRelationsCount, b, false)) then
@@ -755,7 +755,7 @@ begin
         else
           FNeedReadComments := true;
       end else
-      //Примечания
+      //ГЏГ°ГЁГ¬ГҐГ·Г Г­ГЁГї
       if (FileType = 113) then
       begin
         if (isNeedReadComments) then
@@ -1433,11 +1433,11 @@ begin
   FisHaveComments := false;
 end;
 
-//Возвращает номер Relations из rels
+//Г‚Г®Г§ГўГ°Г Г№Г ГҐГІ Г­Г®Г¬ГҐГ° Relations ГЁГ§ rels
 //INPUT
-//  const name: string - текст отношения
+//  const name: string - ГІГҐГЄГ±ГІ Г®ГІГ­Г®ГёГҐГ­ГЁГї
 //RETURN
-//      integer - номер отношения. -1 - не определено
+//      integer - Г­Г®Г¬ГҐГ° Г®ГІГ­Г®ГёГҐГ­ГЁГї. -1 - Г­ГҐ Г®ГЇГ°ГҐГ¤ГҐГ«ГҐГ­Г®
 function ZEXLSXGetRelationNumber(const name: string): integer;
 begin
   result := -1;
@@ -1472,11 +1472,11 @@ begin
     result := 9;
 end; //ZEXLSXGetRelationNumber
 
-//Возвращает текст Relations для rels
+//Г‚Г®Г§ГўГ°Г Г№Г ГҐГІ ГІГҐГЄГ±ГІ Relations Г¤Г«Гї rels
 //INPUT
-//      num: integer - номер отношения
+//      num: integer - Г­Г®Г¬ГҐГ° Г®ГІГ­Г®ГёГҐГ­ГЁГї
 //RETURN
-//      integer - номер отношения. -1 - не определено
+//      integer - Г­Г®Г¬ГҐГ° Г®ГІГ­Г®ГёГҐГ­ГЁГї. -1 - Г­ГҐ Г®ГЇГ°ГҐГ¤ГҐГ«ГҐГ­Г®
 function ZEXLSXGetRelationName(num: integer): string;
 begin
   result := '';
@@ -1494,7 +1494,7 @@ begin
   end;
 end; //ZEXLSXGetRelationName
 
-//BooleanToStr для XLSX //TODO: потом заменить
+//BooleanToStr Г¤Г«Гї XLSX //TODO: ГЇГ®ГІГ®Г¬ Г§Г Г¬ГҐГ­ГЁГІГј
 function XLSXBoolToStr(value: boolean): string;
 begin
   if (value) then
@@ -1503,13 +1503,13 @@ begin
     result := 'false';
 end;
 
-//Читает тему (themeXXX.xml)
+//Г—ГЁГІГ ГҐГІ ГІГҐГ¬Гі (themeXXX.xml)
 //INPUT
-//  var Stream: TStream                   - поток чтения
-//  var ThemaFillsColors: TIntegerDynArray - массив с цветами заливки
-//  var ThemaColorCount: integer          - кол-во цветов заливки
+//  var Stream: TStream                   - ГЇГ®ГІГ®ГЄ Г·ГІГҐГ­ГЁГї
+//  var ThemaFillsColors: TIntegerDynArray - Г¬Г Г±Г±ГЁГў Г± Г¶ГўГҐГІГ Г¬ГЁ Г§Г Г«ГЁГўГЄГЁ
+//  var ThemaColorCount: integer          - ГЄГ®Г«-ГўГ® Г¶ГўГҐГІГ®Гў Г§Г Г«ГЁГўГЄГЁ
 //RETURN
-//      boolean - true - всё прочиталось успешно
+//      boolean - true - ГўГ±Вё ГЇГ°Г®Г·ГЁГІГ Г«Г®Г±Гј ГіГ±ГЇГҐГёГ­Г®
 function ZEXSLXReadTheme(var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer): boolean;
 var
   xml: TZsspXMLReaderH;
@@ -1565,13 +1565,13 @@ begin
   end;
 end; //ZEXSLXReadThema
 
-//Читает список нужных файлов из [Content_Types].xml
+//Г—ГЁГІГ ГҐГІ Г±ГЇГЁГ±Г®ГЄ Г­ГіГ¦Г­Г»Гµ ГґГ Г©Г«Г®Гў ГЁГ§ [Content_Types].xml
 //INPUT
-//  var Stream: TStream             - поток чтения
-//  var FileArray: TZXLSXFileArray  - список файлов
-//  var FilesCount: integer         - кол-во файлов
+//  var Stream: TStream             - ГЇГ®ГІГ®ГЄ Г·ГІГҐГ­ГЁГї
+//  var FileArray: TZXLSXFileArray  - Г±ГЇГЁГ±Г®ГЄ ГґГ Г©Г«Г®Гў
+//  var FilesCount: integer         - ГЄГ®Г«-ГўГ® ГґГ Г©Г«Г®Гў
 //RETURN
-//      boolean - true - всё прочиталось успешно
+//      boolean - true - ГўГ±Вё ГЇГ°Г®Г·ГЁГІГ Г«Г®Г±Гј ГіГ±ГЇГҐГёГ­Г®
 function ZEXSLXReadContentTypes(var Stream: TStream; var FileArray: TZXLSXFileArray; var FilesCount: integer): boolean;
 var
   xml: TZsspXMLReaderH;
@@ -1643,13 +1643,13 @@ begin
   end;
 end; //ZEXSLXReadContentTypes
 
-//Читает строки из sharedStrings.xml
+//Г—ГЁГІГ ГҐГІ Г±ГІГ°Г®ГЄГЁ ГЁГ§ sharedStrings.xml
 //INPUT
-//  var Stream: TStream           - поток для чтения
-//  var StrArray: TStringDynArray - возвращаемый массив со строками
-//  var StrCount: integer         - кол-во элементов
+//  var Stream: TStream           - ГЇГ®ГІГ®ГЄ Г¤Г«Гї Г·ГІГҐГ­ГЁГї
+//  var StrArray: TStringDynArray - ГўГ®Г§ГўГ°Г Г№Г ГҐГ¬Г»Г© Г¬Г Г±Г±ГЁГў Г±Г® Г±ГІГ°Г®ГЄГ Г¬ГЁ
+//  var StrCount: integer         - ГЄГ®Г«-ГўГ® ГЅГ«ГҐГ¬ГҐГ­ГІГ®Гў
 //RETURN
-//      boolean - true - всё ок
+//      boolean - true - ГўГ±Вё Г®ГЄ
 function ZEXSLXReadSharedStrings(var Stream: TStream; out StrArray: TStringDynArray; out StrCount: integer): boolean;
 var
   xml: TZsspXMLReaderH;
@@ -1700,14 +1700,14 @@ begin
 end; //ZEXSLXReadSharedStrings
 
 {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-//Получить условное форматирование и оператор из xlsx
+//ГЏГ®Г«ГіГ·ГЁГІГј ГіГ±Г«Г®ГўГ­Г®ГҐ ГґГ®Г°Г¬Г ГІГЁГ°Г®ГўГ Г­ГЁГҐ ГЁ Г®ГЇГҐГ°Г ГІГ®Г° ГЁГ§ xlsx
 //INPUT
-//  const xlsxCfType: string              - xlsx тип условного форматирования
-//  const xlsxCFOperator: string          - xlsx оператор
-//  out CFCondition: TZCondition          - распознанное условие
-//  out CFOperator: TZConditionalOperator - распознанный оператор
+//  const xlsxCfType: string              - xlsx ГІГЁГЇ ГіГ±Г«Г®ГўГ­Г®ГЈГ® ГґГ®Г°Г¬Г ГІГЁГ°Г®ГўГ Г­ГЁГї
+//  const xlsxCFOperator: string          - xlsx Г®ГЇГҐГ°Г ГІГ®Г°
+//  out CFCondition: TZCondition          - Г°Г Г±ГЇГ®Г§Г­Г Г­Г­Г®ГҐ ГіГ±Г«Г®ГўГЁГҐ
+//  out CFOperator: TZConditionalOperator - Г°Г Г±ГЇГ®Г§Г­Г Г­Г­Г»Г© Г®ГЇГҐГ°Г ГІГ®Г°
 //RETURN
-//      boolean - true - условное форматирование и оператор успешно распознаны
+//      boolean - true - ГіГ±Г«Г®ГўГ­Г®ГҐ ГґГ®Г°Г¬Г ГІГЁГ°Г®ГўГ Г­ГЁГҐ ГЁ Г®ГЇГҐГ°Г ГІГ®Г° ГіГ±ГЇГҐГёГ­Г® Г°Г Г±ГЇГ®Г§Г­Г Г­Г»
 function ZEXLSX_getCFCondition(const xlsxCfType, xlsxCFOperator: string;
                                out CFCondition: TZCondition;
                                out CFOperator: TZConditionalOperator): boolean;
@@ -1720,11 +1720,11 @@ var
     CFCondition := ZCFCellContentOperator;
   end;
 
-  //Проверить тип условного форматирования
-  //  out isNeddCheckOperator: boolean - возвращает, нужно ли проверять
-  //                                     оператор
+  //ГЏГ°Г®ГўГҐГ°ГЁГІГј ГІГЁГЇ ГіГ±Г«Г®ГўГ­Г®ГЈГ® ГґГ®Г°Г¬Г ГІГЁГ°Г®ГўГ Г­ГЁГї
+  //  out isNeddCheckOperator: boolean - ГўГ®Г§ГўГ°Г Г№Г ГҐГІ, Г­ГіГ¦Г­Г® Г«ГЁ ГЇГ°Г®ГўГҐГ°ГїГІГј
+  //                                     Г®ГЇГҐГ°Г ГІГ®Г°
   //RETURN
-  //      boolean - true - всё ок, можно проверять далее
+  //      boolean - true - ГўГ±Вё Г®ГЄ, Г¬Г®Г¦Г­Г® ГЇГ°Г®ГўГҐГ°ГїГІГј Г¤Г Г«ГҐГҐ
   function _CheckXLSXCfType(out isNeddCheckOperator: boolean): boolean;
   begin
     result := true;
@@ -1750,7 +1750,7 @@ var
       result := false;
   end; //_CheckXLSXCfType
 
-  //Проверить оператор
+  //ГЏГ°Г®ГўГҐГ°ГЁГІГј Г®ГЇГҐГ°Г ГІГ®Г°
   function _CheckCFoperator(): boolean;
   begin
     result := true;
@@ -1808,18 +1808,18 @@ begin
 end; //ZEXLSX_getCFCondition
 {$ENDIF}
 
-//Читает страницу документа
+//Г—ГЁГІГ ГҐГІ Г±ГІГ°Г Г­ГЁГ¶Гі Г¤Г®ГЄГіГ¬ГҐГ­ГІГ 
 //INPUT
-//  var XMLSS: TZEXMLSS                 - хранилище
-//  var Stream: TStream                 - поток для чтения
-//  const SheetName: string             - название страницы
-//  var StrArray: TStringDynArray       - строки для подстановки
-//      StrCount: integer               - кол-во строк подстановки
-//  var Relations: TZXLSXRelationsArray - отношения
-//      RelationsCount: integer         - кол-во отношений
+//  var XMLSS: TZEXMLSS                 - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//  var Stream: TStream                 - ГЇГ®ГІГ®ГЄ Г¤Г«Гї Г·ГІГҐГ­ГЁГї
+//  const SheetName: string             - Г­Г Г§ГўГ Г­ГЁГҐ Г±ГІГ°Г Г­ГЁГ¶Г»
+//  var StrArray: TStringDynArray       - Г±ГІГ°Г®ГЄГЁ Г¤Г«Гї ГЇГ®Г¤Г±ГІГ Г­Г®ГўГЄГЁ
+//      StrCount: integer               - ГЄГ®Г«-ГўГ® Г±ГІГ°Г®ГЄ ГЇГ®Г¤Г±ГІГ Г­Г®ГўГЄГЁ
+//  var Relations: TZXLSXRelationsArray - Г®ГІГ­Г®ГёГҐГ­ГЁГї
+//      RelationsCount: integer         - ГЄГ®Г«-ГўГ® Г®ГІГ­Г®ГёГҐГ­ГЁГ©
 //      ReadHelper: TZEXLSXReadHelper   -
 //RETURN
-//      boolean - true - страница прочиталась успешно
+//      boolean - true - Г±ГІГ°Г Г­ГЁГ¶Г  ГЇГ°Г®Г·ГЁГІГ Г«Г Г±Гј ГіГ±ГЇГҐГёГ­Г®
 function ZEXSLXReadSheet(var XMLSS: TZEXMLSS; var Stream: TStream; const SheetName: string; var StrArray: TStringDynArray; StrCount: integer;
                          var Relations: TZXLSXRelationsArray; RelationsCount: integer;
                          ReadHelper: TZEXLSXReadHelper): boolean;
@@ -1836,21 +1836,21 @@ var
   _td: TDateTime;
   _tfloat: Double;
 
-  //Проверить кол-во строк
+  //ГЏГ°Г®ГўГҐГ°ГЁГІГј ГЄГ®Г«-ГўГ® Г±ГІГ°Г®ГЄ
   procedure CheckRow(const RowCount: integer);
   begin
     if (_currSheet.RowCount < RowCount) then
       _currSheet.RowCount := RowCount;
   end;
 
-  //Проверить кол-во столбцов
+  //ГЏГ°Г®ГўГҐГ°ГЁГІГј ГЄГ®Г«-ГўГ® Г±ГІГ®Г«ГЎГ¶Г®Гў
   procedure CheckCol(const ColCount: integer);
   begin
     if (_currSheet.ColCount < ColCount) then
       _currSheet.ColCount := ColCount
   end;
 
-  //Чтение строк/столбцов
+  //Г—ГІГҐГ­ГЁГҐ Г±ГІГ°Г®ГЄ/Г±ГІГ®Г«ГЎГ¶Г®Гў
   procedure _ReadSheetData();
   var
     t: integer;
@@ -1870,10 +1870,10 @@ var
       if (xml.Eof) then
         break;
 
-      //ячейка
+      //ГїГ·ГҐГ©ГЄГ 
       if (xml.TagName = 'c') then
       begin
-        s := xml.Attributes.ItemsByName['r']; //номер
+        s := xml.Attributes.ItemsByName['r']; //Г­Г®Г¬ГҐГ°
         if (s <> '') then
         begin
           if (ZEGetCellCoords(s, _cc, _cr)) then
@@ -1882,7 +1882,7 @@ var
             CheckCol(_cc + 1);
           end;
         end;
-        _type := xml.Attributes.ItemsByName['t']; //тип
+        _type := xml.Attributes.ItemsByName['t']; //ГІГЁГЇ
 
         //s := xml.Attributes.ItemsByName['cm'];
         //s := xml.Attributes.ItemsByName['ph'];
@@ -1890,7 +1890,7 @@ var
         v := '';
         _num := 0;
         _currCell := _currSheet.Cell[_currCol, _currRow];
-        s := xml.Attributes.ItemsByName['s']; //стиль
+        s := xml.Attributes.ItemsByName['s']; //Г±ГІГЁГ«Гј
         if (s > '') then
           if (tryStrToInt(s, t)) then
             _currCell.CellStyle := t;
@@ -1901,7 +1901,7 @@ var
           if (xml.Eof) then
             break;
 
-          //is пока игнорируем
+          //is ГЇГ®ГЄГ  ГЁГЈГ­Г®Г°ГЁГ°ГіГҐГ¬
 
           if (((xml.TagName = 'v') or (xml.TagName = 't')) and (xml.TagType = TAG_TYPE_END)) then
           begin
@@ -1915,7 +1915,7 @@ var
 
         end; //while
 
-        //Возможные типы:
+        //Г‚Г®Г§Г¬Г®Г¦Г­Г»ГҐ ГІГЁГЇГ»:
         //  s - sharedstring
         //  b - boolean
         //  n - number
@@ -1923,7 +1923,7 @@ var
         //  str - string
         //  inlineStr - inline string ??
         //  d - date
-        //  тип может отсутствовать. Интерпретируем в таком случае как ZEGeneral
+        //  ГІГЁГЇ Г¬Г®Г¦ГҐГІ Г®ГІГ±ГіГІГ±ГІГўГ®ГўГ ГІГј. Г€Г­ГІГҐГ°ГЇГ°ГҐГІГЁГ°ГіГҐГ¬ Гў ГІГ ГЄГ®Г¬ Г±Г«ГіГ·Г ГҐ ГЄГ ГЄ ZEGeneral
         if (_type = '') then _currCell.CellType := ZEGeneral
         else
         if (_type = 'n') then
@@ -1963,11 +1963,11 @@ var
         inc(_currCol);
         CheckCol(_currCol + 1);
       end else
-      //строка
+      //Г±ГІГ°Г®ГЄГ 
       if ((xml.TagName = 'row') and (xml.TagType in [TAG_TYPE_START, TAG_TYPE_CLOSED])) then
       begin
         _currCol := 0;
-        s := xml.Attributes.ItemsByName['r']; //индекс строки
+        s := xml.Attributes.ItemsByName['r']; //ГЁГ­Г¤ГҐГЄГ± Г±ГІГ°Г®ГЄГЁ
         if (s > '') then
           if (TryStrToInt(s, t)) then
           begin
@@ -1981,7 +1981,7 @@ var
         if (s > '') then
           _currSheet.Rows[_currRow].Hidden := ZEStrToBoolean(s);
 
-        s := xml.Attributes.ItemsByName['ht']; //в поинтах?
+        s := xml.Attributes.ItemsByName['ht']; //Гў ГЇГ®ГЁГ­ГІГ Гµ?
         if (s > '') then
         begin
           _tmpr := ZETryStrToFloat(s, 10);
@@ -1992,11 +1992,11 @@ var
         //s := xml.Attributes.ItemsByName['outlineLevel'];
         //s := xml.Attributes.ItemsByName['ph'];
 
-        s := xml.Attributes.ItemsByName['s']; //номер стиля
+        s := xml.Attributes.ItemsByName['s']; //Г­Г®Г¬ГҐГ° Г±ГІГЁГ«Гї
         if (s > '') then
           if (TryStrToInt(s, t)) then
           begin
-            //нужно подставить нужный стиль
+            //Г­ГіГ¦Г­Г® ГЇГ®Г¤Г±ГІГ ГўГЁГІГј Г­ГіГ¦Г­Г»Г© Г±ГІГЁГ«Гј
           end;
         //s := xml.Attributes.ItemsByName['spans'];
         //s := xml.Attributes.ItemsByName['thickBot'];
@@ -2008,7 +2008,7 @@ var
           CheckRow(_currRow + 1);
         end;
       end else
-      //конец строки
+      //ГЄГ®Г­ГҐГ¶ Г±ГІГ°Г®ГЄГЁ
       if ((xml.TagName = 'row') and (xml.TagType = TAG_TYPE_END)) then
       begin
         inc(_currRow);
@@ -2017,13 +2017,13 @@ var
     end; //while
   end; //_ReadSheetData
 
-  //Чтение диапазона ячеек с автофильтром
+  //Г—ГІГҐГ­ГЁГҐ Г¤ГЁГ ГЇГ Г§Г®Г­Г  ГїГ·ГҐГҐГЄ Г± Г ГўГІГ®ГґГЁГ«ГјГІГ°Г®Г¬
   procedure _ReadAutoFilter();
   begin
     _currSheet.AutoFilter:=xml.Attributes.ItemsByName['ref'];
   end;
 
-  //Чтение объединённых ячеек
+  //Г—ГІГҐГ­ГЁГҐ Г®ГЎГєГҐГ¤ГЁГ­ВёГ­Г­Г»Гµ ГїГ·ГҐГҐГЄ
   procedure _ReadMerge();
   var
     i, t, num: integer;
@@ -2111,7 +2111,7 @@ var
     end; //while
   end; //_ReadMerge
 
-  //Столбцы
+  //Г‘ГІГ®Г«ГЎГ¶Г»
   procedure _ReadCols();
   var
     num: integer;
@@ -2227,7 +2227,7 @@ var
     end;
   end; //_GetDimension()
 
-  //Чтение ссылок
+  //Г—ГІГҐГ­ГЁГҐ Г±Г±Г»Г«Г®ГЄ
   procedure _ReadHyperLinks();
   var
     _c, _r: integer;
@@ -2252,7 +2252,7 @@ var
             CheckCol(_c);
             _currSheet.Cell[_c, _r].HRefScreenTip := xml.Attributes.ItemsByName['tooltip'];
             s := xml.Attributes.ItemsByName['r:id'];
-            //по r:id подставить ссылку
+            //ГЇГ® r:id ГЇГ®Г¤Г±ГІГ ГўГЁГІГј Г±Г±Г»Г«ГЄГі
             for i := 0 to RelationsCount - 1 do
               if ((Relations[i].id = s) and (Relations[i].ftype = 6)) then
               begin
@@ -2260,7 +2260,7 @@ var
                 break;
               end;
           end;
-        //доп. атрибуты:
+        //Г¤Г®ГЇ. Г ГІГ°ГЁГЎГіГІГ»:
         //  display - ??
         //  id - id <> r:id??
         //  location - ??
@@ -2323,7 +2323,7 @@ var
   end; //_ReadSheetViews()
 
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-  //Чтение условного форматирования
+  //Г—ГІГҐГ­ГЁГҐ ГіГ±Г«Г®ГўГ­Г®ГЈГ® ГґГ®Г°Г¬Г ГІГЁГ°Г®ГўГ Г­ГЁГї
   //<conditionalFormatting>..</conditionalFormatting>
   procedure _ReadConditionFormatting();
   var
@@ -2457,7 +2457,7 @@ var
       end;
     end; //_AddCF
 
-    //Применяем условный стиль
+    //ГЏГ°ГЁГ¬ГҐГ­ГїГҐГ¬ ГіГ±Г«Г®ГўГ­Г»Г© Г±ГІГЁГ«Гј
     procedure _TryApplyCF();
     var
       b: boolean;
@@ -2471,16 +2471,16 @@ var
             _isOk := true;
       end;
 
-      //Найти стиль
-      //  пока будем делать так: предполагаем, что все ячейки в текущей области
-      //  условного форматирования имеют один стиль. Берём стиль из левой верхней
-      //  ячейки, клонируем его, применяем дифф. стиль, добавляем в хранилище стилей
-      //  с учётом повторов.
-      //TODO: потом нужно будет переделать
+      //ГЌГ Г©ГІГЁ Г±ГІГЁГ«Гј
+      //  ГЇГ®ГЄГ  ГЎГіГ¤ГҐГ¬ Г¤ГҐГ«Г ГІГј ГІГ ГЄ: ГЇГ°ГҐГ¤ГЇГ®Г«Г ГЈГ ГҐГ¬, Г·ГІГ® ГўГ±ГҐ ГїГ·ГҐГ©ГЄГЁ Гў ГІГҐГЄГіГ№ГҐГ© Г®ГЎГ«Г Г±ГІГЁ
+      //  ГіГ±Г«Г®ГўГ­Г®ГЈГ® ГґГ®Г°Г¬Г ГІГЁГ°Г®ГўГ Г­ГЁГї ГЁГ¬ГҐГѕГІ Г®Г¤ГЁГ­ Г±ГІГЁГ«Гј. ГЃГҐГ°ВёГ¬ Г±ГІГЁГ«Гј ГЁГ§ Г«ГҐГўГ®Г© ГўГҐГ°ГµГ­ГҐГ©
+      //  ГїГ·ГҐГ©ГЄГЁ, ГЄГ«Г®Г­ГЁГ°ГіГҐГ¬ ГҐГЈГ®, ГЇГ°ГЁГ¬ГҐГ­ГїГҐГ¬ Г¤ГЁГґГґ. Г±ГІГЁГ«Гј, Г¤Г®ГЎГ ГўГ«ГїГҐГ¬ Гў ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ Г±ГІГЁГ«ГҐГ©
+      //  Г± ГіГ·ВёГІГ®Г¬ ГЇГ®ГўГІГ®Г°Г®Гў.
+      //TODO: ГЇГ®ГІГ®Г¬ Г­ГіГ¦Г­Г® ГЎГіГ¤ГҐГІ ГЇГҐГ°ГҐГ¤ГҐГ«Г ГІГј
       //INPUT
-      //      dfNum: integer - номер дифференцированного форматирования
+      //      dfNum: integer - Г­Г®Г¬ГҐГ° Г¤ГЁГґГґГҐГ°ГҐГ­Г¶ГЁГ°Г®ГўГ Г­Г­Г®ГЈГ® ГґГ®Г°Г¬Г ГІГЁГ°Г®ГўГ Г­ГЁГї
       //RETURN
-      //      integer - номер применяемого стиля
+      //      integer - Г­Г®Г¬ГҐГ° ГЇГ°ГЁГ¬ГҐГ­ГїГҐГ¬Г®ГЈГ® Г±ГІГЁГ«Гї
       function _getStyleIdxForDF(dfNum: integer): integer;
       var
         _df: TZXLSXDiffFormattingItem;
@@ -2545,7 +2545,7 @@ var
         ZCFIsTrueFormula:;
         ZCFCellContentIsBetween, ZCFCellContentIsNotBetween:
           begin
-            //только числа
+            //ГІГ®Г«ГјГЄГ® Г·ГЁГ±Г«Г 
             if (count = 2) then
             begin
               ZETryStrToFloat(_formulas[0], b);
@@ -2555,7 +2555,7 @@ var
           end;
         ZCFCellContentOperator:
           begin
-            //только числа
+            //ГІГ®Г«ГјГЄГ® Г·ГЁГ±Г«Г 
             if (count = 1) then
               ZETryStrToFloat(_formulas[0], _isOk);
           end;
@@ -2610,8 +2610,8 @@ var
         if ((xml.TagType = TAG_TYPE_START) and (xml.TagName = ZETag_cfRule)) then
         begin
          (*
-          Атрибуты в cfRule:
-          type	       	- тип
+          ГЂГІГ°ГЁГЎГіГІГ» Гў cfRule:
+          type	       	- ГІГЁГЇ
                             expression        - ??
                             cellIs            -
                             colorScale        - ??
@@ -2630,13 +2630,13 @@ var
                             notContainsErrors - ??
                             timePeriod        - ??
                             aboveAverage      - ?
-          dxfId	        - ID применяемого формата
-          priority	    - приоритет
+          dxfId	        - ID ГЇГ°ГЁГ¬ГҐГ­ГїГҐГ¬Г®ГЈГ® ГґГ®Г°Г¬Г ГІГ 
+          priority	    - ГЇГ°ГЁГ®Г°ГЁГІГҐГІ
           stopIfTrue	  -  ??
           aboveAverage  -  ??
           percent	      -  ??
           bottom	      -  ??
-          operator	    - оператор:
+          operator	    - Г®ГЇГҐГ°Г ГІГ®Г°:
                               lessThan	          <
                               lessThanOrEqual	    <=
                               equal	              =
@@ -2645,10 +2645,10 @@ var
                               greaterThan	        >
                               between	            Between
                               notBetween	        Not Between
-                              containsText	      содержит текст
-                              notContains	        не содержит
-                              beginsWith	        начинается с
-                              endsWith	          оканчивается на
+                              containsText	      Г±Г®Г¤ГҐГ°Г¦ГЁГІ ГІГҐГЄГ±ГІ
+                              notContains	        Г­ГҐ Г±Г®Г¤ГҐГ°Г¦ГЁГІ
+                              beginsWith	        Г­Г Г·ГЁГ­Г ГҐГІГ±Гї Г±
+                              endsWith	          Г®ГЄГ Г­Г·ГЁГўГ ГҐГІГ±Гї Г­Г 
           text	        -  ??
           timePeriod	  -  ??
           rank	        -  ??
@@ -2721,10 +2721,10 @@ begin
       if ((xml.TagName = 'cols') and (xml.TagType = TAG_TYPE_START)) then
         _ReadCols()
       else
-      //Отступы
+      //ГЋГІГ±ГІГіГЇГ»
       if ((xml.TagName = 'pageMargins') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
-        //в дюймах
+        //Гў Г¤ГѕГ©Г¬Г Гµ
         s := xml.Attributes.ItemsByName['bottom'];
         if (_StrToMM(s, _tmpr)) then
           _currSheet.SheetOptions.MarginBottom := round(_tmpr);
@@ -2744,7 +2744,7 @@ begin
         if (_StrToMM(s, _tmpr)) then
           _currSheet.SheetOptions.MarginTop := round(_tmpr);
       end else
-      //Настройки страницы
+      //ГЌГ Г±ГІГ°Г®Г©ГЄГЁ Г±ГІГ°Г Г­ГЁГ¶Г»
       if ((xml.TagName = 'pageSetup') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         //s := xml.Attributes.ItemsByName['blackAndWhite'];
@@ -2775,7 +2775,7 @@ begin
         if (s > '') then
           if (TryStrToInt(s, _t)) then
             _currSheet.SheetOptions.PaperSize := _t;
-        //s := xml.Attributes.ItemsByName['paperHeight']; //если утановлены paperHeight и Width, то paperSize игнорируется
+        //s := xml.Attributes.ItemsByName['paperHeight']; //ГҐГ±Г«ГЁ ГіГІГ Г­Г®ГўГ«ГҐГ­Г» paperHeight ГЁ Width, ГІГ® paperSize ГЁГЈГ­Г®Г°ГЁГ°ГіГҐГІГ±Гї
         //s := xml.Attributes.ItemsByName['paperWidth'];
 
         //s := xml.Attributes.ItemsByName['scale'];
@@ -2783,7 +2783,7 @@ begin
         //s := xml.Attributes.ItemsByName['usePrinterDefaults'];
         //s := xml.Attributes.ItemsByName['verticalDpi'];
       end else
-      //настройки печати
+      //Г­Г Г±ГІГ°Г®Г©ГЄГЁ ГЇГҐГ·Г ГІГЁ
       if ((xml.TagName = 'printOptions') and (xml.TagType = TAG_TYPE_CLOSED)) then
       begin
         //s := xml.Attributes.ItemsByName['gridLines'];
@@ -2820,15 +2820,15 @@ begin
   end;
 end; //ZEXSLXReadSheet
 
-//Прочитать стили из потока (styles.xml)
+//ГЏГ°Г®Г·ГЁГІГ ГІГј Г±ГІГЁГ«ГЁ ГЁГ§ ГЇГ®ГІГ®ГЄГ  (styles.xml)
 //INPUT
-//  var XMLSS: TZEXMLSS                   - хранилище
-//  var Stream: TStream                   - поток
-//  var ThemaFillsColors: TIntegerDynArray - цвета из темы
-//  var ThemaColorCount: integer          - кол-во цветов заливки в теме
+//  var XMLSS: TZEXMLSS                   - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//  var Stream: TStream                   - ГЇГ®ГІГ®ГЄ
+//  var ThemaFillsColors: TIntegerDynArray - Г¶ГўГҐГІГ  ГЁГ§ ГІГҐГ¬Г»
+//  var ThemaColorCount: integer          - ГЄГ®Г«-ГўГ® Г¶ГўГҐГІГ®Гў Г§Г Г«ГЁГўГЄГЁ Гў ГІГҐГ¬ГҐ
 //      ReadHelper: TZEXLSXReadHelper     -
 //RETURN
-//      boolean - true - стили прочитались без ошибок
+//      boolean - true - Г±ГІГЁГ«ГЁ ГЇГ°Г®Г·ГЁГІГ Г«ГЁГ±Гј ГЎГҐГ§ Г®ГёГЁГЎГ®ГЄ
 function ZEXSLXReadStyles(var XMLSS: TZEXMLSS; var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer; ReadHelper: TZEXLSXReadHelper): boolean;
 type
 
@@ -2840,12 +2840,12 @@ type
     Weight: byte;
   end;
 
-  //   0 - left           левая граница
-  //   1 - Top            верхняя граница
-  //   2 - Right          правая граница
-  //   3 - Bottom         нижняя граница
-  //   4 - DiagonalLeft   диагоняль от верхнего левого угла до нижнего правого
-  //   5 - DiagonalRight  диагоняль от нижнего левого угла до правого верхнего
+  //   0 - left           Г«ГҐГўГ Гї ГЈГ°Г Г­ГЁГ¶Г 
+  //   1 - Top            ГўГҐГ°ГµГ­ГїГї ГЈГ°Г Г­ГЁГ¶Г 
+  //   2 - Right          ГЇГ°Г ГўГ Гї ГЈГ°Г Г­ГЁГ¶Г 
+  //   3 - Bottom         Г­ГЁГ¦Г­ГїГї ГЈГ°Г Г­ГЁГ¶Г 
+  //   4 - DiagonalLeft   Г¤ГЁГ ГЈГ®Г­ГїГ«Гј Г®ГІ ГўГҐГ°ГµГ­ГҐГЈГ® Г«ГҐГўГ®ГЈГ® ГіГЈГ«Г  Г¤Г® Г­ГЁГ¦Г­ГҐГЈГ® ГЇГ°Г ГўГ®ГЈГ®
+  //   5 - DiagonalRight  Г¤ГЁГ ГЈГ®Г­ГїГ«Гј Г®ГІ Г­ГЁГ¦Г­ГҐГЈГ® Г«ГҐГўГ®ГЈГ® ГіГЈГ«Г  Г¤Г® ГЇГ°Г ГўГ®ГЈГ® ГўГҐГ°ГµГ­ГҐГЈГ®
   TZXLSXBorder = array[0..5] of TZXLSXBorderItem;
   TZXLSXBordersArray = array of TZXLSXBorder;
 
@@ -2928,9 +2928,9 @@ var
   _dfFonts: TZXLSXDFFontArray;
   _dfFills: TZXLSXFillArray;
 
-  //Приводит к шрифту по-умолчанию
+  //ГЏГ°ГЁГўГ®Г¤ГЁГІ ГЄ ГёГ°ГЁГґГІГі ГЇГ®-ГіГ¬Г®Г«Г·Г Г­ГЁГѕ
   //INPUT
-  //  var fnt: TZEXLSXFont - шрифт
+  //  var fnt: TZEXLSXFont - ГёГ°ГЁГґГІ
   procedure ZEXLSXZeroFont(var fnt: TZEXLSXFont);
   begin
     fnt.name := 'Arial';
@@ -2945,8 +2945,8 @@ var
     fnt.fontsize := 8;
   end; //ZEXLSXZeroFont
 
-  //Обнуляет границы
-  //  var border: TZXLSXBorder - границы
+  //ГЋГЎГ­ГіГ«ГїГҐГІ ГЈГ°Г Г­ГЁГ¶Г»
+  //  var border: TZXLSXBorder - ГЈГ°Г Г­ГЁГ¶Г»
   procedure ZEXLSXZeroBorder(var border: TZXLSXBorder);
   var
     i: integer;
@@ -2961,16 +2961,16 @@ var
     end;
   end; //ZEXLSXZeroBorder
 
-  //Меняёт местами bgColor и fgColor при несплошных заливках
+  //ГЊГҐГ­ГїВёГІ Г¬ГҐГ±ГІГ Г¬ГЁ bgColor ГЁ fgColor ГЇГ°ГЁ Г­ГҐГ±ГЇГ«Г®ГёГ­Г»Гµ Г§Г Г«ГЁГўГЄГ Гµ
   //INPUT
-  //  var PattFill: TZXLSXFill - заливка
+  //  var PattFill: TZXLSXFill - Г§Г Г«ГЁГўГЄГ 
   procedure ZEXLSXSwapPatternFillColors(var PattFill: TZXLSXFill);
   var
     t: integer;
     _b: byte;
 
   begin
-    //если не сплошная заливка - нужно поменять местами цвета (bgColor <-> fgColor)
+    //ГҐГ±Г«ГЁ Г­ГҐ Г±ГЇГ«Г®ГёГ­Г Гї Г§Г Г«ГЁГўГЄГ  - Г­ГіГ¦Г­Г® ГЇГ®Г¬ГҐГ­ГїГІГј Г¬ГҐГ±ГІГ Г¬ГЁ Г¶ГўГҐГІГ  (bgColor <-> fgColor)
     if (not (PattFill.patternfill in [ZPNone, ZPSolid])) then
     begin
       t := PattFill.patterncolor;
@@ -2986,9 +2986,9 @@ var
     end; //if
   end; //ZEXLSXSwapPatternFillColors
 
-  //Очистить заливку ячейки
+  //ГЋГ·ГЁГ±ГІГЁГІГј Г§Г Г«ГЁГўГЄГі ГїГ·ГҐГ©ГЄГЁ
   //INPUT
-  //  var PattFill: TZXLSXFill - заливка
+  //  var PattFill: TZXLSXFill - Г§Г Г«ГЁГўГЄГ 
   procedure ZEXLSXClearPatternFill(var PattFill: TZXLSXFill);
   begin
     PattFill.patternfill := ZPNone;
@@ -3000,9 +3000,9 @@ var
     PattFill.lumFactorPattern := 0.0;
   end; //ZEXLSXClearPatternFill
 
-  //Обнуляет стиль
+  //ГЋГЎГ­ГіГ«ГїГҐГІ Г±ГІГЁГ«Гј
   //INPUT
-  //  var style: TZXLSXCellStyle - стиль XLSX
+  //  var style: TZXLSXCellStyle - Г±ГІГЁГ«Гј XLSX
   procedure ZEXLSXZeroCellStyle(var style: TZXLSXCellStyle);
   begin
     style.applyAlignment := false;
@@ -3023,10 +3023,10 @@ var
     style.alignment.indent := 0;
   end; //ZEXLSXZeroCellStyle
 
-  //TZEXLSXFont в TFont
+  //TZEXLSXFont Гў TFont
   //INPUT
-  //  var fnt: TZEXLSXFont  - XLSX шрифт
-  //  var font: TFont       - стандартный шрифт
+  //  var fnt: TZEXLSXFont  - XLSX ГёГ°ГЁГґГІ
+  //  var font: TFont       - Г±ГІГ Г­Г¤Г Г°ГІГ­Г»Г© ГёГ°ГЁГґГІ
   procedure ZEXLSXFontToFont(var fnt: TZEXLSXFont; var font: TFont);
   begin
     if (Assigned(font)) then
@@ -3045,11 +3045,11 @@ var
     end;
   end; //ZEXLSXFontToFont
 
-  //Прочитать цвет
+  //ГЏГ°Г®Г·ГЁГІГ ГІГј Г¶ГўГҐГІ
   //INPUT
-  //  var retColor: TColor      - возвращаемый цвет
-  //  var retColorType: byte    - тип цвета: 0 - rgb, 1 - indexed, 2 - theme
-  //  var retLumfactor: double  - яркость
+  //  var retColor: TColor      - ГўГ®Г§ГўГ°Г Г№Г ГҐГ¬Г»Г© Г¶ГўГҐГІ
+  //  var retColorType: byte    - ГІГЁГЇ Г¶ГўГҐГІГ : 0 - rgb, 1 - indexed, 2 - theme
+  //  var retLumfactor: double  - ГїГ°ГЄГ®Г±ГІГј
   procedure ZXLSXGetColor(var retColor: TColor; var retColorType: byte; var retLumfactor: double);
   var
     t: integer;
@@ -3146,7 +3146,7 @@ var
         begin
         end;
       end; //if  
-      //Тэги настройки шрифта
+      //Г’ГЅГЈГЁ Г­Г Г±ГІГ°Г®Г©ГЄГЁ ГёГ°ГЁГґГІГ 
       //*b - bold
       //*charset
       //*color
@@ -3166,7 +3166,7 @@ var
     end; //while
   end; //_ReadFonts
 
-  //Получить тип заливки
+  //ГЏГ®Г«ГіГ·ГЁГІГј ГІГЁГЇ Г§Г Г«ГЁГўГЄГЁ
   function _GetPatternFillByStr(const s: string): TZCellPattern;
   begin
     if (s = 'solid') then
@@ -3230,16 +3230,16 @@ var
       result := ZPThinDiagCross
     //
     else
-      result := ZPSolid; //{tut} потом подумать насчёт стилей границ
+      result := ZPSolid; //{tut} ГЇГ®ГІГ®Г¬ ГЇГ®Г¤ГіГ¬Г ГІГј Г­Г Г±Г·ВёГІ Г±ГІГЁГ«ГҐГ© ГЈГ°Г Г­ГЁГ¶
   end; //_GetPatternFillByStr
 
-  //Определить стиль начертания границы
+  //ГЋГЇГ°ГҐГ¤ГҐГ«ГЁГІГј Г±ГІГЁГ«Гј Г­Г Г·ГҐГ°ГІГ Г­ГЁГї ГЈГ°Г Г­ГЁГ¶Г»
   //INPUT
-  //  const st: string            - название стиля
-  //  var retWidth: byte          - возвращаемая ширина линии
-  //  var retStyle: TZBorderType  - возвращаемый стиль начертания линии
+  //  const st: string            - Г­Г Г§ГўГ Г­ГЁГҐ Г±ГІГЁГ«Гї
+  //  var retWidth: byte          - ГўГ®Г§ГўГ°Г Г№Г ГҐГ¬Г Гї ГёГЁГ°ГЁГ­Г  Г«ГЁГ­ГЁГЁ
+  //  var retStyle: TZBorderType  - ГўГ®Г§ГўГ°Г Г№Г ГҐГ¬Г»Г© Г±ГІГЁГ«Гј Г­Г Г·ГҐГ°ГІГ Г­ГЁГї Г«ГЁГ­ГЁГЁ
   //RETURN
-  //      boolean - true - стиль определён
+  //      boolean - true - Г±ГІГЁГ«Гј Г®ГЇГ°ГҐГ¤ГҐГ«ВёГ­
   function XLSXGetBorderStyle(const st: string; var retWidth: byte; var retStyle: TZBorderType): boolean;
   begin
     result := true;
@@ -3303,8 +3303,8 @@ var
   procedure _ReadBorders();
   var
     _diagDown, _diagUP: boolean;
-    _currBorder: integer; //текущий набор границ
-    _currBorderItem: integer; //текущая граница (левая/правая ...)
+    _currBorder: integer; //ГІГҐГЄГіГ№ГЁГ© Г­Г ГЎГ®Г° ГЈГ°Г Г­ГЁГ¶
+    _currBorderItem: integer; //ГІГҐГЄГіГ№Г Гї ГЈГ°Г Г­ГЁГ¶Г  (Г«ГҐГўГ Гї/ГЇГ°Г ГўГ Гї ...)
     _color: TColor;
     _isColor: boolean;
 
@@ -3468,7 +3468,7 @@ var
                         FillArray[_currFill].patternColorType,
                         FillArray[_currFill].lumFactorPattern);
 
-          //если не сплошная заливка - нужно поменять местами цвета (bgColor <-> fgColor)
+          //ГҐГ±Г«ГЁ Г­ГҐ Г±ГЇГ«Г®ГёГ­Г Гї Г§Г Г«ГЁГўГЄГ  - Г­ГіГ¦Г­Г® ГЇГ®Г¬ГҐГ­ГїГІГј Г¬ГҐГ±ГІГ Г¬ГЁ Г¶ГўГҐГІГ  (bgColor <-> fgColor)
           ZEXLSXSwapPatternFillColors(FillArray[_currFill]);
         end;
       end else
@@ -3482,11 +3482,11 @@ var
     end; //while
   end; //_ReadFills
 
-  //Читает стили (cellXfs и cellStyleXfs)
+  //Г—ГЁГІГ ГҐГІ Г±ГІГЁГ«ГЁ (cellXfs ГЁ cellStyleXfs)
   //INPUT
-  //  const TagName: string           - имя тэга
-  //  var CSA: TZXLSXCellStylesArray  - массив со стилями
-  //  var StyleCount: integer         - кол-во стилей
+  //  const TagName: string           - ГЁГ¬Гї ГІГЅГЈГ 
+  //  var CSA: TZXLSXCellStylesArray  - Г¬Г Г±Г±ГЁГў Г±Г® Г±ГІГЁГ«ГїГ¬ГЁ
+  //  var StyleCount: integer         - ГЄГ®Г«-ГўГ® Г±ГІГЁГ«ГҐГ©
   procedure _ReadCellCommonStyles(const TagName: string; var CSA: TZXLSXCellStylesArray; var StyleCount: integer);
   var
     _currCell: integer;
@@ -3638,7 +3638,7 @@ var
     end; //while
   end; //_ReadCellCommonStyles
 
-  //Сами стили ?? (или для чего они вообще?)
+  //Г‘Г Г¬ГЁ Г±ГІГЁГ«ГЁ ?? (ГЁГ«ГЁ Г¤Г«Гї Г·ГҐГЈГ® Г®Г­ГЁ ГўГ®Г®ГЎГ№ГҐ?)
   procedure _ReadCellStyles();
   var
     b: boolean;
@@ -3707,15 +3707,15 @@ var
     end; //while
   end; //_ReadColors
 
-  //Конвертирует RGB в HSL
+  //ГЉГ®Г­ГўГҐГ°ГІГЁГ°ГіГҐГІ RGB Гў HSL
   //http://en.wikipedia.org/wiki/HSL_color_space
   //INPUT
   //      r: byte     -
   //      g: byte     -
   //      b: byte     -
-  //  out h: double   - Hue - тон цвета
-  //  out s: double   - Saturation - насыщенность
-  //  out l: double   - Lightness (Intensity) - светлота (яркость)
+  //  out h: double   - Hue - ГІГ®Г­ Г¶ГўГҐГІГ 
+  //  out s: double   - Saturation - Г­Г Г±Г»Г№ГҐГ­Г­Г®Г±ГІГј
+  //  out l: double   - Lightness (Intensity) - Г±ГўГҐГІГ«Г®ГІГ  (ГїГ°ГЄГ®Г±ГІГј)
   procedure ZRGBToHSL(r, g, b: byte; out h, s, l: double);
   var
     _max, _min: double;
@@ -3773,13 +3773,13 @@ var
     end;
   end; //ZRGBToHSL
 
-  //Конвертирует TColor (RGB) в HSL
+  //ГЉГ®Г­ГўГҐГ°ГІГЁГ°ГіГҐГІ TColor (RGB) Гў HSL
   //http://en.wikipedia.org/wiki/HSL_color_space
   //INPUT
-  //      Color: TColor - цвет
-  //  out h: double     - Hue - тон цвета
-  //  out s: double     - Saturation - насыщенность
-  //  out l: double     - Lightness (Intensity) - светлота (яркость)
+  //      Color: TColor - Г¶ГўГҐГІ
+  //  out h: double     - Hue - ГІГ®Г­ Г¶ГўГҐГІГ 
+  //  out s: double     - Saturation - Г­Г Г±Г»Г№ГҐГ­Г­Г®Г±ГІГј
+  //  out l: double     - Lightness (Intensity) - Г±ГўГҐГІГ«Г®ГІГ  (ГїГ°ГЄГ®Г±ГІГј)
   procedure ZColorToHSL(Color: TColor; out h, s, l: double);
   var
     _RGB: integer;
@@ -3789,12 +3789,12 @@ var
     ZRGBToHSL(byte(_RGB), byte(_RGB shr 8), byte(_RGB shr 16), h, s, l);
   end; //ZColorToHSL
 
-  //Конвертирует HSL в RGB
+  //ГЉГ®Г­ГўГҐГ°ГІГЁГ°ГіГҐГІ HSL Гў RGB
   //http://en.wikipedia.org/wiki/HSL_color_space
   //INPUT
-  //      h: double - Hue - тон цвета
-  //      s: double - Saturation - насыщенность
-  //      l: double - Lightness (Intensity) - светлота (яркость)
+  //      h: double - Hue - ГІГ®Г­ Г¶ГўГҐГІГ 
+  //      s: double - Saturation - Г­Г Г±Г»Г№ГҐГ­Г­Г®Г±ГІГј
+  //      l: double - Lightness (Intensity) - Г±ГўГҐГІГ«Г®ГІГ  (ГїГ°ГЄГ®Г±ГІГј)
   //  out r: byte   -
   //  out g: byte   -
   //  out b: byte   -
@@ -3823,7 +3823,7 @@ var
   begin
     if (s = 0) then
     begin
-      //Оттенок серого
+      //ГЋГІГІГҐГ­Г®ГЄ Г±ГҐГ°Г®ГЈГ®
       _r := l;
       _g := l;
       _b := l;
@@ -3843,14 +3843,14 @@ var
     b := byte(round(_b * 255));
   end; //ZHSLToRGB
 
-  //Конвертирует HSL в Color
+  //ГЉГ®Г­ГўГҐГ°ГІГЁГ°ГіГҐГІ HSL Гў Color
   //http://en.wikipedia.org/wiki/HSL_color_space
   //INPUT
-  //      h: double - Hue - тон цвета
-  //      s: double - Saturation - насыщенность
-  //      l: double - Lightness (Intensity) - светлота (яркость)
+  //      h: double - Hue - ГІГ®Г­ Г¶ГўГҐГІГ 
+  //      s: double - Saturation - Г­Г Г±Г»Г№ГҐГ­Г­Г®Г±ГІГј
+  //      l: double - Lightness (Intensity) - Г±ГўГҐГІГ«Г®ГІГ  (ГїГ°ГЄГ®Г±ГІГј)
   //RETURN
-  //      TColor - цвет
+  //      TColor - Г¶ГўГҐГІ
   function ZHSLToColor(h, s, l: double): TColor;
   var
     r, g, b: byte;
@@ -3860,7 +3860,7 @@ var
     result := (b shl 16) or (g shl 8) or r;
   end; //ZHSLToColor
 
-  //Применить tint к цвету
+  //ГЏГ°ГЁГ¬ГҐГ­ГЁГІГј tint ГЄ Г¶ГўГҐГІГі
   // Thanks Tomasz Wieckowski!
   //   http://msdn.microsoft.com/en-us/library/ff532470%28v=office.12%29.aspx
   procedure ApplyLumFactor(var Color: TColor; var lumFactor: double);
@@ -3880,7 +3880,7 @@ var
     end;
   end; //ApplyLumFactor
 
-  //Differential Formatting для xlsx
+  //Differential Formatting Г¤Г«Гї xlsx
   procedure _Readdxfs();
   var
     _df: TZXLSXDiffFormattingItem;
@@ -4086,10 +4086,10 @@ var
     ApplyLumFactor(AColor, LumFactor);
   end; //XLSXApplyColor
 
-  //Применить стиль
+  //ГЏГ°ГЁГ¬ГҐГ­ГЁГІГј Г±ГІГЁГ«Гј
   //INPUT
-  //  var XMLSSStyle: TZStyle         - стиль в хранилище
-  //  var XLSXStyle: TZXLSXCellStyle  - стиль в xlsx
+  //  var XMLSSStyle: TZStyle         - Г±ГІГЁГ«Гј Гў ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+  //  var XLSXStyle: TZXLSXCellStyle  - Г±ГІГЁГ«Гј Гў xlsx
   procedure _ApplyStyle(var XMLSSStyle: TZStyle; var XLSXStyle: TZXLSXCellStyle);
   var
     i: integer;
@@ -4286,11 +4286,11 @@ begin
       if ((xml.TagName = 'fills') and (xml.TagType = TAG_TYPE_START)) then
         _ReadFills()
       else
-      //TODO: разобраться, чем отличаются cellStyleXfs и cellXfs. Что за cellStyles?
+      //TODO: Г°Г Г§Г®ГЎГ°Г ГІГјГ±Гї, Г·ГҐГ¬ Г®ГІГ«ГЁГ·Г ГѕГІГ±Гї cellStyleXfs ГЁ cellXfs. Г—ГІГ® Г§Г  cellStyles?
       if ((xml.TagName = 'cellStyleXfs') and (xml.TagType = TAG_TYPE_START)) then
         _ReadCellCommonStyles('cellStyleXfs', CellStyleArray, CellStyleCount)//_ReadCellStyleXfs()
       else
-      if ((xml.TagName = 'cellXfs') and (xml.TagType = TAG_TYPE_START)) then  //сами стили?
+      if ((xml.TagName = 'cellXfs') and (xml.TagType = TAG_TYPE_START)) then  //Г±Г Г¬ГЁ Г±ГІГЁГ«ГЁ?
         _ReadCellCommonStyles('cellXfs', CellXfsArray, CellXfsCount) //_ReadCellXfs()
       else
       if ((xml.TagName = 'cellStyles') and (xml.TagType = TAG_TYPE_START)) then //??
@@ -4306,7 +4306,7 @@ begin
         ReadHelper.NumberFormats.ReadNumFmts(xml);
     end; //while
 
-    //тут незабыть применить номера цветов, если были введены
+    //ГІГіГІ Г­ГҐГ§Г ГЎГ»ГІГј ГЇГ°ГЁГ¬ГҐГ­ГЁГІГј Г­Г®Г¬ГҐГ°Г  Г¶ГўГҐГІГ®Гў, ГҐГ±Г«ГЁ ГЎГ»Г«ГЁ ГўГўГҐГ¤ГҐГ­Г»
 
     _CheckIndexedColors();
 
@@ -4332,7 +4332,7 @@ begin
       _ApplyStyle(_Style, CellXfsArray[i]);
     end;
 
-    //Применение цветов к DF
+    //ГЏГ°ГЁГ¬ГҐГ­ГҐГ­ГЁГҐ Г¶ГўГҐГІГ®Гў ГЄ DF
     for i := 0 to ReadHelper.DiffFormatting.Count - 1 do
     begin
       if (ReadHelper.DiffFormatting[i].UseFontColor) then
@@ -4375,14 +4375,14 @@ begin
   end;
 end; //ZEXSLXReadStyles
 
-//Читает названия листов (workbook.xml)
+//Г—ГЁГІГ ГҐГІ Г­Г Г§ГўГ Г­ГЁГї Г«ГЁГ±ГІГ®Гў (workbook.xml)
 //INPUT
-//  var XMLSS: TZEXMLSS                 - хранилище
-//  var Stream: TStream                 - поток
-//  var Relations: TZXLSXRelationsArray - связи
-//  var RelationsCount: integer         - кол-во
+//  var XMLSS: TZEXMLSS                 - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//  var Stream: TStream                 - ГЇГ®ГІГ®ГЄ
+//  var Relations: TZXLSXRelationsArray - Г±ГўГїГ§ГЁ
+//  var RelationsCount: integer         - ГЄГ®Г«-ГўГ®
 //RETURN
-//      boolean - true - названия прочитались без ошибок
+//      boolean - true - Г­Г Г§ГўГ Г­ГЁГї ГЇГ°Г®Г·ГЁГІГ Г«ГЁГ±Гј ГЎГҐГ§ Г®ГёГЁГЎГ®ГЄ
 function ZEXSLXReadWorkBook(var XMLSS: TZEXMLSS; var Stream: TStream; var Relations: TZXLSXRelationsArray; var RelationsCount: integer): boolean;
 var
   xml: TZsspXMLReaderH;
@@ -4438,10 +4438,10 @@ begin
   end;
 end; //ZEXSLXReadWorkBook
 
-//Удаляет первый символ + меняет все разделители на нужные
+//Г“Г¤Г Г«ГїГҐГІ ГЇГҐГ°ГўГ»Г© Г±ГЁГ¬ГўГ®Г« + Г¬ГҐГ­ГїГҐГІ ГўГ±ГҐ Г°Г Г§Г¤ГҐГ«ГЁГІГҐГ«ГЁ Г­Г  Г­ГіГ¦Г­Г»ГҐ
 //INPUT
-//  var FileArray: TZXLSXFileArray  - файлы
-//      FilesCount: integer         - кол-во файлов
+//  var FileArray: TZXLSXFileArray  - ГґГ Г©Г«Г»
+//      FilesCount: integer         - ГЄГ®Г«-ГўГ® ГґГ Г©Г«Г®Гў
 procedure ZE_XSLXReplaceDelimiter(var FileArray: TZXLSXFileArray; FilesCount: integer);
 var
   i, j, k: integer;
@@ -4462,15 +4462,15 @@ begin
   end;
 end; //ZE_XSLXReplaceDelimiter
 
-//Читает связи страниц/стилей  (*.rels: workbook.xml.rels и .rels)
+//Г—ГЁГІГ ГҐГІ Г±ГўГїГ§ГЁ Г±ГІГ°Г Г­ГЁГ¶/Г±ГІГЁГ«ГҐГ©  (*.rels: workbook.xml.rels ГЁ .rels)
 //INPUT
-//  var Stream: TStream                 - поток для чтения
-//  var Relations: TZXLSXRelationsArray - массив с отношениями
-//  var RelationsCount: integer         - кол-во
-//  var isWorkSheet: boolean            - признак workbook.xml.rels
-//      needReplaceDelimiter: boolean   - признак необходимости заменять разделитель
+//  var Stream: TStream                 - ГЇГ®ГІГ®ГЄ Г¤Г«Гї Г·ГІГҐГ­ГЁГї
+//  var Relations: TZXLSXRelationsArray - Г¬Г Г±Г±ГЁГў Г± Г®ГІГ­Г®ГёГҐГ­ГЁГїГ¬ГЁ
+//  var RelationsCount: integer         - ГЄГ®Г«-ГўГ®
+//  var isWorkSheet: boolean            - ГЇГ°ГЁГ§Г­Г ГЄ workbook.xml.rels
+//      needReplaceDelimiter: boolean   - ГЇГ°ГЁГ§Г­Г ГЄ Г­ГҐГ®ГЎГµГ®Г¤ГЁГ¬Г®Г±ГІГЁ Г§Г Г¬ГҐГ­ГїГІГј Г°Г Г§Г¤ГҐГ«ГЁГІГҐГ«Гј
 //RETURN
-//      boolean - true - успешно прочитано
+//      boolean - true - ГіГ±ГЇГҐГёГ­Г® ГЇГ°Г®Г·ГЁГІГ Г­Г®
 function ZE_XSLXReadRelationships(var Stream: TStream; var Relations: TZXLSXRelationsArray; var RelationsCount: integer; var isWorkSheet: boolean; needReplaceDelimiter: boolean): boolean;
 var
   xml: TZsspXMLReaderH;
@@ -4522,12 +4522,12 @@ begin
   end;
 end; //ZE_XSLXReadRelationsips
 
-//Читает примечания (добавляет примечания на последнюю страницу)
+//Г—ГЁГІГ ГҐГІ ГЇГ°ГЁГ¬ГҐГ·Г Г­ГЁГї (Г¤Г®ГЎГ ГўГ«ГїГҐГІ ГЇГ°ГЁГ¬ГҐГ·Г Г­ГЁГї Г­Г  ГЇГ®Г±Г«ГҐГ¤Г­ГѕГѕ Г±ГІГ°Г Г­ГЁГ¶Гі)
 //INPUT
-//  var XMLSS: TZEXMLSS - хранилище
-//  var Stream: TStream - поток для чтения
+//  var XMLSS: TZEXMLSS - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//  var Stream: TStream - ГЇГ®ГІГ®ГЄ Г¤Г«Гї Г·ГІГҐГ­ГЁГї
 //RETURN
-//      boolean - true - всё нормально
+//      boolean - true - ГўГ±Вё Г­Г®Г°Г¬Г Г«ГјГ­Г®
 function ZEXSLXReadComments(var XMLSS: TZEXMLSS; var Stream: TStream): boolean;
 var
   xml: TZsspXMLReaderH;
@@ -4669,12 +4669,12 @@ begin
       end;
 end;
 
-//Читает распакованный xlsx
+//Г—ГЁГІГ ГҐГІ Г°Г Г±ГЇГ ГЄГ®ГўГ Г­Г­Г»Г© xlsx
 //INPUT
-//  var XMLSS: TZEXMLSS - хранилище
-//  DirName: string     - имя папки
+//  var XMLSS: TZEXMLSS - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//  DirName: string     - ГЁГ¬Гї ГЇГ ГЇГЄГЁ
 //RETURN
-//      integer - номер ошибки (0 - всё OK)
+//      integer - Г­Г®Г¬ГҐГ° Г®ГёГЁГЎГЄГЁ (0 - ГўГ±Вё OK)
 function ReadXLSXPath(var XMLSS: TZEXMLSS; DirName: string): integer;
 var
   stream: TStream;
@@ -4696,11 +4696,11 @@ var
   _no_sheets: boolean;
   RH: TZEXLSXReadHelper;
 
-  //Пытается прочитать rel для листа
+  //ГЏГ»ГІГ ГҐГІГ±Гї ГЇГ°Г®Г·ГЁГІГ ГІГј rel Г¤Г«Гї Г«ГЁГ±ГІГ 
   //INPUT
-  //  const fname: string - имя файла листа
+  //  const fname: string - ГЁГ¬Гї ГґГ Г©Г«Г  Г«ГЁГ±ГІГ 
   //RETURN
-  //      boolean - true - прочитал успешно
+  //      boolean - true - ГЇГ°Г®Г·ГЁГІГ Г« ГіГ±ГЇГҐГёГ­Г®
   function _CheckSheetRelations(const fname: string): boolean;
   var
     _rstream: TStream;
@@ -4737,7 +4737,7 @@ var
     end;
   end; //_CheckSheetRelations
 
-  //Прочитать примечания
+  //ГЏГ°Г®Г·ГЁГІГ ГІГј ГЇГ°ГЁГ¬ГҐГ·Г Г­ГЁГї
   procedure _ReadComments();
   var
     i, l: integer;
@@ -4757,7 +4757,7 @@ var
       break;
     end;
 
-    //Если найдены примечания
+    //Г…Г±Г«ГЁ Г­Г Г©Г¤ГҐГ­Г» ГЇГ°ГЁГ¬ГҐГ·Г Г­ГЁГї
     if (b) then
     begin
       l := length(s);
@@ -4774,7 +4774,7 @@ var
               b := true;
               break;
             end;
-      //Если файл не найден
+      //Г…Г±Г«ГЁ ГґГ Г©Г« Г­ГҐ Г­Г Г©Г¤ГҐГ­
       if (not b) then
       begin
         s := DirName + 'xl' + PathDelim + s;
@@ -4782,7 +4782,7 @@ var
           b := true;
       end;
 
-      //Файл с примечаниями таки присутствует!
+      //Г”Г Г©Г« Г± ГЇГ°ГЁГ¬ГҐГ·Г Г­ГЁГїГ¬ГЁ ГІГ ГЄГЁ ГЇГ°ГЁГ±ГіГІГ±ГІГўГіГҐГІ!
       if (b) then
       try
         _stream := TFileStream.Create(s, fmOpenRead or fmShareDenyNone);
@@ -4908,7 +4908,7 @@ begin
         break;
       end;
 
-      //тема (если есть)
+      //ГІГҐГ¬Г  (ГҐГ±Г«ГЁ ГҐГ±ГІГј)
       for i := 0 to FilesCount - 1 do
       if (FileArray[i].ftype = 8) then
       begin
@@ -4922,7 +4922,7 @@ begin
         break;
       end;
 
-      //стили (styles.xml)
+      //Г±ГІГЁГ«ГЁ (styles.xml)
       for i := 0 to FilesCount - 1 do
       if (FileArray[i].ftype = 1) then
       begin
@@ -4936,7 +4936,7 @@ begin
           b := true;
       end;
 
-      //чтение страниц
+      //Г·ГІГҐГ­ГЁГҐ Г±ГІГ°Г Г­ГЁГ¶
       _no_sheets := true;
       if (SheetRelationNumber > 0) then
       begin
@@ -4968,7 +4968,7 @@ begin
             _no_sheets := false;
           end; //if
       end;
-      //если прочитано 0 листов - пробуем прочитать все (не удалось прочитать workbook/rel)
+      //ГҐГ±Г«ГЁ ГЇГ°Г®Г·ГЁГІГ Г­Г® 0 Г«ГЁГ±ГІГ®Гў - ГЇГ°Г®ГЎГіГҐГ¬ ГЇГ°Г®Г·ГЁГІГ ГІГј ГўГ±ГҐ (Г­ГҐ ГіГ¤Г Г«Г®Г±Гј ГЇГ°Г®Г·ГЁГІГ ГІГј workbook/rel)
       if (_no_sheets) then
       for i := 0 to FilesCount - 1 do
       if (FileArray[i].ftype = 0) then
@@ -5010,12 +5010,12 @@ begin
   end;
 end; //ReadXLSXPath
 
-//Читает xlsx
+//Г—ГЁГІГ ГҐГІ xlsx
 //INPUT
-//  var XMLSS: TZEXMLSS - хранилище
-//  FileName: string    - имя файла
+//  var XMLSS: TZEXMLSS - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//  FileName: string    - ГЁГ¬Гї ГґГ Г©Г«Г 
 //RETURN
-//      integer - номер ошибки (0 - всё OK)
+//      integer - Г­Г®Г¬ГҐГ° Г®ГёГЁГЎГЄГЁ (0 - ГўГ±Вё OK)
 function ReadXLSX(var XMLSS: TZEXMLSS; FileName: string): integer;
 var
   i, j: integer;
@@ -5027,15 +5027,15 @@ var
   procedure _getFile(num: integer);
   begin
     lst.Clear();
-    lst.Add(ZH.FileArray[num].name); //список файлов
+    lst.Add(ZH.FileArray[num].name); //Г±ГЇГЁГ±Г®ГЄ ГґГ Г©Г«Г®Гў
     u_zip.UnZipFiles(lst);
   end;
 
-  //Пытается прочитать rel для листа
+  //ГЏГ»ГІГ ГҐГІГ±Гї ГЇГ°Г®Г·ГЁГІГ ГІГј rel Г¤Г«Гї Г«ГЁГ±ГІГ 
   //INPUT
-  //     fnum: integer - Номер файла с листом
+  //     fnum: integer - ГЌГ®Г¬ГҐГ° ГґГ Г©Г«Г  Г± Г«ГЁГ±ГІГ®Г¬
   //RETURN
-  //      boolean - true - прочитал успешно
+  //      boolean - true - ГЇГ°Г®Г·ГЁГІГ Г« ГіГ±ГЇГҐГёГ­Г®
   function _CheckSheetRelations(fnum: integer): boolean;
   var
     i, t, l: integer;
@@ -5073,7 +5073,7 @@ var
     end; //if
   end; //_CheckSheetRelations
 
-  //Прочитать примечания
+  //ГЏГ°Г®Г·ГЁГІГ ГІГј ГЇГ°ГЁГ¬ГҐГ·Г Г­ГЁГї
   procedure _ReadComments();
   var
     _num: integer;
@@ -5110,7 +5110,7 @@ begin
     try
       lst := TStringList.Create();
       lst.Clear();
-      lst.Add('[Content_Types].xml'); //список файлов
+      lst.Add('[Content_Types].xml'); //Г±ГЇГЁГ±Г®ГЄ ГґГ Г©Г«Г®Гў
       ZH := TXSLXZipHelper.Create();
       ZH.XMLSS := XMLSS;
       u_zip := TUnZipper.Create();
@@ -5157,7 +5157,7 @@ begin
         break;
       end;
 
-      //тема (если есть)
+      //ГІГҐГ¬Г  (ГҐГ±Г«ГЁ ГҐГ±ГІГј)
       ZH.FileType := 5;
       for i := 0 to ZH.FilesCount - 1 do
       if (ZH.FileArray[i].ftype = 8) then
@@ -5171,7 +5171,7 @@ begin
         break;
       end;
 
-      //стили (styles.xml)
+      //Г±ГІГЁГ«ГЁ (styles.xml)
       ZH.FileType := 1;
       for i := 0 to ZH.FilesCount - 1 do
       if (ZH.FileArray[i].ftype = 1) then
@@ -5185,7 +5185,7 @@ begin
       end;
 
       _no_sheets := true;
-      //чтение страниц
+      //Г·ГІГҐГ­ГЁГҐ Г±ГІГ°Г Г­ГЁГ¶
       if (ZH.SheetRelationNumber > 0) then
       begin
         ZH.FileType := 2;
@@ -5250,18 +5250,18 @@ begin
 end; //ReadXLSX
 
 /////////////////////////////////////////////////////////////////////////////
-/////////////                    запись                         /////////////
+/////////////                    Г§Г ГЇГЁГ±Гј                         /////////////
 /////////////////////////////////////////////////////////////////////////////
 
-//Создаёт [Content_Types].xml 
+//Г‘Г®Г§Г¤Г ВёГІ [Content_Types].xml 
 //INPUT
-//  var XMLSS: TZEXMLSS                 - хранилище
-//    Stream: TStream                   - поток для записи
-//    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    PageCount: integer                - кол-во страниц
-//    CommentCount: integer             - кол-во страниц с комментариями
-//  const PagesComments: TIntegerDynArray- номера страниц с комментариями (нумеряция с нуля)
-//    CodePageName: string              - название кодовой страници
+//  var XMLSS: TZEXMLSS                 - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//    Stream: TStream                   - ГЇГ®ГІГ®ГЄ Г¤Г«Гї Г§Г ГЇГЁГ±ГЁ
+//    TextConverter: TAnsiToCPConverter - ГЄГ®Г­ГўГҐГ°ГІГҐГ° ГЁГ§ Г«Г®ГЄГ Г«ГјГ­Г®Г© ГЄГ®Г¤ГЁГ°Г®ГўГЄГЁ Гў Г­ГіГ¦Г­ГіГѕ
+//    PageCount: integer                - ГЄГ®Г«-ГўГ® Г±ГІГ°Г Г­ГЁГ¶
+//    CommentCount: integer             - ГЄГ®Г«-ГўГ® Г±ГІГ°Г Г­ГЁГ¶ Г± ГЄГ®Г¬Г¬ГҐГ­ГІГ Г°ГЁГїГ¬ГЁ
+//  const PagesComments: TIntegerDynArray- Г­Г®Г¬ГҐГ°Г  Г±ГІГ°Г Г­ГЁГ¶ Г± ГЄГ®Г¬Г¬ГҐГ­ГІГ Г°ГЁГїГ¬ГЁ (Г­ГіГ¬ГҐГ°ГїГ¶ГЁГї Г± Г­ГіГ«Гї)
+//    CodePageName: string              - Г­Г Г§ГўГ Г­ГЁГҐ ГЄГ®Г¤Г®ГўГ®Г© Г±ГІГ°Г Г­ГЁГ¶ГЁ
 //    BOM: ansistring                   - BOM
 //  const WriteHelper: TZEXLSXWriteHelper - additional data
 //RETURN
@@ -5270,7 +5270,7 @@ function ZEXLSXCreateContentTypes(var XMLSS: TZEXMLSS; Stream: TStream; PageCoun
                                   TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring;
                                   const WriteHelper: TZEXLSXWriteHelper): integer;
 var
-  _xml: TZsspXMLWriterH;    //писатель
+  _xml: TZsspXMLWriterH;    //ГЇГЁГ±Г ГІГҐГ«Гј
   s: string;
 
   procedure _WriteOverride(const PartName: string; ct: integer);
@@ -5323,7 +5323,7 @@ var
     _xml.WriteEmptyTag('Default', true);
     {$ENDIF}
 
-    //Страницы
+    //Г‘ГІГ°Г Г­ГЁГ¶Г»
     //_WriteOverride('/_rels/.rels', 3);
     //_WriteOverride('/xl/_rels/workbook.xml.rels', 3);
     for i := 0 to PageCount - 1 do
@@ -5332,14 +5332,14 @@ var
       if (WriteHelper.IsSheetHaveHyperlinks(i)) then
         _WriteOverride('/xl/worksheets/_rels/sheet' + IntToStr(i + 1) + '.xml.rels', 3);
     end;
-    //комментарии
+    //ГЄГ®Г¬Г¬ГҐГ­ГІГ Г°ГЁГЁ
     for i := 0 to CommentCount - 1 do
     begin
       _WriteOverride('/xl/worksheets/_rels/sheet' + IntToStr(PagesComments[i] + 1) + '.xml.rels', 3);
       _WriteOverride('/xl/comments' + IntToStr(PagesComments[i] + 1) + '.xml', 6);
     end;
     {$IFDEF ZUSE_DRAWINGS}
-    // картинки
+    // ГЄГ Г°ГІГЁГ­ГЄГЁ
     for i := 0 to XMLSS.DrawingCount - 1 do
     begin
       _drawing := XMLSS.GetDrawing(i);
@@ -5394,13 +5394,13 @@ end; //ZEXLSXCreateContentTypes
 
 
 {$IFDEF ZUSE_DRAWINGS}
-//Создаёт рисунок (drawing*.xml)
+//Г‘Г®Г§Г¤Г ВёГІ Г°ГЁГ±ГіГ­Г®ГЄ (drawing*.xml)
 //INPUT
-//  var XMLSS: TZEXMLSS                 - хранилище
-//    Stream: TStream                   - поток для записи
-//    Drawing: TZEDrawing               - набор рисунков
-//    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: string              - название кодовой страници
+//  var XMLSS: TZEXMLSS                 - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//    Stream: TStream                   - ГЇГ®ГІГ®ГЄ Г¤Г«Гї Г§Г ГЇГЁГ±ГЁ
+//    Drawing: TZEDrawing               - Г­Г ГЎГ®Г° Г°ГЁГ±ГіГ­ГЄГ®Гў
+//    TextConverter: TAnsiToCPConverter - ГЄГ®Г­ГўГҐГ°ГІГҐГ° ГЁГ§ Г«Г®ГЄГ Г«ГјГ­Г®Г© ГЄГ®Г¤ГЁГ°Г®ГўГЄГЁ Гў Г­ГіГ¦Г­ГіГѕ
+//    CodePageName: string              - Г­Г Г§ГўГ Г­ГЁГҐ ГЄГ®Г¤Г®ГўГ®Г© Г±ГІГ°Г Г­ГЁГ¶ГЁ
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
@@ -5415,7 +5415,7 @@ var
     Result := IntToStr(Trunc(Value * 1000));
   end;
 
-  // Адрес ячейки определяется по координатам
+  // ГЂГ¤Г°ГҐГ± ГїГ·ГҐГ©ГЄГЁ Г®ГЇГ°ГҐГ¤ГҐГ«ГїГҐГІГ±Гї ГЇГ® ГЄГ®Г®Г°Г¤ГЁГ­Г ГІГ Г¬
   procedure _WriteCellForXY(PageNum: Integer; X, Y: Real);
   var
     sh: TZSheet;
@@ -5449,7 +5449,7 @@ var
     _xml.WriteTag('xdr:rowOff', PtToStr(Total), false, false);
   end;
 
-  // Если размер картинки указан, то адрес ячейки сдвигается на заданный размер
+  // Г…Г±Г«ГЁ Г°Г Г§Г¬ГҐГ° ГЄГ Г°ГІГЁГ­ГЄГЁ ГіГЄГ Г§Г Г­, ГІГ® Г Г¤Г°ГҐГ± ГїГ·ГҐГ©ГЄГЁ Г±Г¤ГўГЁГЈГ ГҐГІГ±Гї Г­Г  Г§Г Г¤Г Г­Г­Г»Г© Г°Г Г§Г¬ГҐГ°
   procedure _WriteCellForRowCol(PageNum, Row, Col: Integer; Width, Height: Real);
   var
     sh: TZSheet;
@@ -5670,22 +5670,22 @@ begin
 end;
 {$ENDIF} // ZUSE_DRAWINGS
 
-//Создаёт лист документа (sheet*.xml)
+//Г‘Г®Г§Г¤Г ВёГІ Г«ГЁГ±ГІ Г¤Г®ГЄГіГ¬ГҐГ­ГІГ  (sheet*.xml)
 //INPUT
-//  var XMLSS: TZEXMLSS                 - хранилище
-//    Stream: TStream                   - поток для записи
-//    SheetNum: integer                 - номер листа в документе
-//    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: string              - название кодовой страници
+//  var XMLSS: TZEXMLSS                 - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//    Stream: TStream                   - ГЇГ®ГІГ®ГЄ Г¤Г«Гї Г§Г ГЇГЁГ±ГЁ
+//    SheetNum: integer                 - Г­Г®Г¬ГҐГ° Г«ГЁГ±ГІГ  Гў Г¤Г®ГЄГіГ¬ГҐГ­ГІГҐ
+//    TextConverter: TAnsiToCPConverter - ГЄГ®Г­ГўГҐГ°ГІГҐГ° ГЁГ§ Г«Г®ГЄГ Г«ГјГ­Г®Г© ГЄГ®Г¤ГЁГ°Г®ГўГЄГЁ Гў Г­ГіГ¦Г­ГіГѕ
+//    CodePageName: string              - Г­Г Г§ГўГ Г­ГЁГҐ ГЄГ®Г¤Г®ГўГ®Г© Г±ГІГ°Г Г­ГЁГ¶ГЁ
 //    BOM: ansistring                   - BOM
-//  var isHaveComments: boolean         - возвращает true, если были комментарии (чтобы создать comments*.xml)
+//  var isHaveComments: boolean         - ГўГ®Г§ГўГ°Г Г№Г ГҐГІ true, ГҐГ±Г«ГЁ ГЎГ»Г«ГЁ ГЄГ®Г¬Г¬ГҐГ­ГІГ Г°ГЁГЁ (Г·ГІГ®ГЎГ» Г±Г®Г§Г¤Г ГІГј comments*.xml)
 //  const WriteHelper: TZEXLSXWriteHelper - additional data
 //RETURN
 //      integer
 function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter;
                                      CodePageName: String; BOM: ansistring; const WriteHelper: TZEXLSXWriteHelper): integer;
 var
-  _xml: TZsspXMLWriterH;    //писатель
+  _xml: TZsspXMLWriterH;    //ГЇГЁГ±Г ГІГҐГ«Гј
   _sheet: TZSheet;
 
   {
@@ -5815,7 +5815,7 @@ var
     <pane xSplit="1" ySplit="1" topLeftCell="B2" activePane="bottomRight" state="frozen"/>
     activePane (Active Pane) The pane that is active.
                 The possible values for this attribute are
-                defined by the ST_Pane simple type (§18.18.52).
+                defined by the ST_Pane simple type (В§18.18.52).
                   bottomRight	Bottom Right Pane
                   topRight	Top Right Pane
                   bottomLeft	Bottom Left Pane
@@ -5823,7 +5823,7 @@ var
 
     state (Split State) Indicates whether the pane has horizontal / vertical
                 splits, and whether those splits are frozen.
-                The possible values for this attribute are defined by the ST_PaneState simple type (§18.18.53).
+                The possible values for this attribute are defined by the ST_PaneState simple type (В§18.18.53).
                    Split
                    Frozen
                    FrozenSplit
@@ -5831,7 +5831,7 @@ var
     topLeftCell (Top Left Visible Cell) Location of the top left visible
                 cell in the bottom right pane (when in Left-To-Right mode).
                 The possible values for this attribute are defined by the
-                ST_CellRef simple type (§18.18.7).
+                ST_CellRef simple type (В§18.18.7).
 
     xSplit (Horizontal Split Position) Horizontal position of the split,
                 in 1/20th of a point; 0 (zero) if none. If the pane is frozen,
@@ -5885,7 +5885,7 @@ var
       _xml.Attributes.Add('collapsed', 'false', false);
       _xml.Attributes.Add('hidden', XLSXBoolToStr(_sheet.Columns[i].Hidden), false);
       s := IntToStr(i + 1);
-      //Как там эти max / min считаются?
+      //ГЉГ ГЄ ГІГ Г¬ ГЅГІГЁ max / min Г±Г·ГЁГІГ ГѕГІГ±Гї?
       if (i = _sheet.ColCount - 1) then
       begin
         if (i + 1 <= 1025) then
@@ -5974,7 +5974,7 @@ var
           ZEError: s := 'e';
         end;
         
-        // если тип ячейки ZEGeneral, то атрибут опускаем
+        // ГҐГ±Г«ГЁ ГІГЁГЇ ГїГ·ГҐГ©ГЄГЁ ZEGeneral, ГІГ® Г ГІГ°ГЁГЎГіГІ Г®ГЇГіГ±ГЄГ ГҐГ¬
         if _sheet.Cell[j, i].CellType <> ZEGeneral then
           _xml.Attributes.Add('t', s, false);
 
@@ -6144,22 +6144,22 @@ begin
   end;
 end; //ZEXLSXCreateSheet
 
-//Создаёт workbook.xml
+//Г‘Г®Г§Г¤Г ВёГІ workbook.xml
 //INPUT
-//  var XMLSS: TZEXMLSS                 - хранилище
-//    Stream: TStream                   - поток для записи
-//  const _pages: TIntegerDynArray       - массив страниц
-//  const _names: TStringDynArray       - массив имён страниц
-//    PageCount: integer                - кол-во страниц
-//    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: string              - название кодовой страници
+//  var XMLSS: TZEXMLSS                 - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//    Stream: TStream                   - ГЇГ®ГІГ®ГЄ Г¤Г«Гї Г§Г ГЇГЁГ±ГЁ
+//  const _pages: TIntegerDynArray       - Г¬Г Г±Г±ГЁГў Г±ГІГ°Г Г­ГЁГ¶
+//  const _names: TStringDynArray       - Г¬Г Г±Г±ГЁГў ГЁГ¬ВёГ­ Г±ГІГ°Г Г­ГЁГ¶
+//    PageCount: integer                - ГЄГ®Г«-ГўГ® Г±ГІГ°Г Г­ГЁГ¶
+//    TextConverter: TAnsiToCPConverter - ГЄГ®Г­ГўГҐГ°ГІГҐГ° ГЁГ§ Г«Г®ГЄГ Г«ГјГ­Г®Г© ГЄГ®Г¤ГЁГ°Г®ГўГЄГЁ Гў Г­ГіГ¦Г­ГіГѕ
+//    CodePageName: string              - Г­Г Г§ГўГ Г­ГЁГҐ ГЄГ®Г¤Г®ГўГ®Г© Г±ГІГ°Г Г­ГЁГ¶ГЁ
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
 function ZEXLSXCreateWorkBook(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
                               const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
 var
-  _xml: TZsspXMLWriterH;    //писатель
+  _xml: TZsspXMLWriterH;    //ГЇГЁГ±Г ГІГҐГ«Гј
 
   //<sheets> ... </sheets>
   procedure WriteSheets();
@@ -6248,21 +6248,21 @@ begin
   end;
 end; //ZEXLSXCreateWorkBook
 
-//Создаёт styles.xml 
+//Г‘Г®Г§Г¤Г ВёГІ styles.xml 
 //INPUT
-//  var XMLSS: TZEXMLSS                 - хранилище
-//    Stream: TStream                   - поток для записи
-//    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: string              - название кодовой страници
+//  var XMLSS: TZEXMLSS                 - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//    Stream: TStream                   - ГЇГ®ГІГ®ГЄ Г¤Г«Гї Г§Г ГЇГЁГ±ГЁ
+//    TextConverter: TAnsiToCPConverter - ГЄГ®Г­ГўГҐГ°ГІГҐГ° ГЁГ§ Г«Г®ГЄГ Г«ГјГ­Г®Г© ГЄГ®Г¤ГЁГ°Г®ГўГЄГЁ Гў Г­ГіГ¦Г­ГіГѕ
+//    CodePageName: string              - Г­Г Г§ГўГ Г­ГЁГҐ ГЄГ®Г¤Г®ГўГ®Г© Г±ГІГ°Г Г­ГЁГ¶ГЁ
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
 function ZEXLSXCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 var
-  _xml: TZsspXMLWriterH;        //писатель
-  _FontIndex: TIntegerDynArray;  //соответствия шрифтов
-  _FillIndex: TIntegerDynArray;  //заливки
-  _BorderIndex: TIntegerDynArray;//границы
+  _xml: TZsspXMLWriterH;        //ГЇГЁГ±Г ГІГҐГ«Гј
+  _FontIndex: TIntegerDynArray;  //Г±Г®Г®ГІГўГҐГІГ±ГІГўГЁГї ГёГ°ГЁГґГІГ®Гў
+  _FillIndex: TIntegerDynArray;  //Г§Г Г«ГЁГўГЄГЁ
+  _BorderIndex: TIntegerDynArray;//ГЈГ°Г Г­ГЁГ¶Г»
   _StylesCount: integer;
   _NumFmtIndexes: array of integer;
   _FmtParser: TNumFormatParser;
@@ -6409,7 +6409,7 @@ var
     end;
   end; //WritenumFmts
 
-  //Являются ли шрифты одинаковыми
+  //ГџГўГ«ГїГѕГІГ±Гї Г«ГЁ ГёГ°ГЁГґГІГ» Г®Г¤ГЁГ­Г ГЄГ®ГўГ»Г¬ГЁ
   function _isFontsEqual(const fnt1, fnt2: TFont): boolean;
   begin
     result := False;
@@ -6431,14 +6431,14 @@ var
     if (fnt1.Style <> fnt2.Style) then
       exit;
 
-    Result := true; // если уж до сюда добрались
+    Result := true; // ГҐГ±Г«ГЁ ГіГ¦ Г¤Г® Г±ГѕГ¤Г  Г¤Г®ГЎГ°Г Г«ГЁГ±Гј
   end; //_isFontsEqual
 
-  //Обновляет индексы в массиве
+  //ГЋГЎГ­Г®ГўГ«ГїГҐГІ ГЁГ­Г¤ГҐГЄГ±Г» Гў Г¬Г Г±Г±ГЁГўГҐ
   //INPUT
-  //  var arr: TIntegerDynArray  - массив
-  //      cnt: integer          - номер последнего элемента в массиве (начинает с 0)
-  //                              (предполагается, что возникнет ситуация, когда нужно будет использовать только часть массива)
+  //  var arr: TIntegerDynArray  - Г¬Г Г±Г±ГЁГў
+  //      cnt: integer          - Г­Г®Г¬ГҐГ° ГЇГ®Г±Г«ГҐГ¤Г­ГҐГЈГ® ГЅГ«ГҐГ¬ГҐГ­ГІГ  Гў Г¬Г Г±Г±ГЁГўГҐ (Г­Г Г·ГЁГ­Г ГҐГІ Г± 0)
+  //                              (ГЇГ°ГҐГ¤ГЇГ®Г«Г ГЈГ ГҐГІГ±Гї, Г·ГІГ® ГўГ®Г§Г­ГЁГЄГ­ГҐГІ Г±ГЁГІГіГ Г¶ГЁГї, ГЄГ®ГЈГ¤Г  Г­ГіГ¦Г­Г® ГЎГіГ¤ГҐГІ ГЁГ±ГЇГ®Г«ГјГ§Г®ГўГ ГІГј ГІГ®Г«ГјГЄГ® Г·Г Г±ГІГј Г¬Г Г±Г±ГЁГўГ )
   procedure _UpdateArrayIndex(var arr: TIntegerDynArray; cnt: integer); // deprecated {$IFDEF USE_DEPRECATED_STRING}'remove CNT parameter!'{$ENDIF};
   var
     res: TIntegerDynArray;
@@ -6554,7 +6554,7 @@ var
     _xml.WriteEndTagNode(); //fonts
   end; //WriteXLSXFonts
 
-  //Являются ли заливки одинаковыми
+  //ГџГўГ«ГїГѕГІГ±Гї Г«ГЁ Г§Г Г«ГЁГўГЄГЁ Г®Г¤ГЁГ­Г ГЄГ®ГўГ»Г¬ГЁ
   function _isFillsEqual(style1, style2: TZStyle): boolean;
   begin
     result := (style1.BGColor = style2.BGColor) and
@@ -6601,16 +6601,16 @@ var
     _xml.Attributes.Add('count', IntToStr(_fillCount + 2));
     _xml.WriteTagNode('fills', true, true, true);
 
-    //по какой-то непонятной причине, если в начале нету двух стилей заливок (none + gray125),
-    //в грёбаном 2010-ом офисе глючат заливки (то-ли чтобы сложно было сделать экспорт в xlsx, то-ли
-    //кривые руки у мелкомягких программеров). LibreOffice открывает нормально.
+    //ГЇГ® ГЄГ ГЄГ®Г©-ГІГ® Г­ГҐГЇГ®Г­ГїГІГ­Г®Г© ГЇГ°ГЁГ·ГЁГ­ГҐ, ГҐГ±Г«ГЁ Гў Г­Г Г·Г Г«ГҐ Г­ГҐГІГі Г¤ГўГіГµ Г±ГІГЁГ«ГҐГ© Г§Г Г«ГЁГўГ®ГЄ (none + gray125),
+    //Гў ГЈГ°ВёГЎГ Г­Г®Г¬ 2010-Г®Г¬ Г®ГґГЁГ±ГҐ ГЈГ«ГѕГ·Г ГІ Г§Г Г«ГЁГўГЄГЁ (ГІГ®-Г«ГЁ Г·ГІГ®ГЎГ» Г±Г«Г®Г¦Г­Г® ГЎГ»Г«Г® Г±Г¤ГҐГ«Г ГІГј ГЅГЄГ±ГЇГ®Г°ГІ Гў xlsx, ГІГ®-Г«ГЁ
+    //ГЄГ°ГЁГўГ»ГҐ Г°ГіГЄГЁ Гі Г¬ГҐГ«ГЄГ®Г¬ГїГЈГЄГЁГµ ГЇГ°Г®ГЈГ°Г Г¬Г¬ГҐГ°Г®Гў). LibreOffice Г®ГІГЄГ°Г»ГўГ ГҐГІ Г­Г®Г°Г¬Г Г«ГјГ­Г®.
     _WriteBlankFill('none');
     _WriteBlankFill('gray125');
 
     //TODO:
-    //ВНИМАНИЕ!!! //{tut}
-    //в некоторых случаях fgColor - это цвет заливки (вроде для solid), а в некоторых - bgColor.
-    //Потом не забыть разобраться.
+    //Г‚ГЌГ€ГЊГЂГЌГ€Г…!!! //{tut}
+    //Гў Г­ГҐГЄГ®ГІГ®Г°Г»Гµ Г±Г«ГіГ·Г ГїГµ fgColor - ГЅГІГ® Г¶ГўГҐГІ Г§Г Г«ГЁГўГЄГЁ (ГўГ°Г®Г¤ГҐ Г¤Г«Гї solid), Г  Гў Г­ГҐГЄГ®ГІГ®Г°Г»Гµ - bgColor.
+    //ГЏГ®ГІГ®Г¬ Г­ГҐ Г§Г ГЎГ»ГІГј Г°Г Г§Г®ГЎГ°Г ГІГјГ±Гї.
     for i := -1 to _StylesCount - 1 do
     if (_FillIndex[i + 1] = -2) then
     begin
@@ -6684,7 +6684,7 @@ var
     _xml.WriteEndTagNode(); //fills
   end; //WriteXLSXFills();
 
-  //единичная граница
+  //ГҐГ¤ГЁГ­ГЁГ·Г­Г Гї ГЈГ°Г Г­ГЁГ¶Г 
   procedure _WriteBorderItem(StyleNum: integer; BorderNum: integer);
   var
     s, s1: string;
@@ -6833,11 +6833,11 @@ var
     _xml.WriteEndTagNode(); //borders
   end; //WriteXLSXBorders
 
-  //Добавляет <xf> ... </xf>
+  //Г„Г®ГЎГ ГўГ«ГїГҐГІ <xf> ... </xf>
   //INPUT
-  //      NumStyle: integer - номер стиля
-  //      isxfId: boolean   - нужно ли добавлять атрибут "xfId"
-  //      xfId: integer     - значение "xfId"
+  //      NumStyle: integer - Г­Г®Г¬ГҐГ° Г±ГІГЁГ«Гї
+  //      isxfId: boolean   - Г­ГіГ¦Г­Г® Г«ГЁ Г¤Г®ГЎГ ГўГ«ГїГІГј Г ГІГ°ГЁГЎГіГІ "xfId"
+  //      xfId: integer     - Г§Г­Г Г·ГҐГ­ГЁГҐ "xfId"
   procedure _WriteXF(NumStyle: integer; isxfId: boolean; xfId: integer);
   var
     _addalignment: boolean;
@@ -6862,7 +6862,7 @@ var
     _xml.Attributes.Add('applyFont', 'true', false);
     _xml.Attributes.Add('applyProtection', 'true', false);
     _xml.Attributes.Add('borderId', IntToStr(_BorderIndex[NumStyle + 1]), false);
-    _xml.Attributes.Add('fillId', IntToStr(_FillIndex[NumStyle + 1] + 2), false); //+2 т.к. первыми всегда идут 2 левых стиля заливки
+    _xml.Attributes.Add('fillId', IntToStr(_FillIndex[NumStyle + 1] + 2), false); //+2 ГІ.ГЄ. ГЇГҐГ°ГўГ»Г¬ГЁ ГўГ±ГҐГЈГ¤Г  ГЁГ¤ГіГІ 2 Г«ГҐГўГ»Гµ Г±ГІГЁГ«Гї Г§Г Г«ГЁГўГЄГЁ
     _xml.Attributes.Add('fontId', IntToStr(_FontIndex[NumStyle + 1]), false);
 
     // ECMA 376 Ed.4:  12.3.20 Styles Part; 17.9.17 numFmt (Numbering Format); 18.8.30 numFmt (Number Format)
@@ -6944,7 +6944,7 @@ var
     _xml.WriteTagNode(TagName, true, true, true);
     for i := -1 to XMLSS.Styles.Count - 1 do
     begin
-      //Что-то не совсем понятно, какой именно xfId нужно ставить. Пока будет 0 для всех.
+      //Г—ГІГ®-ГІГ® Г­ГҐ Г±Г®ГўГ±ГҐГ¬ ГЇГ®Г­ГїГІГ­Г®, ГЄГ ГЄГ®Г© ГЁГ¬ГҐГ­Г­Г® xfId Г­ГіГ¦Г­Г® Г±ГІГ ГўГЁГІГј. ГЏГ®ГЄГ  ГЎГіГ¤ГҐГІ 0 Г¤Г«Гї ГўГ±ГҐГµ.
       _WriteXF(i, isxfId, 0{i + 1});
     end;
     _xml.WriteEndTagNode(); //cellStyleXfs
@@ -7014,9 +7014,9 @@ begin
   end;
 end; //ZEXLSXCreateStyles
 
-//Добавить Relationship для rels
+//Г„Г®ГЎГ ГўГЁГІГј Relationship Г¤Г«Гї rels
 //INPUT
-//      xml: TZsspXMLWriterH  - писалка
+//      xml: TZsspXMLWriterH  - ГЇГЁГ±Г Г«ГЄГ 
 //  const rid: string         - rid
 //      ridType: integer      - rIdType (0..8)
 //  const Target: string      -
@@ -7032,11 +7032,11 @@ begin
   xml.WriteEmptyTag('Relationship', true, true);
 end; //ZEAddRelsID
 
-//Создаёт _rels/.rels
+//Г‘Г®Г§Г¤Г ВёГІ _rels/.rels
 //INPUT
-//    Stream: TStream                   - поток для записи
-//    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: string              - название кодовой страници
+//    Stream: TStream                   - ГЇГ®ГІГ®ГЄ Г¤Г«Гї Г§Г ГЇГЁГ±ГЁ
+//    TextConverter: TAnsiToCPConverter - ГЄГ®Г­ГўГҐГ°ГІГҐГ° ГЁГ§ Г«Г®ГЄГ Г«ГјГ­Г®Г© ГЄГ®Г¤ГЁГ°Г®ГўГЄГЁ Гў Г­ГіГ¦Г­ГіГѕ
+//    CodePageName: string              - Г­Г Г§ГўГ Г­ГЁГҐ ГЄГ®Г¤Г®ГўГ®Г© Г±ГІГ°Г Г­ГЁГ¶ГЁ
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
@@ -7075,12 +7075,12 @@ begin
   end;
 end; //ZEXLSXCreateRelsMain
 
-//Создаёт xl/_rels/workbook.xml.rels   
+//Г‘Г®Г§Г¤Г ВёГІ xl/_rels/workbook.xml.rels   
 //INPUT
-//    PageCount: integer                - кол-во страниц
-//    Stream: TStream                   - поток для записи
-//    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: string              - название кодовой страници
+//    PageCount: integer                - ГЄГ®Г«-ГўГ® Г±ГІГ°Г Г­ГЁГ¶
+//    Stream: TStream                   - ГЇГ®ГІГ®ГЄ Г¤Г«Гї Г§Г ГЇГЁГ±ГЁ
+//    TextConverter: TAnsiToCPConverter - ГЄГ®Г­ГўГҐГ°ГІГҐГ° ГЁГ§ Г«Г®ГЄГ Г«ГјГ­Г®Г© ГЄГ®Г¤ГЁГ°Г®ГўГЄГЁ Гў Г­ГіГ¦Г­ГіГѕ
+//    CodePageName: string              - Г­Г Г§ГўГ Г­ГЁГҐ ГЄГ®Г¤Г®ГўГ®Г© Г±ГІГ°Г Г­ГЁГ¶ГЁ
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
@@ -7123,12 +7123,12 @@ begin
   end;
 end; //ZEXLSXCreateRelsWorkBook
 
-//Создаёт sharedStrings.xml (пока не реализовано)
+//Г‘Г®Г§Г¤Г ВёГІ sharedStrings.xml (ГЇГ®ГЄГ  Г­ГҐ Г°ГҐГ Г«ГЁГ§Г®ГўГ Г­Г®)
 //INPUT
-//  var XMLSS: TZEXMLSS                 - хранилище
-//    Stream: TStream                   - поток для записи
-//    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: string              - название кодовой страници
+//  var XMLSS: TZEXMLSS                 - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//    Stream: TStream                   - ГЇГ®ГІГ®ГЄ Г¤Г«Гї Г§Г ГЇГЁГ±ГЁ
+//    TextConverter: TAnsiToCPConverter - ГЄГ®Г­ГўГҐГ°ГІГҐГ° ГЁГ§ Г«Г®ГЄГ Г«ГјГ­Г®Г© ГЄГ®Г¤ГЁГ°Г®ГўГЄГЁ Гў Г­ГіГ¦Г­ГіГѕ
+//    CodePageName: string              - Г­Г Г§ГўГ Г­ГЁГҐ ГЄГ®Г¤Г®ГўГ®Г© Г±ГІГ°Г Г­ГЁГ¶ГЁ
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
@@ -7157,7 +7157,7 @@ begin
     _xml.Attributes.Add('xmlns', SCHEMA_SHEET_MAIN, false);
     _xml.WriteTagNode('sst', true, true, false);
 
-    //Пока не заполняется
+    //ГЏГ®ГЄГ  Г­ГҐ Г§Г ГЇГ®Г«Г­ГїГҐГІГ±Гї
 
     _xml.WriteEndTagNode(); //Relationships
 
@@ -7167,11 +7167,11 @@ begin
   end;
 end; //ZEXLSXCreateSharedStrings
 
-//Создаёт app.xml
+//Г‘Г®Г§Г¤Г ВёГІ app.xml
 //INPUT
-//    Stream: TStream                   - поток для записи
-//    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: string              - название кодовой страници
+//    Stream: TStream                   - ГЇГ®ГІГ®ГЄ Г¤Г«Гї Г§Г ГЇГЁГ±ГЁ
+//    TextConverter: TAnsiToCPConverter - ГЄГ®Г­ГўГҐГ°ГІГҐГ° ГЁГ§ Г«Г®ГЄГ Г«ГјГ­Г®Г© ГЄГ®Г¤ГЁГ°Г®ГўГЄГЁ Гў Г­ГіГ¦Г­ГіГѕ
+//    CodePageName: string              - Г­Г Г§ГўГ Г­ГЁГҐ ГЄГ®Г¤Г®ГўГ®Г© Г±ГІГ°Г Г­ГЁГ¶ГЁ
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
@@ -7219,12 +7219,12 @@ begin
   end;
 end; //ZEXLSXCreateDocPropsApp
 
-//Создаёт app.xml 
+//Г‘Г®Г§Г¤Г ВёГІ app.xml 
 //INPUT
-//  var XMLSS: TZEXMLSS                 - хранилище
-//    Stream: TStream                   - поток для записи
-//    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: string              - название кодовой страници
+//  var XMLSS: TZEXMLSS                 - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//    Stream: TStream                   - ГЇГ®ГІГ®ГЄ Г¤Г«Гї Г§Г ГЇГЁГ±ГЁ
+//    TextConverter: TAnsiToCPConverter - ГЄГ®Г­ГўГҐГ°ГІГҐГ° ГЁГ§ Г«Г®ГЄГ Г«ГјГ­Г®Г© ГЄГ®Г¤ГЁГ°Г®ГўГЄГЁ Гў Г­ГіГ¦Г­ГіГѕ
+//    CodePageName: string              - Г­Г Г§ГўГ Г­ГЁГҐ ГЄГ®Г¤Г®ГўГ®Г© Г±ГІГ°Г Г­ГЁГ¶ГЁ
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
@@ -7273,15 +7273,15 @@ begin
   end;
 end; //ZEXLSXCreateDocPropsCore
 
-//Сохраняет незапакованный документ в формате Office Open XML (OOXML)
+//Г‘Г®ГµГ°Г Г­ГїГҐГІ Г­ГҐГ§Г ГЇГ ГЄГ®ГўГ Г­Г­Г»Г© Г¤Г®ГЄГіГ¬ГҐГ­ГІ Гў ГґГ®Г°Г¬Г ГІГҐ Office Open XML (OOXML)
 //INPUT
-//  var XMLSS: TZEXMLSS                   - хранилище
-//      PathName: string                  - путь к директории для сохранения (должна заканчиватся разделителем директории)
-//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
-//  const SheetsNames: array of string    - массив названий страниц
-//                                          (количество элементов в двух массивах должны совпадать)
-//      TextConverter: TAnsiToCPConverter - конвертер
-//      CodePageName: string              - имя кодировки
+//  var XMLSS: TZEXMLSS                   - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//      PathName: string                  - ГЇГіГІГј ГЄ Г¤ГЁГ°ГҐГЄГІГ®Г°ГЁГЁ Г¤Г«Гї Г±Г®ГµГ°Г Г­ГҐГ­ГЁГї (Г¤Г®Г«Г¦Г­Г  Г§Г ГЄГ Г­Г·ГЁГўГ ГІГ±Гї Г°Г Г§Г¤ГҐГ«ГЁГІГҐГ«ГҐГ¬ Г¤ГЁГ°ГҐГЄГІГ®Г°ГЁГЁ)
+//  const SheetsNumbers:array of integer  - Г¬Г Г±Г±ГЁГў Г­Г®Г¬ГҐГ°Г®Гў Г±ГІГ°Г Г­ГЁГ¶ Гў Г­ГіГ¦Г­Г®Г© ГЇГ®Г±Г«ГҐГ¤Г®ГўГ ГІГҐГ«ГјГ­Г®Г±ГІГЁ
+//  const SheetsNames: array of string    - Г¬Г Г±Г±ГЁГў Г­Г Г§ГўГ Г­ГЁГ© Г±ГІГ°Г Г­ГЁГ¶
+//                                          (ГЄГ®Г«ГЁГ·ГҐГ±ГІГўГ® ГЅГ«ГҐГ¬ГҐГ­ГІГ®Гў Гў Г¤ГўГіГµ Г¬Г Г±Г±ГЁГўГ Гµ Г¤Г®Г«Г¦Г­Г» Г±Г®ГўГЇГ Г¤Г ГІГј)
+//      TextConverter: TAnsiToCPConverter - ГЄГ®Г­ГўГҐГ°ГІГҐГ°
+//      CodePageName: string              - ГЁГ¬Гї ГЄГ®Г¤ГЁГ°Г®ГўГЄГЁ
 //      BOM: ansistring                   - Byte Order Mark
 //RETURN
 //      integer
@@ -7293,8 +7293,8 @@ function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string;
   BOM: ansistring = '';
   AllowUnzippedFolder: boolean = false): integer;
 var
-  _pages: TIntegerDynArray;      //номера страниц
-  _names: TStringDynArray;      //названия страниц
+  _pages: TIntegerDynArray;      //Г­Г®Г¬ГҐГ°Г  Г±ГІГ°Г Г­ГЁГ¶
+  _names: TStringDynArray;      //Г­Г Г§ГўГ Г­ГЁГї Г±ГІГ°Г Г­ГЁГ¶
   kol, i, ii: integer;
   zip: TZipper;
   _WriteHelper: TZEXLSXWriteHelper;
@@ -7327,6 +7327,7 @@ var
         ForceDirectories(sFullFilePath);
 
       Result := TFileStream.Create(sFullFileName, fmCreate);
+      StreamList.Add(Result);
     end
     else
     begin
@@ -7357,7 +7358,7 @@ begin
 
     path_xl := 'xl/';
 
-    //стили
+    //Г±ГІГЁГ«ГЁ
     TmpStream := _AddFile(path_xl + 'styles.xml');
     ZEXLSXCreateStyles(XMLSS, TmpStream, TextConverter, CodePageName, BOM);
 
@@ -7382,7 +7383,7 @@ begin
     iDrawingsCount := XMLSS.DrawingCount();
     {$ENDIF} // ZUSE_DRAWINGS
 
-    //Листы документа
+    //Г‹ГЁГ±ГІГ» Г¤Г®ГЄГіГ¬ГҐГ­ГІГ 
     for i := 0 to kol - 1 do
     begin
       _commentArray[i] := 0;
@@ -7399,7 +7400,7 @@ begin
       if (_WriteHelper.isHaveComments) then
       begin
         _commentArray[i] := 1;
-        //создать файл с комментариями
+        //Г±Г®Г§Г¤Г ГІГј ГґГ Г©Г« Г± ГЄГ®Г¬Г¬ГҐГ­ГІГ Г°ГЁГїГ¬ГЁ
       end;
     end; //for i
 
@@ -7435,7 +7436,7 @@ begin
     end;
     {$ENDIF} // ZUSE_DRAWINGS
 
-    //workbook.xml - список листов
+    //workbook.xml - Г±ГЇГЁГ±Г®ГЄ Г«ГЁГ±ГІГ®Гў
     TmpStream := _AddFile(path_xl + 'workbook.xml');
     ZEXLSXCreateWorkBook(XMLSS, TmpStream, _pages, _names, kol, TextConverter, CodePageName, BOM);
 
@@ -7467,15 +7468,15 @@ begin
   Result := 0;
 end;
 
-//Сохраняет незапакованный документ в формате Office Open XML (OOXML)
+//Г‘Г®ГµГ°Г Г­ГїГҐГІ Г­ГҐГ§Г ГЇГ ГЄГ®ГўГ Г­Г­Г»Г© Г¤Г®ГЄГіГ¬ГҐГ­ГІ Гў ГґГ®Г°Г¬Г ГІГҐ Office Open XML (OOXML)
 //INPUT
-//  var XMLSS: TZEXMLSS                   - хранилище
-//      PathName: string                  - путь к директории для сохранения (должна заканчиватся разделителем директории)
-//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
-//  const SheetsNames: array of string    - массив названий страниц
-//                                          (количество элементов в двух массивах должны совпадать)
-//      TextConverter: TAnsiToCPConverter - конвертер
-//      CodePageName: string              - имя кодировки
+//  var XMLSS: TZEXMLSS                   - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//      PathName: string                  - ГЇГіГІГј ГЄ Г¤ГЁГ°ГҐГЄГІГ®Г°ГЁГЁ Г¤Г«Гї Г±Г®ГµГ°Г Г­ГҐГ­ГЁГї (Г¤Г®Г«Г¦Г­Г  Г§Г ГЄГ Г­Г·ГЁГўГ ГІГ±Гї Г°Г Г§Г¤ГҐГ«ГЁГІГҐГ«ГҐГ¬ Г¤ГЁГ°ГҐГЄГІГ®Г°ГЁГЁ)
+//  const SheetsNumbers:array of integer  - Г¬Г Г±Г±ГЁГў Г­Г®Г¬ГҐГ°Г®Гў Г±ГІГ°Г Г­ГЁГ¶ Гў Г­ГіГ¦Г­Г®Г© ГЇГ®Г±Г«ГҐГ¤Г®ГўГ ГІГҐГ«ГјГ­Г®Г±ГІГЁ
+//  const SheetsNames: array of string    - Г¬Г Г±Г±ГЁГў Г­Г Г§ГўГ Г­ГЁГ© Г±ГІГ°Г Г­ГЁГ¶
+//                                          (ГЄГ®Г«ГЁГ·ГҐГ±ГІГўГ® ГЅГ«ГҐГ¬ГҐГ­ГІГ®Гў Гў Г¤ГўГіГµ Г¬Г Г±Г±ГЁГўГ Гµ Г¤Г®Г«Г¦Г­Г» Г±Г®ГўГЇГ Г¤Г ГІГј)
+//      TextConverter: TAnsiToCPConverter - ГЄГ®Г­ГўГҐГ°ГІГҐГ°
+//      CodePageName: string              - ГЁГ¬Гї ГЄГ®Г¤ГЁГ°Г®ГўГЄГЁ
 //      BOM: ansistring                   - Byte Order Mark
 //RETURN
 //      integer
@@ -7486,13 +7487,13 @@ begin
 end; //SaveXmlssToXLSXPath
 
 //SaveXmlssToXLSXPath
-//Сохраняет незапакованный документ в формате Office Open XML (OOXML)
+//Г‘Г®ГµГ°Г Г­ГїГҐГІ Г­ГҐГ§Г ГЇГ ГЄГ®ГўГ Г­Г­Г»Г© Г¤Г®ГЄГіГ¬ГҐГ­ГІ Гў ГґГ®Г°Г¬Г ГІГҐ Office Open XML (OOXML)
 //INPUT
-//  var XMLSS: TZEXMLSS                   - хранилище
-//      PathName: string                  - путь к директории для сохранения (должна заканчиватся разделителем директории)
-//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
-//  const SheetsNames: array of string    - массив названий страниц
-//                                          (количество элементов в двух массивах должны совпадать)
+//  var XMLSS: TZEXMLSS                   - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//      PathName: string                  - ГЇГіГІГј ГЄ Г¤ГЁГ°ГҐГЄГІГ®Г°ГЁГЁ Г¤Г«Гї Г±Г®ГµГ°Г Г­ГҐГ­ГЁГї (Г¤Г®Г«Г¦Г­Г  Г§Г ГЄГ Г­Г·ГЁГўГ ГІГ±Гї Г°Г Г§Г¤ГҐГ«ГЁГІГҐГ«ГҐГ¬ Г¤ГЁГ°ГҐГЄГІГ®Г°ГЁГЁ)
+//  const SheetsNumbers:array of integer  - Г¬Г Г±Г±ГЁГў Г­Г®Г¬ГҐГ°Г®Гў Г±ГІГ°Г Г­ГЁГ¶ Гў Г­ГіГ¦Г­Г®Г© ГЇГ®Г±Г«ГҐГ¤Г®ГўГ ГІГҐГ«ГјГ­Г®Г±ГІГЁ
+//  const SheetsNames: array of string    - Г¬Г Г±Г±ГЁГў Г­Г Г§ГўГ Г­ГЁГ© Г±ГІГ°Г Г­ГЁГ¶
+//                                          (ГЄГ®Г«ГЁГ·ГҐГ±ГІГўГ® ГЅГ«ГҐГ¬ГҐГ­ГІГ®Гў Гў Г¤ГўГіГµ Г¬Г Г±Г±ГЁГўГ Гµ Г¤Г®Г«Г¦Г­Г» Г±Г®ГўГЇГ Г¤Г ГІГј)
 //RETURN
 //      integer
 function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
@@ -7503,10 +7504,10 @@ begin
 end; //SaveXmlssToXLSXPath
 
 //SaveXmlssToXLSXPath
-//Сохраняет незапакованный документ в формате Office Open XML (OOXML)
+//Г‘Г®ГµГ°Г Г­ГїГҐГІ Г­ГҐГ§Г ГЇГ ГЄГ®ГўГ Г­Г­Г»Г© Г¤Г®ГЄГіГ¬ГҐГ­ГІ Гў ГґГ®Г°Г¬Г ГІГҐ Office Open XML (OOXML)
 //INPUT
-//  var XMLSS: TZEXMLSS                   - хранилище
-//      PathName: string                  - путь к директории для сохранения (должна заканчиватся разделителем директории)
+//  var XMLSS: TZEXMLSS                   - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//      PathName: string                  - ГЇГіГІГј ГЄ Г¤ГЁГ°ГҐГЄГІГ®Г°ГЁГЁ Г¤Г«Гї Г±Г®ГµГ°Г Г­ГҐГ­ГЁГї (Г¤Г®Г«Г¦Г­Г  Г§Г ГЄГ Г­Г·ГЁГўГ ГІГ±Гї Г°Г Г§Г¤ГҐГ«ГЁГІГҐГ«ГҐГ¬ Г¤ГЁГ°ГҐГЄГІГ®Г°ГЁГЁ)
 //RETURN
 //      integer
 function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string): integer; overload;
@@ -7514,15 +7515,15 @@ begin
   Result := SaveXmlssToXLSXPath(XMLSS, PathName, [], []);
 end; //SaveXmlssToXLSXPath
 
-//Сохраняет документ в формате Open Office XML (xlsx)
+//Г‘Г®ГµГ°Г Г­ГїГҐГІ Г¤Г®ГЄГіГ¬ГҐГ­ГІ Гў ГґГ®Г°Г¬Г ГІГҐ Open Office XML (xlsx)
 //INPUT
-//  var XMLSS: TZEXMLSS                   - хранилище
-//      FileName: string                  - имя файла для сохранения
-//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
-//  const SheetsNames: array of string    - массив названий страниц
-//                                          (количество элементов в двух массивах должны совпадать)
-//      TextConverter: TAnsiToCPConverter - конвертер
-//      CodePageName: string              - имя кодировки
+//  var XMLSS: TZEXMLSS                   - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//      FileName: string                  - ГЁГ¬Гї ГґГ Г©Г«Г  Г¤Г«Гї Г±Г®ГµГ°Г Г­ГҐГ­ГЁГї
+//  const SheetsNumbers:array of integer  - Г¬Г Г±Г±ГЁГў Г­Г®Г¬ГҐГ°Г®Гў Г±ГІГ°Г Г­ГЁГ¶ Гў Г­ГіГ¦Г­Г®Г© ГЇГ®Г±Г«ГҐГ¤Г®ГўГ ГІГҐГ«ГјГ­Г®Г±ГІГЁ
+//  const SheetsNames: array of string    - Г¬Г Г±Г±ГЁГў Г­Г Г§ГўГ Г­ГЁГ© Г±ГІГ°Г Г­ГЁГ¶
+//                                          (ГЄГ®Г«ГЁГ·ГҐГ±ГІГўГ® ГЅГ«ГҐГ¬ГҐГ­ГІГ®Гў Гў Г¤ГўГіГµ Г¬Г Г±Г±ГЁГўГ Гµ Г¤Г®Г«Г¦Г­Г» Г±Г®ГўГЇГ Г¤Г ГІГј)
+//      TextConverter: TAnsiToCPConverter - ГЄГ®Г­ГўГҐГ°ГІГҐГ°
+//      CodePageName: string              - ГЁГ¬Гї ГЄГ®Г¤ГЁГ°Г®ГўГЄГЁ
 //      BOM: ansistring                   - Byte Order Mark
 //RETURN
 //      integer
@@ -7532,13 +7533,13 @@ begin
   Result := ExportXmlssToXLSX(XMLSS, FileName, SheetsNumbers, SheetsNames, TextConverter, CodePageName, BOM, False);
 end; //SaveXmlssToXSLX
 
-//Сохраняет документ в формате Open Office XML (xlsx)
+//Г‘Г®ГµГ°Г Г­ГїГҐГІ Г¤Г®ГЄГіГ¬ГҐГ­ГІ Гў ГґГ®Г°Г¬Г ГІГҐ Open Office XML (xlsx)
 //INPUT
-//  var XMLSS: TZEXMLSS                   - хранилище
-//      FileName: string                  - имя файла для сохранения
-//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
-//  const SheetsNames: array of string    - массив названий страниц
-//                                          (количество элементов в двух массивах должны совпадать)
+//  var XMLSS: TZEXMLSS                   - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//      FileName: string                  - ГЁГ¬Гї ГґГ Г©Г«Г  Г¤Г«Гї Г±Г®ГµГ°Г Г­ГҐГ­ГЁГї
+//  const SheetsNumbers:array of integer  - Г¬Г Г±Г±ГЁГў Г­Г®Г¬ГҐГ°Г®Гў Г±ГІГ°Г Г­ГЁГ¶ Гў Г­ГіГ¦Г­Г®Г© ГЇГ®Г±Г«ГҐГ¤Г®ГўГ ГІГҐГ«ГјГ­Г®Г±ГІГЁ
+//  const SheetsNames: array of string    - Г¬Г Г±Г±ГЁГў Г­Г Г§ГўГ Г­ГЁГ© Г±ГІГ°Г Г­ГЁГ¶
+//                                          (ГЄГ®Г«ГЁГ·ГҐГ±ГІГўГ® ГЅГ«ГҐГ¬ГҐГ­ГІГ®Гў Гў Г¤ГўГіГµ Г¬Г Г±Г±ГЁГўГ Гµ Г¤Г®Г«Г¦Г­Г» Г±Г®ГўГЇГ Г¤Г ГІГј)
 //RETURN
 //      integer
 function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
@@ -7547,10 +7548,10 @@ begin
   result := SaveXmlssToXLSX(XMLSS, FileName, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
 end; //SaveXmlssToXLSX
 
-//Сохраняет документ в формате Open Office XML (xlsx)
+//Г‘Г®ГµГ°Г Г­ГїГҐГІ Г¤Г®ГЄГіГ¬ГҐГ­ГІ Гў ГґГ®Г°Г¬Г ГІГҐ Open Office XML (xlsx)
 //INPUT
-//  var XMLSS: TZEXMLSS                   - хранилище
-//      FileName: string                  - имя файла для сохранения
+//  var XMLSS: TZEXMLSS                   - ГµГ°Г Г­ГЁГ«ГЁГ№ГҐ
+//      FileName: string                  - ГЁГ¬Гї ГґГ Г©Г«Г  Г¤Г«Гї Г±Г®ГµГ°Г Г­ГҐГ­ГЁГї
 //RETURN
 //      integer
 function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
@@ -7558,7 +7559,7 @@ begin
   result := SaveXmlssToXLSX(XMLSS, FileName, [], []);
 end; //SaveXmlssToXLSX
 
-//Перепутал малость названия ^_^
+//ГЏГҐГ°ГҐГЇГіГІГ Г« Г¬Г Г«Г®Г±ГІГј Г­Г Г§ГўГ Г­ГЁГї ^_^
 
 function ReadXSLXPath(var XMLSS: TZEXMLSS; DirName: string): integer; //deprecated 'Use ReadXLSXPath!';
 begin
