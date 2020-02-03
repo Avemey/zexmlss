@@ -925,7 +925,7 @@ begin
     begin
       ZipItem := zip.Items[i];
 
-      Item := Entries.AddFileEntry('', ZipItem.FileName);
+      Item := Entries.AddFileEntry('', ZipItem.PackedName);
       if AExtract and ((FFiles.Count = 0) or (FFiles.IndexOf(Item.ArchiveFileName) <> -1)) then
       begin
         if Assigned(OnCreateStream) and Assigned(OnDoneStream) then
