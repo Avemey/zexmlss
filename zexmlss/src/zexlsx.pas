@@ -528,7 +528,9 @@ end;
 function TXSLXZipHelper.GetRelationsCounts(num: integer): integer;
 begin
   if ((num >= 0) and (num < FRelationsCount)) then
-    result := FRelationsCounts[num];
+    result := FRelationsCounts[num]
+  else
+    Result := 0;
 end;
 
 function TXSLXZipHelper.GetRelationsArray(num: integer): TZXLSXRelationsArray;

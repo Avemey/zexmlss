@@ -2750,7 +2750,7 @@ end;
 
 procedure TZStyles.SetDefaultStyle(const Value: TZStyle);
 begin
-  if not(Value <> nil) then
+  if Assigned(Value) then
     FDefaultStyle.Assign(Value);
 end;
 
