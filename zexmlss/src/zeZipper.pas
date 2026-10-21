@@ -607,10 +607,18 @@ end;
 procedure TZipper.BuildZipDirectoryJCL7Z();
 var
   zip: TJclZipCompressArchive;
+  Volume: TStream;
   i: Integer;
   Item: TZipFileEntry;
 begin
-  zip := TJclZipCompressArchive.Create(FileName);
+  // Create(FileName) opens an existing file with fmOpenWrite and does not truncate it
+  Volume := TFileStream.Create(FileName, fmCreate);
+  try
+    zip := TJclZipCompressArchive.Create(Volume, 0, True);
+  except
+    Volume.Free();
+    raise;
+  end;
   try
     for i := 0 to Entries.Count-1 do
     begin

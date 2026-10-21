@@ -39,9 +39,18 @@ begin
 end;
 
 constructor TZxZipJcl7z.Create(const ZipFile: TFileName);
+var
+  Volume: TStream;
 begin
   inherited;
-  FZ := TJclZipCompressArchive.Create(self.ZipFileName);
+  // Create(FileName) opens an existing file with fmOpenWrite and does not truncate it
+  Volume := TFileStream.Create(self.ZipFileName, fmCreate);
+  try
+    FZ := TJclZipCompressArchive.Create(Volume, 0, True);
+  except
+    Volume.Free;
+    raise;
+  end;
 end;
 
 procedure TZxZipJcl7z.DoSaveAndSeal;
